@@ -20,7 +20,10 @@ export function GroupCell<TData>({ cell, groupColumn }: GroupCellProps<TData>) {
   const indentSize = groupColumn.indentSize ?? 24
 
   // Group row, group column: chevron + grouping value + (count).
-  if (cell.getIsGrouped() && isGroupColumn) {
+  // Use row.getIsGrouped() (not cell.getIsGrouped()) because TanStack marks the
+  // *grouping dimension* cell as grouped (e.g. the "entity" cell), never the
+  // synthesised __group__ column cell.
+  if (row.getIsGrouped() && isGroupColumn) {
     const count = getGroupRowCount(row, groupColumn.countMode)
     const canExpand = row.getCanExpand()
     return (
@@ -48,7 +51,7 @@ export function GroupCell<TData>({ cell, groupColumn }: GroupCellProps<TData>) {
           <span className="size-5 shrink-0" aria-hidden="true" />
         )}
         <span className="font-semibold">
-          {String(cell.getValue() ?? "")}
+          {String(row.groupingValue ?? "")}
         </span>
         <span className="text-muted-foreground">({count})</span>
       </div>

@@ -20,6 +20,8 @@ function groupCell(opts: {
 }): Cell<Acct, unknown> {
   const row = {
     depth: opts.depth,
+    groupingValue: opts.groupedValue,
+    getIsGrouped: () => true,
     getIsExpanded: () => opts.expanded,
     getCanExpand: () => true,
     getToggleExpandedHandler: () => () => {},
@@ -54,6 +56,8 @@ describe("GroupCell", () => {
     // count branches are distinguishable at the render level.
     const row = {
       depth: 0,
+      groupingValue: "Holding BV",
+      getIsGrouped: () => true,
       getIsExpanded: () => true,
       getCanExpand: () => true,
       getToggleExpandedHandler: () => () => {},
@@ -82,6 +86,7 @@ describe("GroupCell", () => {
     const row = {
       depth: 1,
       original: { id: "1", name: "Payroll" },
+      getIsGrouped: () => false,
       getIsExpanded: () => false,
       getCanExpand: () => false,
     } as unknown as Row<Acct>
@@ -100,7 +105,7 @@ describe("GroupCell", () => {
   it("renders nothing for a placeholder cell", () => {
     const cell = {
       column: { id: "currency" },
-      row: { depth: 1 } as unknown as Row<Acct>,
+      row: { depth: 1, getIsGrouped: () => false } as unknown as Row<Acct>,
       getIsGrouped: () => false,
       getIsAggregated: () => false,
       getIsPlaceholder: () => true,
