@@ -25,30 +25,32 @@ describe("reorderGrouping", () => {
 })
 
 describe("DimensionPickerContent", () => {
-  it("adds a dimension via the multi-select list", async () => {
-    const onGroupingChange = vi.fn()
-    render(
-      <DimensionPickerContent
-        dimensions={dimensions}
-        grouping={[]}
-        onGroupingChange={onGroupingChange}
-      />,
-    )
-    await userEvent.click(screen.getByRole("checkbox", { name: "Entity" }))
-    expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
-  })
-
-  it("removes a dimension via the multi-select list", async () => {
-    const onGroupingChange = vi.fn()
+  it("shows the selected dimension count in the multi-select trigger", () => {
     render(
       <DimensionPickerContent
         dimensions={dimensions}
         grouping={["entity", "bank"]}
-        onGroupingChange={onGroupingChange}
+        onGroupingChange={vi.fn()}
       />,
     )
-    await userEvent.click(screen.getByRole("checkbox", { name: "Bank" }))
-    expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
+    // Collapsed multi-select dropdown shows "N selected" (its checkbox list is
+    // in a portal; the add/remove toggle behavior is covered in multi-select.test).
+    expect(
+      screen.getByRole("button", { name: "Dimensions" }),
+    ).toHaveTextContent("2 selected")
+  })
+
+  it("shows the placeholder when no dimensions are selected", () => {
+    render(
+      <DimensionPickerContent
+        dimensions={dimensions}
+        grouping={[]}
+        onGroupingChange={vi.fn()}
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: "Dimensions" }),
+    ).toHaveTextContent("Select dimensions…")
   })
 
   it("renders selected dimensions as reorderable hierarchy items", () => {

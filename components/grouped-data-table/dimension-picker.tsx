@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/popover"
 
 import type { DimensionDef } from "./types"
-import { MultiSelectContent } from "./multi-select"
+import { MultiSelect } from "./multi-select"
 
 /** Pure reorder used on drag end. Returns a new array; unchanged if an id is missing. */
 export function reorderGrouping(
@@ -141,10 +141,13 @@ export function DimensionPickerContent({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <p className="text-xs font-medium text-muted-foreground">Dimensions</p>
-        <MultiSelectContent
+        <MultiSelect
           options={dimensions.map((d) => ({ label: d.label, value: d.id }))}
           selected={grouping}
           onChange={onGroupingChange}
+          ariaLabel="Dimensions"
+          placeholder="Select dimensions…"
+          className="w-full"
         />
       </div>
 
