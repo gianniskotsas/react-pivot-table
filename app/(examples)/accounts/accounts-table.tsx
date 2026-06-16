@@ -3,14 +3,25 @@
 import { Landmark } from "lucide-react"
 
 import { GroupedDataTable } from "@/components/grouped-data-table"
-import type { GroupColumnConfig, DimensionDef } from "@/components/grouped-data-table"
+import type { GroupColumnConfig, DimensionDef, FilterDef } from "@/components/grouped-data-table"
 
 import { columns } from "./columns"
+import { accounts } from "./data"
 import type { Account } from "./data"
 
 const groupableDimensions: DimensionDef[] = [
   { id: "entity", label: "Entity" },
   { id: "bank", label: "Bank" },
+]
+
+const uniqueOptions = (values: string[]) =>
+  Array.from(new Set(values)).map((v) => ({ label: v, value: v }))
+
+const filterableColumns: FilterDef[] = [
+  { id: "entity", label: "Entity", type: "select", options: uniqueOptions(accounts.map((a) => a.entity)) },
+  { id: "bank", label: "Bank", type: "select", options: uniqueOptions(accounts.map((a) => a.bank)) },
+  { id: "currency", label: "Ccy", type: "select", options: uniqueOptions(accounts.map((a) => a.currency)) },
+  { id: "balance", label: "Balance", type: "number" },
 ]
 
 // Hoisted to module scope so the config (and its renderLeaf) keeps a stable
@@ -39,6 +50,7 @@ export function AccountsTable({ data }: { data: Account[] }) {
       groupableDimensions={groupableDimensions}
       initialGrouping={["entity", "bank"]}
       groupColumn={groupColumn}
+      filterableColumns={filterableColumns}
     />
   )
 }

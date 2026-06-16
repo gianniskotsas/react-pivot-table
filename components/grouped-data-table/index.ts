@@ -12,3 +12,12 @@ export {
   type GroupColumnConfig,
   type GroupedDataTableProps,
 } from "./types"
+export { FilterPopover, FilterBuilderContent } from "./filter-builder"
+export { FilterChips } from "./filter-chips"
+export {
+  type FilterType,
+  type FilterOperator,
+  type FilterDef,
+  type FilterCondition,
+  type FilterValue,
+} from "./types"
