@@ -209,6 +209,7 @@ describe("new operators", () => {
     expect(evaluateCondition("HSBC", "isNoneOf", ["HSBC", "Citi"])).toBe(false)
     expect(evaluateCondition("x", "doesNotContain", "")).toBe(true)
     expect(evaluateCondition("x", "isNoneOf", [])).toBe(true)
+    expect(evaluateCondition("x", "isNot", "")).toBe(true)
   })
 })
 
@@ -258,6 +259,22 @@ describe("evaluateFilterState", () => {
   })
   it("empty state is no constraint", () => {
     expect(evaluateFilterState(emptyFilterState(), get({}))).toBe(true)
+  })
+  it("skips groups whose conditions are all incomplete", () => {
+    const mixed: FilterState = {
+      combinator: "and",
+      groups: [
+        { id: "g1", combinator: "and", conditions: [
+          { id: "a", columnId: "bank", operator: "is", value: "HSBC" },
+        ] },
+        // all-null group must be ignored, not treated as a failing AND clause
+        { id: "g2", combinator: "and", conditions: [
+          { id: "b", columnId: "balance", operator: "gt", value: null },
+        ] },
+      ],
+    }
+    expect(evaluateFilterState(mixed, get({ bank: "HSBC", balance: 1 }))).toBe(true)
+    expect(evaluateFilterState(mixed, get({ bank: "Citi", balance: 1 }))).toBe(false)
   })
 })
 
