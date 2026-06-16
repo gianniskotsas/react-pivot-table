@@ -13,7 +13,7 @@ export {
   type GroupedDataTableProps,
 } from "./types"
 export { FilterPopover, FilterBuilderContent } from "./filter-builder"
-export { MultiSelect, MultiSelectContent } from "./multi-select"
+export { MultiSelect, MultiSelectContent, multiSelectLabel } from "./multi-select"
 export {
   type FilterType,
   type FilterOperator,

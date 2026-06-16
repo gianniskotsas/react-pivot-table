@@ -60,7 +60,30 @@ describe("FilterBuilderContent", () => {
     render(
       <FilterBuilderContent filterableColumns={defs} filterState={oneGroup} onFilterStateChange={onChange} />,
     )
-    await userEvent.click(screen.getByRole("button", { name: /remove filter/i }))
+    await userEvent.click(screen.getByRole("button", { name: "Remove filter" }))
+    const next = onChange.mock.calls[0][0] as FilterState
+    expect(next.groups).toHaveLength(0)
+  })
+
+  it("removes a whole group via the group's remove button", async () => {
+    const onChange = vi.fn()
+    const twoConditionGroup: FilterState = {
+      combinator: "and",
+      groups: [
+        { id: "g1", combinator: "and", conditions: [
+          { id: "c1", columnId: "bank", operator: "contains", value: "x" },
+          { id: "c2", columnId: "balance", operator: "gt", value: 1 },
+        ] },
+      ],
+    }
+    render(
+      <FilterBuilderContent
+        filterableColumns={defs}
+        filterState={twoConditionGroup}
+        onFilterStateChange={onChange}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Remove filter group" }))
     const next = onChange.mock.calls[0][0] as FilterState
     expect(next.groups).toHaveLength(0)
   })

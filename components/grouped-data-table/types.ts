@@ -53,6 +53,7 @@ export type FilterValue =
   | string
   | number
   | [number, number]
+  | [string, string]
   | string[]
   | null
 

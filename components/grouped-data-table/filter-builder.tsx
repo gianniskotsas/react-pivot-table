@@ -28,6 +28,7 @@ import {
   OPERATOR_LABELS,
   operatorsForDef,
   removeConditionFromGroup,
+  removeGroup,
   setGroupCombinator,
   setTopCombinator,
   updateConditionInGroup,
@@ -278,6 +279,20 @@ export function FilterBuilderContent({
             </div>
           )}
           <div className="space-y-2 rounded-md border p-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium text-muted-foreground">
+                {filterState.groups.length > 1 ? `Group ${gi + 1}` : "Group"}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Remove filter group"
+                onClick={() => onState((s) => removeGroup(s, group.id))}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
             {group.conditions.map((condition, ci) => (
               <div key={condition.id} className="space-y-2">
                 {ci === 1 && (
