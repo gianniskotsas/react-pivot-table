@@ -38,7 +38,9 @@ export type UseGroupedTableResult<TData> = {
   grouping: GroupingState
   setGrouping: (next: GroupingState) => void
   filterConditions: FilterCondition[]
-  setFilterConditions: (next: FilterCondition[]) => void
+  setFilterConditions: (
+    next: FilterCondition[] | ((prev: FilterCondition[]) => FilterCondition[]),
+  ) => void
 }
 
 export function useGroupedTable<TData>({
@@ -76,8 +78,15 @@ export function useGroupedTable<TData>({
   >(() => normalizeConditions(initialFilters, filterableIds))
 
   const setFilterConditions = React.useCallback(
-    (next: FilterCondition[]) => {
-      setFilterConditionsState(normalizeConditions(next, filterableIds))
+    (
+      next: FilterCondition[] | ((prev: FilterCondition[]) => FilterCondition[]),
+    ) => {
+      setFilterConditionsState((prev) =>
+        normalizeConditions(
+          typeof next === "function" ? next(prev) : next,
+          filterableIds,
+        ),
+      )
     },
     [filterableIds],
   )

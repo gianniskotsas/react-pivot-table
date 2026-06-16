@@ -25,15 +25,19 @@ export function FilterChips({
         const def = filterDefs.find((d) => d.id === condition.columnId)
         const label = describeCondition(condition, def)
         return (
-          <Badge key={condition.id} variant="secondary" className="gap-1 pr-1">
-            {label}
+          <Badge
+            key={condition.id}
+            variant="secondary"
+            className="max-w-60 gap-1 pr-1"
+          >
+            <span className="truncate">{label}</span>
             <button
               type="button"
               aria-label={`Remove ${label}`}
               onClick={() => onRemove(condition.id)}
-              className="rounded-sm text-muted-foreground hover:text-foreground"
+              className="shrink-0 rounded-sm text-muted-foreground hover:text-foreground"
             >
-              <X className="size-3" />
+              <X className="size-3" aria-hidden="true" />
             </button>
           </Badge>
         )

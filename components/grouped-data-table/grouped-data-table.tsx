@@ -25,14 +25,15 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
     useGroupedTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
+  const hasFilterableColumns = (props.filterableColumns?.length ?? 0) > 0
 
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          {props.filterableColumns && props.filterableColumns.length > 0 && (
+          {hasFilterableColumns && (
             <FilterPopover
-              filterableColumns={props.filterableColumns}
+              filterableColumns={props.filterableColumns!}
               conditions={filterConditions}
               onConditionsChange={setFilterConditions}
             />
@@ -43,12 +44,12 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
             onGroupingChange={setGrouping}
           />
         </div>
-        {props.filterableColumns && props.filterableColumns.length > 0 && (
+        {hasFilterableColumns && (
           <FilterChips
             conditions={filterConditions}
-            filterDefs={props.filterableColumns}
+            filterDefs={props.filterableColumns!}
             onRemove={(id) =>
-              setFilterConditions(removeCondition(filterConditions, id))
+              setFilterConditions((prev) => removeCondition(prev, id))
             }
           />
         )}
