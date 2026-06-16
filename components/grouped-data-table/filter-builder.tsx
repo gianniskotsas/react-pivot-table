@@ -76,7 +76,7 @@ function CombinatorSelect({
 }) {
   return (
     <Select value={value} onValueChange={(v) => v != null && onChange(v as Combinator)}>
-      <SelectTrigger aria-label={ariaLabel} className="h-7 w-20 text-xs">
+      <SelectTrigger aria-label={ariaLabel} size="sm" className="w-20 text-xs">
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
@@ -122,7 +122,7 @@ function ConditionValueInput({
         items={def.options}
         onValueChange={(v) => onValueChange(v ?? "")}
       >
-        <SelectTrigger aria-label={ariaLabel} className="h-8 w-full">
+        <SelectTrigger aria-label={ariaLabel} size="sm" className="h-8 w-full">
           <SelectValue placeholder="Select…" />
         </SelectTrigger>
         <SelectContent>
@@ -201,7 +201,7 @@ function ConditionRow({
         items={filterableColumns.map((d) => ({ value: d.id, label: d.label }))}
         onValueChange={(v) => v != null && update(withColumn(condition, String(v), filterableColumns))}
       >
-        <SelectTrigger aria-label="Filter column" className="h-8 w-28">
+        <SelectTrigger aria-label="Filter column" size="sm" className="h-8 w-28">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -217,7 +217,7 @@ function ConditionRow({
         items={operators.map((op) => ({ value: op, label: OPERATOR_LABELS[op] }))}
         onValueChange={(v) => v != null && update(withOperator(condition, v as FilterOperator))}
       >
-        <SelectTrigger aria-label="Filter operator" className="h-8 w-32">
+        <SelectTrigger aria-label="Filter operator" size="sm" className="h-8 w-32">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -269,7 +269,7 @@ export function FilterBuilderContent({
       {filterState.groups.map((group, gi) => (
         <React.Fragment key={group.id}>
           {gi > 0 && (
-            <div className="flex justify-start pl-14">
+            <div className="flex justify-start">
               {gi === 1 ? (
                 <CombinatorSelect
                   value={filterState.combinator}
@@ -299,7 +299,7 @@ export function FilterBuilderContent({
             {group.conditions.map((condition, ci) => (
               <div key={condition.id} className="space-y-2">
                 {ci === 1 && (
-                  <div className="pl-14">
+                  <div>
                     <CombinatorSelect
                       value={group.combinator}
                       onChange={(c) => onState((s) => setGroupCombinator(s, group.id, c))}
@@ -308,7 +308,7 @@ export function FilterBuilderContent({
                   </div>
                 )}
                 {ci > 1 && (
-                  <div className="pl-14">
+                  <div>
                     <span className="px-2 text-xs text-muted-foreground">{group.combinator}</span>
                   </div>
                 )}
