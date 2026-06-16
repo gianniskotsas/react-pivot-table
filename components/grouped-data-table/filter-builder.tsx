@@ -119,6 +119,7 @@ function ConditionValueInput({
     return (
       <Select
         value={condition.value == null ? "" : String(condition.value)}
+        items={def.options}
         onValueChange={(v) => onValueChange(v ?? "")}
       >
         <SelectTrigger aria-label={ariaLabel} className="h-8 w-full">
@@ -197,6 +198,7 @@ function ConditionRow({
       </div>
       <Select
         value={condition.columnId}
+        items={filterableColumns.map((d) => ({ value: d.id, label: d.label }))}
         onValueChange={(v) => v != null && update(withColumn(condition, String(v), filterableColumns))}
       >
         <SelectTrigger aria-label="Filter column" className="h-8 w-28">
@@ -212,6 +214,7 @@ function ConditionRow({
       </Select>
       <Select
         value={condition.operator}
+        items={operators.map((op) => ({ value: op, label: OPERATOR_LABELS[op] }))}
         onValueChange={(v) => v != null && update(withOperator(condition, v as FilterOperator))}
       >
         <SelectTrigger aria-label="Filter operator" className="h-8 w-32">

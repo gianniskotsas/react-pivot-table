@@ -55,6 +55,22 @@ describe("FilterBuilderContent", () => {
     expect(next.groups[0].conditions[0].value).toBe("H")
   })
 
+  it("shows human-readable labels (not raw values) in the column and operator triggers", () => {
+    const state: FilterState = {
+      combinator: "and",
+      groups: [
+        { id: "g1", combinator: "and", conditions: [
+          { id: "c1", columnId: "bank", operator: "isNot", value: null },
+        ] },
+      ],
+    }
+    render(
+      <FilterBuilderContent filterableColumns={defs} filterState={state} onFilterStateChange={vi.fn()} />,
+    )
+    expect(screen.getByRole("combobox", { name: "Filter operator" })).toHaveTextContent("is not")
+    expect(screen.getByRole("combobox", { name: "Filter column" })).toHaveTextContent("Bank")
+  })
+
   it("removes a condition (and its now-empty group)", async () => {
     const onChange = vi.fn()
     render(
