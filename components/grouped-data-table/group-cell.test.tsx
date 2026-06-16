@@ -118,4 +118,24 @@ describe("GroupCell", () => {
     )
     expect(container.textContent).toBe("")
   })
+
+  it("renders the aggregatedCell for an aggregated, non-group cell", () => {
+    const cell = {
+      column: {
+        id: "balance",
+        columnDef: {
+          aggregatedCell: () => <span>Total: 999</span>,
+          cell: () => <span>leaf-value</span>,
+        },
+      },
+      row: { depth: 0, getIsGrouped: () => true } as unknown as Row<Acct>,
+      getContext: () => ({}),
+      getIsGrouped: () => false,
+      getIsAggregated: () => true,
+      getIsPlaceholder: () => false,
+    } as unknown as Cell<Acct, unknown>
+    render(<GroupCell cell={cell} groupColumn={groupColumn} />)
+    expect(screen.getByText("Total: 999")).toBeInTheDocument()
+    expect(screen.queryByText("leaf-value")).not.toBeInTheDocument()
+  })
 })

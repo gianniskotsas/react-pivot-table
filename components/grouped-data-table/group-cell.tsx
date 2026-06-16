@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 import { getGroupRowCount } from "./grouping-utils"
 import { GROUP_COLUMN_ID, type GroupColumnConfig } from "./types"
 
-type GroupCellProps<TData> = {
+export type GroupCellProps<TData> = {
   cell: Cell<TData, unknown>
   groupColumn: GroupColumnConfig<TData>
 }

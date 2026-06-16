@@ -1429,7 +1429,7 @@ Then open `http://localhost:3000/accounts`.
 - [ ] **Step 2: Verify the grouped rendering matches the screenshot**
 
 Confirm:
-- Left "Account" column shows `Sombrero Coffee Inc (5)`, `Sombrero Holding BV (3)`, `Sombrero France SAS (3)` as expandable group rows (counts = leaf descendants).
+- Left "Account" column shows `Sombrero Coffee Inc (3)`, `Sombrero Holding BV (3)`, `Sombrero France SAS (3)` as expandable group rows (counts = underlying data records, excluding intermediate group rows).
 - Expanding an entity reveals bank sub-groups (e.g. `Citi (2)`, `HSBC (1)`) indented one level.
 - Expanding a bank reveals leaf rows: icon + account name + IBAN below it.
 - `Ccy` is blank on group rows, shows the currency on leaf rows.

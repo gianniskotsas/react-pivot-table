@@ -95,6 +95,10 @@ export function useGroupedTable<TData>({
     [grouping],
   )
 
+  // React Compiler reports "Use of incompatible library" here: useReactTable
+  // returns identity-stable functions it cannot safely memoize, so it skips
+  // compiling this component. This is expected with TanStack Table and is
+  // harmless — the table manages its own memoization internally.
   const table = useReactTable<TData>({
     data,
     columns: allColumns,
