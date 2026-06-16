@@ -2,14 +2,21 @@ import type { Row, VisibilityState } from "@tanstack/react-table"
 
 import type { GroupColumnConfig } from "./types"
 
-/** Count shown next to a group label. */
+/**
+ * Count shown next to a group label.
+ *
+ * "leaf" (default) counts the underlying DATA records in the group. TanStack's
+ * `row.getLeafRows()` flattens the whole subtree and includes intermediate
+ * grouped rows (e.g. nested bank groups), so those are filtered out to count
+ * only real records. "immediate" counts direct sub-rows (groups or records).
+ */
 export function getGroupRowCount<TData>(
   row: Row<TData>,
   countMode: GroupColumnConfig<TData>["countMode"] = "leaf",
 ): number {
   return countMode === "immediate"
     ? row.subRows.length
-    : row.getLeafRows().length
+    : row.getLeafRows().filter((leaf) => !leaf.getIsGrouped()).length
 }
 
 /** Keep only allowed ids, preserve order, dedupe. */

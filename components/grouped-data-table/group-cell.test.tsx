@@ -25,7 +25,10 @@ function groupCell(opts: {
     getIsExpanded: () => opts.expanded,
     getCanExpand: () => true,
     getToggleExpandedHandler: () => () => {},
-    getLeafRows: () => new Array(opts.leafCount).fill(null),
+    getLeafRows: () =>
+      new Array(opts.leafCount).fill(null).map(() => ({
+        getIsGrouped: () => false,
+      })),
     subRows: new Array(opts.leafCount).fill(null),
   } as unknown as Row<Acct>
   return {

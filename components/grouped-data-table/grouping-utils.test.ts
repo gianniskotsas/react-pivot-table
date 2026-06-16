@@ -6,20 +6,43 @@ import {
   normalizeGrouping,
 } from "./grouping-utils"
 
-// Minimal fake row supporting the two count modes.
-function fakeRow(immediate: number, leaf: number): Row<unknown> {
+// Minimal fake row. `getLeafRows()` mirrors TanStack: the flattened subtree may
+// contain intermediate grouped rows alongside real data rows.
+function fakeRow(opts: {
+  immediate: number
+  dataLeaves: number
+  groupLeaves?: number
+}): Row<unknown> {
+  const leaves = [
+    ...new Array(opts.dataLeaves)
+      .fill(null)
+      .map(() => ({ getIsGrouped: () => false })),
+    ...new Array(opts.groupLeaves ?? 0)
+      .fill(null)
+      .map(() => ({ getIsGrouped: () => true })),
+  ]
   return {
-    subRows: new Array(immediate).fill(null),
-    getLeafRows: () => new Array(leaf).fill(null),
+    subRows: new Array(opts.immediate).fill(null),
+    getLeafRows: () => leaves,
   } as unknown as Row<unknown>
 }
 
 describe("getGroupRowCount", () => {
-  it("defaults to leaf-descendant count", () => {
-    expect(getGroupRowCount(fakeRow(2, 9))).toBe(9)
+  it("defaults to counting only data leaf rows", () => {
+    expect(getGroupRowCount(fakeRow({ immediate: 2, dataLeaves: 9 }))).toBe(9)
+  })
+  it("excludes intermediate grouped rows from the leaf count", () => {
+    // e.g. an entity with 3 accounts spread across 2 bank sub-groups.
+    expect(
+      getGroupRowCount(
+        fakeRow({ immediate: 2, dataLeaves: 3, groupLeaves: 2 }),
+      ),
+    ).toBe(3)
   })
   it("uses immediate sub-row count when countMode is 'immediate'", () => {
-    expect(getGroupRowCount(fakeRow(2, 9), "immediate")).toBe(2)
+    expect(
+      getGroupRowCount(fakeRow({ immediate: 2, dataLeaves: 9 }), "immediate"),
+    ).toBe(2)
   })
 })
 
