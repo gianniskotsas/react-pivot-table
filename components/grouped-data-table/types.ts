@@ -26,6 +26,49 @@ export type GroupColumnConfig<TData> = {
   indentSize?: number
 }
 
+export type FilterType = "text" | "number" | "select" | "date"
+
+export type FilterOperator =
+  | "contains"
+  | "equals"
+  | "startsWith"
+  | "eq"
+  | "ne"
+  | "gt"
+  | "lt"
+  | "between"
+  | "is"
+  | "isAnyOf"
+  | "before"
+  | "after"
+  | "dateBetween"
+
+export type FilterDef = {
+  /** Must match a column id. */
+  id: string
+  label: string
+  type: FilterType
+  /** Allowed operators; falls back to the type default when omitted. */
+  operators?: FilterOperator[]
+  /** Required for type "select" — the choosable values. */
+  options?: { label: string; value: string }[]
+}
+
+export type FilterValue =
+  | string
+  | number
+  | [number, number]
+  | string[]
+  | null
+
+export type FilterCondition = {
+  /** Unique id for keying / removal. */
+  id: string
+  columnId: string
+  operator: FilterOperator
+  value: FilterValue
+}
+
 export type GroupedDataTableProps<TData> = {
   data: TData[]
   /** Measure / attribute columns. Groupable columns must set `enableGrouping: true`. */
@@ -41,4 +84,8 @@ export type GroupedDataTableProps<TData> = {
   initialGrouping?: string[]
   /** Enable client-side pagination. Default true. */
   enablePagination?: boolean
+  /** Declares which columns are filterable and how (the filter "options"). */
+  filterableColumns?: FilterDef[]
+  /** Optional initial active conditions (config-level; mirrors initialGrouping). */
+  initialFilters?: FilterCondition[]
 }
