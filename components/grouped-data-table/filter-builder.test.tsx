@@ -60,4 +60,51 @@ describe("FilterBuilderContent", () => {
     await userEvent.click(screen.getByRole("button", { name: /remove filter/i }))
     expect(onConditionsChange).toHaveBeenCalledWith([])
   })
+
+  it("emits a string-pair value when typing into a 'between' range input", async () => {
+    const onConditionsChange = vi.fn()
+    const conditions: FilterCondition[] = [
+      { id: "c1", columnId: "balance", operator: "between", value: null },
+    ]
+    render(
+      <FilterBuilderContent
+        filterableColumns={defs}
+        conditions={conditions}
+        onConditionsChange={onConditionsChange}
+      />,
+    )
+    await userEvent.type(screen.getByLabelText("Filter value for Balance from"), "5")
+    expect(onConditionsChange).toHaveBeenCalledWith([
+      { id: "c1", columnId: "balance", operator: "between", value: ["5", ""] },
+    ])
+  })
+
+  it("toggles an isAnyOf option via its checkbox", async () => {
+    const onConditionsChange = vi.fn()
+    const selectDefs: FilterDef[] = [
+      {
+        id: "bank",
+        label: "Bank",
+        type: "select",
+        options: [
+          { label: "HSBC", value: "HSBC" },
+          { label: "Citi", value: "Citi" },
+        ],
+      },
+    ]
+    const conditions: FilterCondition[] = [
+      { id: "c1", columnId: "bank", operator: "isAnyOf", value: [] },
+    ]
+    render(
+      <FilterBuilderContent
+        filterableColumns={selectDefs}
+        conditions={conditions}
+        onConditionsChange={onConditionsChange}
+      />,
+    )
+    await userEvent.click(screen.getByRole("checkbox", { name: "HSBC" }))
+    expect(onConditionsChange).toHaveBeenCalledWith([
+      { id: "c1", columnId: "bank", operator: "isAnyOf", value: ["HSBC"] },
+    ])
+  })
 })

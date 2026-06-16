@@ -104,8 +104,11 @@ function ConditionValueInput({
   }
 
   if (op === "between" || op === "dateBetween") {
+    // Range pairs are stored as a 2-element string[] (inputs emit strings;
+    // evaluateCondition coerces with Number()/Date()). string[] is a valid
+    // FilterValue, so no cast is needed.
     const pair = Array.isArray(condition.value)
-      ? (condition.value as (string | number)[])
+      ? condition.value.map((v) => String(v ?? ""))
       : ["", ""]
     const inputType = def.type === "date" ? "date" : "number"
     return (
@@ -115,7 +118,7 @@ function ConditionValueInput({
           aria-label={`${ariaLabel} from`}
           className="h-8"
           value={pair[0] ?? ""}
-          onChange={(e) => onValueChange([e.target.value, pair[1] ?? ""] as never)}
+          onChange={(e) => onValueChange([e.target.value, pair[1] ?? ""])}
         />
         <span className="text-muted-foreground">–</span>
         <Input
@@ -123,7 +126,7 @@ function ConditionValueInput({
           aria-label={`${ariaLabel} to`}
           className="h-8"
           value={pair[1] ?? ""}
-          onChange={(e) => onValueChange([pair[0] ?? "", e.target.value] as never)}
+          onChange={(e) => onValueChange([pair[0] ?? "", e.target.value])}
         />
       </div>
     )
@@ -157,6 +160,9 @@ export function FilterBuilderContent({
   function update(next: FilterCondition) {
     onConditionsChange(replaceCondition(conditions, next))
   }
+
+  // Nothing to build without at least one filterable column.
+  if (filterableColumns.length === 0) return null
 
   return (
     <div className="space-y-3">
