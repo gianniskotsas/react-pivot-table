@@ -19,10 +19,22 @@ const DEFAULT_OPERATORS: Record<FilterType, FilterOperator[]> = {
 }
 
 export const OPERATOR_LABELS: Record<FilterOperator, string> = {
-  contains: "contains", doesNotContain: "does not contain", equals: "is", isNot: "is not", startsWith: "starts with",
-  eq: "equals", ne: "not equal", gt: "greater than", lt: "less than", between: "between",
-  is: "is", isAnyOf: "is any of", isNoneOf: "is none of",
-  before: "before", after: "after", dateBetween: "between",
+  contains: "contains",
+  doesNotContain: "does not contain",
+  equals: "is",
+  isNot: "is not",
+  startsWith: "starts with",
+  eq: "equals",
+  ne: "not equal",
+  gt: "greater than",
+  lt: "less than",
+  between: "between",
+  is: "is",
+  isAnyOf: "is any of",
+  isNoneOf: "is none of",
+  before: "before",
+  after: "after",
+  dateBetween: "between",
 }
 
 export function defaultOperatorsFor(type: FilterType): FilterOperator[] {
@@ -84,8 +96,8 @@ export function evaluateCondition(
       return String(cellValue ?? "").toLowerCase() !== String(value).toLowerCase()
     case "isNoneOf":
       return !(value as string[]).map(String).includes(String(cellValue ?? ""))
-    // `is`/`isAnyOf` are case-sensitive by design: select columns hold exact
-    // enum values (e.g. "HSBC"), unlike the case-insensitive text operators.
+    // `is`/`isAnyOf`/`isNoneOf` are case-sensitive by design: select columns hold
+    // exact enum values (e.g. "HSBC"), unlike the case-insensitive text operators.
     case "is":
       return String(cellValue ?? "") === String(value)
     case "isAnyOf":
@@ -265,6 +277,11 @@ export function updateConditionInGroup(state: FilterState, groupId: string, cond
   return mapGroup(state, groupId, (g) => ({ ...g, conditions: g.conditions.map((c) => (c.id === condition.id ? condition : c)) }))
 }
 
+/**
+ * Removes a single condition from a group. If the group becomes empty it is
+ * dropped from the state entirely. Use `removeGroup` to remove a group explicitly
+ * regardless of its condition count.
+ */
 export function removeConditionFromGroup(state: FilterState, groupId: string, conditionId: string): FilterState {
   const next = mapGroup(state, groupId, (g) => ({ ...g, conditions: g.conditions.filter((c) => c.id !== conditionId) }))
   return { ...next, groups: next.groups.filter((g) => g.conditions.length > 0) }

@@ -341,4 +341,14 @@ describe("tree mutation helpers", () => {
     expect(result.groups).toHaveLength(1)
     expect(result.groups[0].conditions.map((c) => c.id)).toEqual(["a"])
   })
+  it("normalizeFilterState preserves the top combinator when all groups are pruned", () => {
+    const state: FilterState = { combinator: "or", groups: [
+      { id: "g1", combinator: "and", conditions: [
+        { id: "a", columnId: "ghost", operator: "is", value: "x" },
+      ] },
+    ] }
+    const result = normalizeFilterState(state, ["bank"])
+    expect(result.groups).toEqual([])
+    expect(result.combinator).toBe("or")
+  })
 })
