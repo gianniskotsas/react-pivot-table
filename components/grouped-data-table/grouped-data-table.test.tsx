@@ -72,4 +72,26 @@ describe("GroupedDataTable", () => {
     expect(next).toBeDisabled()
     expect(screen.getByText(/Page 1 of 1/)).toBeInTheDocument()
   })
+
+  it("applies initialFilters and shows a removable chip", () => {
+    render(
+      <GroupedDataTable<Acct>
+        data={data}
+        columns={columns}
+        groupableDimensions={[{ id: "entity", label: "Entity" }]}
+        initialGrouping={["entity"]}
+        enablePagination={false}
+        filterableColumns={[{ id: "currency", label: "Ccy", type: "select" }]}
+        initialFilters={[
+          { id: "f1", columnId: "currency", operator: "is", value: "USD" },
+        ]}
+        groupColumn={{ header: "Account", renderLeaf: (row) => row.original.id }}
+      />,
+    )
+    // Only the USD row remains → entity group "Coffee Inc (1)"; Holding BV gone.
+    expect(screen.getByText("Coffee Inc")).toBeInTheDocument()
+    expect(screen.getByText("(1)")).toBeInTheDocument()
+    expect(screen.queryByText("Holding BV")).not.toBeInTheDocument()
+    expect(screen.getByText("Ccy is USD")).toBeInTheDocument()
+  })
 })

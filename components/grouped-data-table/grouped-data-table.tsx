@@ -13,23 +13,45 @@ import {
 } from "@/components/ui/table"
 
 import { DimensionPicker } from "./dimension-picker"
+import { FilterChips } from "./filter-chips"
+import { FilterPopover } from "./filter-builder"
+import { removeCondition } from "./filter-utils"
 import { GroupCell } from "./group-cell"
 import { useGroupedTable } from "./use-grouped-table"
 import type { GroupedDataTableProps } from "./types"
 
 export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
-  const { table, grouping, setGrouping } = useGroupedTable(props)
+  const { table, grouping, setGrouping, filterConditions, setFilterConditions } =
+    useGroupedTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <DimensionPicker
-          dimensions={props.groupableDimensions}
-          grouping={grouping}
-          onGroupingChange={setGrouping}
-        />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          {props.filterableColumns && props.filterableColumns.length > 0 && (
+            <FilterPopover
+              filterableColumns={props.filterableColumns}
+              conditions={filterConditions}
+              onConditionsChange={setFilterConditions}
+            />
+          )}
+          <DimensionPicker
+            dimensions={props.groupableDimensions}
+            grouping={grouping}
+            onGroupingChange={setGrouping}
+          />
+        </div>
+        {props.filterableColumns && props.filterableColumns.length > 0 && (
+          <FilterChips
+            conditions={filterConditions}
+            filterDefs={props.filterableColumns}
+            onRemove={(id) =>
+              setFilterConditions(removeCondition(filterConditions, id))
+            }
+          />
+        )}
       </div>
 
       <div className="rounded-md border">
