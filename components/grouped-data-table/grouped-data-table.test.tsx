@@ -53,4 +53,23 @@ describe("GroupedDataTable", () => {
     )
     expect(screen.getByText("No results.")).toBeInTheDocument()
   })
+
+  it("renders pagination controls (disabled at a single page) when enabled", () => {
+    render(
+      <GroupedDataTable<Acct>
+        data={data}
+        columns={columns}
+        groupableDimensions={[{ id: "entity", label: "Entity" }]}
+        initialGrouping={["entity"]}
+        enablePagination
+        groupColumn={{ header: "Account", renderLeaf: (row) => row.original.id }}
+      />,
+    )
+    const prev = screen.getByRole("button", { name: "Previous page" })
+    const next = screen.getByRole("button", { name: "Next page" })
+    expect(prev).toBeDisabled()
+    // Only one page of grouped rows, so Next is disabled too.
+    expect(next).toBeDisabled()
+    expect(screen.getByText(/Page 1 of 1/)).toBeInTheDocument()
+  })
 })

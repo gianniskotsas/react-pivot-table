@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import { flexRender } from "@tanstack/react-table"
 
 import { Button } from "@/components/ui/button"
@@ -77,10 +76,14 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
       </div>
 
       {enablePagination && (
-        <div className="flex items-center justify-end gap-2">
+        <nav
+          aria-label="Table pagination"
+          className="flex items-center justify-end gap-2"
+        >
           <Button
             variant="outline"
             size="sm"
+            aria-label="Previous page"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
           >
@@ -93,12 +96,13 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
           <Button
             variant="outline"
             size="sm"
+            aria-label="Next page"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
           >
             Next
           </Button>
-        </div>
+        </nav>
       )}
     </div>
   )
