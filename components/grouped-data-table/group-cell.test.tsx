@@ -49,6 +49,35 @@ describe("GroupCell", () => {
     expect(screen.getByText(/\(7\)/)).toBeInTheDocument()
   })
 
+  it("renders the immediate sub-row count when countMode is 'immediate'", () => {
+    // subRows (2) deliberately differs from leaf descendants (9) so the two
+    // count branches are distinguishable at the render level.
+    const row = {
+      depth: 0,
+      getIsExpanded: () => true,
+      getCanExpand: () => true,
+      getToggleExpandedHandler: () => () => {},
+      getLeafRows: () => new Array(9).fill(null),
+      subRows: new Array(2).fill(null),
+    } as unknown as Row<Acct>
+    const cell = {
+      column: { id: GROUP_COLUMN_ID },
+      row,
+      getValue: () => "Holding BV",
+      getIsGrouped: () => true,
+      getIsAggregated: () => false,
+      getIsPlaceholder: () => false,
+    } as unknown as Cell<Acct, unknown>
+    render(
+      <GroupCell
+        cell={cell}
+        groupColumn={{ ...groupColumn, countMode: "immediate" }}
+      />,
+    )
+    expect(screen.getByText(/\(2\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/\(9\)/)).not.toBeInTheDocument()
+  })
+
   it("renders the leaf renderer for a leaf row in the group column", () => {
     const row = {
       depth: 1,

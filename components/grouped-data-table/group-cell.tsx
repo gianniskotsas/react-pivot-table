@@ -28,22 +28,25 @@ export function GroupCell<TData>({ cell, groupColumn }: GroupCellProps<TData>) {
         className="flex items-center gap-1"
         style={{ paddingLeft: row.depth * indentSize }}
       >
-        <button
-          type="button"
-          aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
-          onClick={row.getToggleExpandedHandler()}
-          disabled={!canExpand}
-          className={cn(
-            "flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted",
-            !canExpand && "invisible",
-          )}
-        >
-          {row.getIsExpanded() ? (
-            <ChevronDown className="size-4" />
-          ) : (
-            <ChevronRight className="size-4" />
-          )}
-        </button>
+        {canExpand ? (
+          <button
+            type="button"
+            aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
+            onClick={() => row.getToggleExpandedHandler()()}
+            className={cn(
+              "flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted",
+            )}
+          >
+            {row.getIsExpanded() ? (
+              <ChevronDown className="size-4" />
+            ) : (
+              <ChevronRight className="size-4" />
+            )}
+          </button>
+        ) : (
+          // Keep the 20px slot so labels stay aligned across depths.
+          <span className="size-5 shrink-0" aria-hidden="true" />
+        )}
         <span className="font-semibold">
           {String(cell.getValue() ?? "")}
         </span>
@@ -63,13 +66,9 @@ export function GroupCell<TData>({ cell, groupColumn }: GroupCellProps<TData>) {
 
   // Aggregated cell (group row, non-group column).
   if (cell.getIsAggregated()) {
-    return (
-      <>
-        {flexRender(
-          cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
-          cell.getContext(),
-        )}
-      </>
+    return flexRender(
+      cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
+      cell.getContext(),
     )
   }
 
@@ -79,5 +78,5 @@ export function GroupCell<TData>({ cell, groupColumn }: GroupCellProps<TData>) {
   }
 
   // Normal leaf value.
-  return <>{flexRender(cell.column.columnDef.cell, cell.getContext())}</>
+  return flexRender(cell.column.columnDef.cell, cell.getContext())
 }
