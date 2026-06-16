@@ -118,7 +118,7 @@ function ConditionValueInput({
     return (
       <Select
         value={condition.value == null ? "" : String(condition.value)}
-        onValueChange={(v) => onValueChange((v ?? "") as FilterValue)}
+        onValueChange={(v) => onValueChange(v ?? "")}
       >
         <SelectTrigger aria-label={ariaLabel} className="h-8 w-full">
           <SelectValue placeholder="Select…" />
@@ -249,7 +249,10 @@ export function FilterBuilderContent({
   filterState,
   onFilterStateChange,
 }: FilterBuilderProps) {
-  const onState = (fn: (s: FilterState) => FilterState) => onFilterStateChange(fn(filterState))
+  const onState = React.useCallback(
+    (fn: (s: FilterState) => FilterState) => onFilterStateChange(fn(filterState)),
+    [filterState, onFilterStateChange],
+  )
 
   return (
     <div className="space-y-3">

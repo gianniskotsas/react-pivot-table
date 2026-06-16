@@ -41,6 +41,7 @@ export {
   emptyFilterState,
   countActiveConditions,
   isConditionComplete,
+  newGroup,
   addGroup,
   addConditionToGroup,
   updateConditionInGroup,

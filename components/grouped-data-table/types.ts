@@ -35,7 +35,11 @@ export type FilterOperator =
   | "before" | "after" | "dateBetween"
 
 export type FilterDef = {
-  /** Must match a column id. */
+  /**
+   * Must match a column's `id`/`accessorKey` AND a key on the row data — the
+   * filter engine reads the value via `row[id]`. Filterable columns must
+   * therefore be accessorKey-based (not `accessorFn`-only).
+   */
   id: string
   label: string
   type: FilterType

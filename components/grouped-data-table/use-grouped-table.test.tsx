@@ -88,6 +88,34 @@ describe("useGroupedTable", () => {
     expect(leafCount).toBe(2) // ids 2 and 3 are EUR
   })
 
+  it("an OR group keeps rows matching either condition", () => {
+    const { result } = renderHook(() =>
+      useGroupedTable<Acct>({
+        data,
+        columns,
+        groupableDimensions: [{ id: "entity", label: "Entity" }],
+        groupColumn: { renderLeaf: (row) => row.original.id },
+        enablePagination: false,
+        filterableColumns: [
+          { id: "currency", label: "Ccy", type: "select" },
+          { id: "bank", label: "Bank", type: "select" },
+        ],
+        initialFilterState: {
+          combinator: "and",
+          groups: [
+            { id: "g1", combinator: "or", conditions: [
+              { id: "f1", columnId: "currency", operator: "is", value: "USD" },
+              { id: "f2", columnId: "bank", operator: "is", value: "HSBC" },
+            ] },
+          ],
+        },
+      }),
+    )
+    // No grouping → rows are the filtered leaves directly.
+    // id1 USD/Citi (USD✓), id2 EUR/HSBC (HSBC✓), id3 EUR/HSBC (HSBC✓) → all 3.
+    expect(result.current.table.getRowModel().rows).toHaveLength(3)
+  })
+
   it("setFilterState normalizes away unknown-column conditions", () => {
     const { result } = setup()
     act(() =>

@@ -83,6 +83,9 @@ export function useGroupedTable<TData>({
     [filterableIds],
   )
 
+  // Pre-filter rows against the FilterState tree, then hand the result to
+  // TanStack (so grouping/aggregation/counts recompute over filtered rows).
+  // Values are read by accessorKey via `row[columnId]` — see FilterDef.id.
   const filteredData = React.useMemo(() => {
     if (filterState.groups.length === 0) return data
     return data.filter((row) =>
