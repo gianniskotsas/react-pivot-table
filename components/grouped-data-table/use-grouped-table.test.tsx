@@ -67,51 +67,39 @@ describe("useGroupedTable", () => {
     expect(rows.length).toBe(2)
   })
 
-  it("filters leaf rows from initialFilters and recomputes groups", () => {
+  it("pre-filters rows from initialFilterState and recomputes groups", () => {
     const { result } = renderHook(() =>
       useGroupedTable<Acct>({
-        data,
-        columns,
+        data, columns,
         groupableDimensions: [{ id: "entity", label: "Entity" }],
         groupColumn: { renderLeaf: (row) => row.original.id },
         initialGrouping: ["entity"],
         enablePagination: false,
         filterableColumns: [{ id: "currency", label: "Ccy", type: "select" }],
-        initialFilters: [
-          { id: "f1", columnId: "currency", operator: "is", value: "EUR" },
+        initialFilterState: { combinator: "and", groups: [
+          { id: "g1", combinator: "and", conditions: [
+            { id: "f1", columnId: "currency", operator: "is", value: "EUR" },
+          ] },
+        ] },
+      }),
+    )
+    const leafCount = result.current.table.getRowModel().rows
+      .flatMap((r) => r.getLeafRows()).filter((r) => !r.getIsGrouped()).length
+    expect(leafCount).toBe(2) // ids 2 and 3 are EUR
+  })
+
+  it("setFilterState normalizes away unknown-column conditions", () => {
+    const { result } = setup()
+    act(() =>
+      result.current.setFilterState({
+        combinator: "and",
+        groups: [
+          { id: "g1", combinator: "and", conditions: [
+            { id: "f1", columnId: "ghost", operator: "is", value: "x" },
+          ] },
         ],
       }),
     )
-    // Only EUR leaf rows survive (ids 2 and 3 in the fixture).
-    const leafCount = result.current.table
-      .getRowModel()
-      .rows.flatMap((r) => r.getLeafRows())
-      .filter((r) => !r.getIsGrouped()).length
-    expect(leafCount).toBe(2)
-  })
-
-  it("setFilterConditions keeps only filterable columns and drops the rest", () => {
-    const { result } = renderHook(() =>
-      useGroupedTable<Acct>({
-        data,
-        columns,
-        groupableDimensions: [{ id: "entity", label: "Entity" }],
-        groupColumn: { renderLeaf: (row) => row.original.id },
-        enablePagination: false,
-        // Only `currency` is filterable; `entity` is a real column but NOT
-        // filterable, and `ghost` does not exist at all — both must drop.
-        filterableColumns: [{ id: "currency", label: "Ccy", type: "select" }],
-      }),
-    )
-    act(() =>
-      result.current.setFilterConditions([
-        { id: "f1", columnId: "currency", operator: "is", value: "EUR" },
-        { id: "f2", columnId: "entity", operator: "is", value: "Coffee Inc" },
-        { id: "f3", columnId: "ghost", operator: "is", value: "x" },
-      ]),
-    )
-    expect(result.current.filterConditions.map((c) => c.columnId)).toEqual([
-      "currency",
-    ])
+    expect(result.current.filterState.groups).toEqual([])
   })
 })

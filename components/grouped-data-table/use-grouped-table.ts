@@ -4,7 +4,6 @@ import * as React from "react"
 import {
   getCoreRowModel,
   getExpandedRowModel,
-  getFilteredRowModel,
   getGroupedRowModel,
   getPaginationRowModel,
   getSortedRowModel,
@@ -22,12 +21,12 @@ import {
   normalizeGrouping,
 } from "./grouping-utils"
 import {
-  conditionsToColumnFilters,
-  makeFilterFn,
-  normalizeConditions,
+  evaluateFilterState,
+  normalizeFilterState,
+  emptyFilterState,
 } from "./filter-utils"
-import type { FilterCondition, FilterDef } from "./types"
-import { GROUP_COLUMN_ID, type GroupedDataTableProps } from "./types"
+import type { FilterState } from "./types"
+import { GROUP_COLUMN_ID, type FilterDef, type GroupedDataTableProps } from "./types"
 
 // Stable empty default so omitting `filterableColumns` doesn't create a new
 // array reference each render (which would churn the derived memos/callbacks).
@@ -37,10 +36,8 @@ export type UseGroupedTableResult<TData> = {
   table: Table<TData>
   grouping: GroupingState
   setGrouping: (next: GroupingState) => void
-  filterConditions: FilterCondition[]
-  setFilterConditions: (
-    next: FilterCondition[] | ((prev: FilterCondition[]) => FilterCondition[]),
-  ) => void
+  filterState: FilterState
+  setFilterState: (next: FilterState | ((prev: FilterState) => FilterState)) => void
 }
 
 export function useGroupedTable<TData>({
@@ -51,7 +48,7 @@ export function useGroupedTable<TData>({
   initialGrouping = [],
   enablePagination = true,
   filterableColumns = EMPTY_FILTER_COLUMNS,
-  initialFilters = [],
+  initialFilterState,
 }: GroupedDataTableProps<TData>): UseGroupedTableResult<TData> {
   const allowedIds = React.useMemo(
     () => groupableDimensions.map((d) => d.id),
@@ -73,30 +70,25 @@ export function useGroupedTable<TData>({
     [filterableColumns],
   )
 
-  const [filterConditions, setFilterConditionsState] = React.useState<
-    FilterCondition[]
-  >(() => normalizeConditions(initialFilters, filterableIds))
+  const [filterState, setFilterStateRaw] = React.useState<FilterState>(() =>
+    normalizeFilterState(initialFilterState ?? emptyFilterState(), filterableIds),
+  )
 
-  const setFilterConditions = React.useCallback(
-    (
-      next: FilterCondition[] | ((prev: FilterCondition[]) => FilterCondition[]),
-    ) => {
-      setFilterConditionsState((prev) =>
-        normalizeConditions(
-          typeof next === "function" ? next(prev) : next,
-          filterableIds,
-        ),
+  const setFilterState = React.useCallback(
+    (next: FilterState | ((prev: FilterState) => FilterState)) => {
+      setFilterStateRaw((prev) =>
+        normalizeFilterState(typeof next === "function" ? next(prev) : next, filterableIds),
       )
     },
     [filterableIds],
   )
 
-  const columnFilters = React.useMemo(
-    () => conditionsToColumnFilters(filterConditions),
-    [filterConditions],
-  )
-
-  const filterFn = React.useMemo(() => makeFilterFn<TData>(), [])
+  const filteredData = React.useMemo(() => {
+    if (filterState.groups.length === 0) return data
+    return data.filter((row) =>
+      evaluateFilterState(filterState, (columnId) => (row as Record<string, unknown>)[columnId]),
+    )
+  }, [data, filterState])
 
   // setGrouping that always normalizes against allowed dimensions.
   const setGrouping = React.useCallback(
@@ -121,21 +113,9 @@ export function useGroupedTable<TData>({
     [groupColumn.header],
   )
 
-  const columnsWithFilters = React.useMemo(
-    () =>
-      columns.map((col) => {
-        const rawKey = (col as { accessorKey?: unknown }).accessorKey
-        const id =
-          (col as { id?: string }).id ??
-          (typeof rawKey === "string" ? rawKey : undefined)
-        return id && filterableIds.includes(id) ? { ...col, filterFn } : col
-      }),
-    [columns, filterableIds, filterFn],
-  )
-
   const allColumns = React.useMemo(
-    () => [groupColumnDef, ...columnsWithFilters],
-    [groupColumnDef, columnsWithFilters],
+    () => [groupColumnDef, ...columns],
+    [groupColumnDef, columns],
   )
 
   // `columnVisibility` is fully derived from `grouping`: grouped dimension columns
@@ -154,13 +134,12 @@ export function useGroupedTable<TData>({
   // compiling this component. This is expected with TanStack Table and is
   // harmless — the table manages its own memoization internally.
   const table = useReactTable<TData>({
-    data,
+    data: filteredData,
     columns: allColumns,
     state: {
       grouping,
       expanded,
       sorting,
-      columnFilters,
       columnVisibility,
       ...(enablePagination ? { pagination } : {}),
     },
@@ -174,7 +153,6 @@ export function useGroupedTable<TData>({
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
     getGroupedRowModel: getGroupedRowModel(),
     getExpandedRowModel: getExpandedRowModel(),
     ...(enablePagination
@@ -186,5 +164,5 @@ export function useGroupedTable<TData>({
     autoResetPageIndex: false,
   })
 
-  return { table, grouping, setGrouping, filterConditions, setFilterConditions }
+  return { table, grouping, setGrouping, filterState, setFilterState }
 }

@@ -1,10 +1,8 @@
 import { describe, expect, it } from "vitest"
 import type { FilterCondition, FilterDef, FilterGroup, FilterState } from "./types"
-import type { Row } from "@tanstack/react-table"
 import {
   addConditionToGroup,
   addGroup,
-  conditionsToColumnFilters,
   countActiveConditions,
   createCondition,
   defaultOperatorsFor,
@@ -14,15 +12,11 @@ import {
   evaluateFilterState,
   evaluateGroup,
   isConditionComplete,
-  makeFilterFn,
   newGroup,
-  normalizeConditions,
   normalizeFilterState,
   operatorsForDef,
-  removeCondition,
   removeConditionFromGroup,
   removeGroup,
-  replaceCondition,
   setGroupCombinator,
   setTopCombinator,
   updateConditionInGroup,
@@ -95,21 +89,6 @@ describe("evaluateCondition", () => {
   })
 })
 
-describe("conditionsToColumnFilters", () => {
-  it("groups conditions by columnId", () => {
-    const conds: FilterCondition[] = [
-      { id: "a", columnId: "bank", operator: "is", value: "HSBC" },
-      { id: "b", columnId: "balance", operator: "gt", value: 100 },
-      { id: "c", columnId: "bank", operator: "isAnyOf", value: ["HSBC"] },
-    ]
-    const result = conditionsToColumnFilters(conds)
-    expect(result).toEqual([
-      { id: "bank", value: [conds[0], conds[2]] },
-      { id: "balance", value: [conds[1]] },
-    ])
-  })
-})
-
 describe("describeCondition", () => {
   it("uses label, operator symbol, and value", () => {
     expect(
@@ -150,52 +129,6 @@ describe("mutation helpers", () => {
   it("withValue sets value", () => {
     const c: FilterCondition = { id: "x", columnId: "balance", operator: "eq", value: null }
     expect(withValue(c, 42)).toEqual({ id: "x", columnId: "balance", operator: "eq", value: 42 })
-  })
-  it("removeCondition and replaceCondition", () => {
-    const list: FilterCondition[] = [
-      { id: "a", columnId: "bank", operator: "is", value: "HSBC" },
-      { id: "b", columnId: "balance", operator: "gt", value: 1 },
-    ]
-    expect(removeCondition(list, "a")).toEqual([list[1]])
-    const updated = { ...list[0], value: "Citi" }
-    expect(replaceCondition(list, updated)).toEqual([updated, list[1]])
-  })
-  it("normalizeConditions drops unknown columns", () => {
-    const list: FilterCondition[] = [
-      { id: "a", columnId: "bank", operator: "is", value: "HSBC" },
-      { id: "b", columnId: "ghost", operator: "is", value: "x" },
-    ]
-    expect(normalizeConditions(list, ["bank", "balance"])).toEqual([list[0]])
-  })
-})
-
-describe("makeFilterFn", () => {
-  const fn = makeFilterFn<{ bank: string }>()
-  const rowWith = (bank: string) =>
-    ({ getValue: () => bank }) as unknown as Row<{ bank: string }>
-  const noop = () => {}
-
-  it("ANDs all conditions for the column and passes when none", () => {
-    expect(fn(rowWith("HSBC"), "bank", [], noop)).toBe(true)
-    expect(
-      fn(
-        rowWith("HSBC"),
-        "bank",
-        [
-          { id: "1", columnId: "bank", operator: "contains", value: "HS" },
-          { id: "2", columnId: "bank", operator: "startsWith", value: "H" },
-        ],
-        noop,
-      ),
-    ).toBe(true)
-    expect(
-      fn(
-        rowWith("Citi"),
-        "bank",
-        [{ id: "1", columnId: "bank", operator: "contains", value: "HS" }],
-        noop,
-      ),
-    ).toBe(false)
   })
 })
 

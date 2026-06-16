@@ -1,5 +1,3 @@
-import type { ColumnFiltersState, FilterFn } from "@tanstack/react-table"
-
 import type {
   Combinator,
   FilterCondition,
@@ -118,28 +116,6 @@ export function evaluateCondition(
   }
 }
 
-export function conditionsToColumnFilters(
-  conditions: FilterCondition[],
-): ColumnFiltersState {
-  const byColumn = new Map<string, FilterCondition[]>()
-  for (const condition of conditions) {
-    const existing = byColumn.get(condition.columnId) ?? []
-    existing.push(condition)
-    byColumn.set(condition.columnId, existing)
-  }
-  return Array.from(byColumn, ([id, value]) => ({ id, value }))
-}
-
-export function makeFilterFn<TData>(): FilterFn<TData> {
-  return (row, columnId, filterValue) => {
-    const conditions = (filterValue as FilterCondition[]) ?? []
-    const cellValue = row.getValue(columnId)
-    return conditions.every((c) =>
-      evaluateCondition(cellValue, c.operator, c.value),
-    )
-  }
-}
-
 export function describeCondition(
   condition: FilterCondition,
   def?: FilterDef,
@@ -205,28 +181,6 @@ export function withValue(
   value: FilterValue,
 ): FilterCondition {
   return { ...condition, value }
-}
-
-export function removeCondition(
-  conditions: FilterCondition[],
-  id: string,
-): FilterCondition[] {
-  return conditions.filter((c) => c.id !== id)
-}
-
-export function replaceCondition(
-  conditions: FilterCondition[],
-  next: FilterCondition,
-): FilterCondition[] {
-  return conditions.map((c) => (c.id === next.id ? next : c))
-}
-
-export function normalizeConditions(
-  conditions: FilterCondition[],
-  filterableIds: string[],
-): FilterCondition[] {
-  const allowed = new Set(filterableIds)
-  return conditions.filter((c) => allowed.has(c.columnId))
 }
 
 // ─── Filter v2: group model + tree evaluation ────────────────────────────────

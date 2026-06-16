@@ -13,46 +13,32 @@ import {
 } from "@/components/ui/table"
 
 import { DimensionPicker } from "./dimension-picker"
-import { FilterChips } from "./filter-chips"
 import { FilterPopover } from "./filter-builder"
-import { removeCondition } from "./filter-utils"
 import { GroupCell } from "./group-cell"
 import { useGroupedTable } from "./use-grouped-table"
 import type { GroupedDataTableProps } from "./types"
 
 export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
-  const { table, grouping, setGrouping, filterConditions, setFilterConditions } =
+  const { table, grouping, setGrouping, filterState, setFilterState } =
     useGroupedTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
-  const hasFilterableColumns = (props.filterableColumns?.length ?? 0) > 0
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          {hasFilterableColumns && (
-            <FilterPopover
-              filterableColumns={props.filterableColumns!}
-              conditions={filterConditions}
-              onConditionsChange={setFilterConditions}
-            />
-          )}
-          <DimensionPicker
-            dimensions={props.groupableDimensions}
-            grouping={grouping}
-            onGroupingChange={setGrouping}
-          />
-        </div>
-        {hasFilterableColumns && (
-          <FilterChips
-            conditions={filterConditions}
-            filterDefs={props.filterableColumns!}
-            onRemove={(id) =>
-              setFilterConditions((prev) => removeCondition(prev, id))
-            }
+      <div className="flex items-center gap-2">
+        {props.filterableColumns && props.filterableColumns.length > 0 && (
+          <FilterPopover
+            filterableColumns={props.filterableColumns}
+            filterState={filterState}
+            onFilterStateChange={setFilterState}
           />
         )}
+        <DimensionPicker
+          dimensions={props.groupableDimensions}
+          grouping={grouping}
+          onGroupingChange={setGrouping}
+        />
       </div>
 
       <div className="rounded-md border">

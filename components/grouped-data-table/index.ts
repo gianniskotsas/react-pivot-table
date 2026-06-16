@@ -13,29 +13,40 @@ export {
   type GroupedDataTableProps,
 } from "./types"
 export { FilterPopover, FilterBuilderContent } from "./filter-builder"
-export { FilterChips } from "./filter-chips"
+export { MultiSelect, MultiSelectContent } from "./multi-select"
 export {
   type FilterType,
   type FilterOperator,
   type FilterDef,
   type FilterCondition,
   type FilterValue,
+  type Combinator,
+  type FilterGroup,
+  type FilterState,
 } from "./types"
 // Pure filter helpers — for custom UIs and for a future MCP tool that emits or
 // describes filter config/conditions.
 export {
   OPERATOR_LABELS,
-  conditionsToColumnFilters,
   createCondition,
   defaultOperatorsFor,
   describeCondition,
   evaluateCondition,
-  makeFilterFn,
-  normalizeConditions,
   operatorsForDef,
-  removeCondition,
-  replaceCondition,
   withColumn,
   withOperator,
   withValue,
+  evaluateFilterState,
+  evaluateGroup,
+  emptyFilterState,
+  countActiveConditions,
+  isConditionComplete,
+  addGroup,
+  addConditionToGroup,
+  updateConditionInGroup,
+  removeConditionFromGroup,
+  removeGroup,
+  setGroupCombinator,
+  setTopCombinator,
+  normalizeFilterState,
 } from "./filter-utils"

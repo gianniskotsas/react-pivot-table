@@ -81,8 +81,6 @@ export type GroupedDataTableProps<TData> = {
   enablePagination?: boolean
   /** Declares which columns are filterable and how (the filter "options"). */
   filterableColumns?: FilterDef[]
-  /** Optional initial active conditions (config-level; mirrors initialGrouping). */
-  initialFilters?: FilterCondition[]
-  /** Initial filter state (groups + AND/OR). Replaces initialFilters in v2. */
+  /** Initial filter state (groups + AND/OR). */
   initialFilterState?: FilterState
 }
