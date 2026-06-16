@@ -74,10 +74,15 @@ export function evaluateCondition(
     case "lt":
       return Number(cellValue) < Number(value)
     case "between": {
+      // Guard: range operators need a [min, max] pair; a scalar mid-build
+      // (e.g. only one bound entered) is treated as no constraint, not a crash.
+      if (!Array.isArray(value)) return true
       const [min, max] = value as [number, number]
       const n = Number(cellValue)
       return n >= Number(min) && n <= Number(max)
     }
+    // `is`/`isAnyOf` are case-sensitive by design: select columns hold exact
+    // enum values (e.g. "HSBC"), unlike the case-insensitive text operators.
     case "is":
       return String(cellValue ?? "") === String(value)
     case "isAnyOf":
@@ -87,6 +92,7 @@ export function evaluateCondition(
     case "after":
       return new Date(String(cellValue)).getTime() > new Date(String(value)).getTime()
     case "dateBetween": {
+      if (!Array.isArray(value)) return true
       const [start, end] = value as string[]
       const t = new Date(String(cellValue)).getTime()
       return t >= new Date(start).getTime() && t <= new Date(end).getTime()
@@ -151,6 +157,9 @@ export function createCondition(
   id: string,
 ): FilterCondition {
   const def = filterDefs[0]
+  if (!def) {
+    throw new Error("createCondition: filterDefs must not be empty")
+  }
   return { id, columnId: def.id, operator: operatorsForDef(def)[0], value: null }
 }
 

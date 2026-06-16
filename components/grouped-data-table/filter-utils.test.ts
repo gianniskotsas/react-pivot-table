@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest"
 import type { FilterCondition, FilterDef } from "./types"
+import type { Row } from "@tanstack/react-table"
 import {
   conditionsToColumnFilters,
   createCondition,
   defaultOperatorsFor,
   describeCondition,
   evaluateCondition,
+  makeFilterFn,
   normalizeConditions,
   operatorsForDef,
   removeCondition,
@@ -53,6 +55,14 @@ describe("evaluateCondition", () => {
     expect(evaluateCondition(10, "lt", 5)).toBe(false)
     expect(evaluateCondition(10, "between", [5, 15])).toBe(true)
     expect(evaluateCondition(20, "between", [5, 15])).toBe(false)
+  })
+  it("between is inclusive on both bounds", () => {
+    expect(evaluateCondition(5, "between", [5, 15])).toBe(true)
+    expect(evaluateCondition(15, "between", [5, 15])).toBe(true)
+  })
+  it("between/dateBetween treat a non-array (mid-build) value as no constraint", () => {
+    expect(evaluateCondition(10, "between", 5)).toBe(true)
+    expect(evaluateCondition("2024-03-01", "dateBetween", "2024-01-01")).toBe(true)
   })
   it("select is / isAnyOf", () => {
     expect(evaluateCondition("HSBC", "is", "HSBC")).toBe(true)
@@ -103,6 +113,9 @@ describe("mutation helpers", () => {
       id: "id1", columnId: "bank", operator: "is", value: null,
     })
   })
+  it("createCondition throws a clear error on empty filterDefs", () => {
+    expect(() => createCondition([], "id1")).toThrow(/must not be empty/)
+  })
   it("withColumn resets operator and value", () => {
     const c: FilterCondition = { id: "x", columnId: "bank", operator: "isAnyOf", value: ["HSBC"] }
     expect(withColumn(c, "balance", defs)).toEqual({
@@ -134,5 +147,35 @@ describe("mutation helpers", () => {
       { id: "b", columnId: "ghost", operator: "is", value: "x" },
     ]
     expect(normalizeConditions(list, ["bank", "balance"])).toEqual([list[0]])
+  })
+})
+
+describe("makeFilterFn", () => {
+  const fn = makeFilterFn<{ bank: string }>()
+  const rowWith = (bank: string) =>
+    ({ getValue: () => bank }) as unknown as Row<{ bank: string }>
+  const noop = () => {}
+
+  it("ANDs all conditions for the column and passes when none", () => {
+    expect(fn(rowWith("HSBC"), "bank", [], noop)).toBe(true)
+    expect(
+      fn(
+        rowWith("HSBC"),
+        "bank",
+        [
+          { id: "1", columnId: "bank", operator: "contains", value: "HS" },
+          { id: "2", columnId: "bank", operator: "startsWith", value: "H" },
+        ],
+        noop,
+      ),
+    ).toBe(true)
+    expect(
+      fn(
+        rowWith("Citi"),
+        "bank",
+        [{ id: "1", columnId: "bank", operator: "contains", value: "HS" }],
+        noop,
+      ),
+    ).toBe(false)
   })
 })
