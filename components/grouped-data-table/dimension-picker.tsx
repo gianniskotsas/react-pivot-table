@@ -24,7 +24,6 @@ import { GripVertical, Layers, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Popover,
   PopoverContent,
@@ -32,6 +31,7 @@ import {
 } from "@/components/ui/popover"
 
 import type { DimensionDef } from "./types"
+import { MultiSelectContent } from "./multi-select"
 
 /** Pure reorder used on drag end. Returns a new array; unchanged if an id is missing. */
 export function reorderGrouping(
@@ -126,17 +126,6 @@ export function DimensionPickerContent({
     [grouping, byId],
   )
 
-  const toggle = React.useCallback(
-    (id: string, checked: boolean) => {
-      if (checked) {
-        if (!grouping.includes(id)) onGroupingChange([...grouping, id])
-      } else {
-        onGroupingChange(grouping.filter((g) => g !== id))
-      }
-    },
-    [grouping, onGroupingChange],
-  )
-
   const handleDragEnd = React.useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event
@@ -152,23 +141,11 @@ export function DimensionPickerContent({
     <div className="space-y-3">
       <div className="space-y-1.5">
         <p className="text-xs font-medium text-muted-foreground">Dimensions</p>
-        {dimensions.map((dimension) => (
-          // Native <label> wrapping makes the whole row a hit target; base-ui
-          // Checkbox associates the label text as its single accessible name, so
-          // no aria-label is needed (and adding one would double the name).
-          <label
-            key={dimension.id}
-            className="flex cursor-pointer items-center gap-2 text-sm select-none"
-          >
-            <Checkbox
-              checked={grouping.includes(dimension.id)}
-              onCheckedChange={(checked) =>
-                toggle(dimension.id, checked === true)
-              }
-            />
-            {dimension.label}
-          </label>
-        ))}
+        <MultiSelectContent
+          options={dimensions.map((d) => ({ label: d.label, value: d.id }))}
+          selected={grouping}
+          onChange={onGroupingChange}
+        />
       </div>
 
       {orderedSelected.length > 0 && (
@@ -191,7 +168,9 @@ export function DimensionPickerContent({
                   <SortableDimension
                     key={dimension.id}
                     dimension={dimension}
-                    onRemove={() => toggle(dimension.id, false)}
+                    onRemove={() =>
+                      onGroupingChange(grouping.filter((g) => g !== dimension.id))
+                    }
                   />
                 ))}
               </div>

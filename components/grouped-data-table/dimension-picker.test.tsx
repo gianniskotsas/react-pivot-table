@@ -25,7 +25,7 @@ describe("reorderGrouping", () => {
 })
 
 describe("DimensionPickerContent", () => {
-  it("adds a dimension to the grouping when checked", async () => {
+  it("adds a dimension via the multi-select list", async () => {
     const onGroupingChange = vi.fn()
     render(
       <DimensionPickerContent
@@ -38,7 +38,7 @@ describe("DimensionPickerContent", () => {
     expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
   })
 
-  it("removes a dimension from the grouping when unchecked", async () => {
+  it("removes a dimension via the multi-select list", async () => {
     const onGroupingChange = vi.fn()
     render(
       <DimensionPickerContent
@@ -48,19 +48,6 @@ describe("DimensionPickerContent", () => {
       />,
     )
     await userEvent.click(screen.getByRole("checkbox", { name: "Bank" }))
-    expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
-  })
-
-  it("toggles when the dimension label text is clicked (full-row hit target)", async () => {
-    const onGroupingChange = vi.fn()
-    render(
-      <DimensionPickerContent
-        dimensions={dimensions}
-        grouping={[]}
-        onGroupingChange={onGroupingChange}
-      />,
-    )
-    await userEvent.click(screen.getByText("Entity"))
     expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
   })
 
