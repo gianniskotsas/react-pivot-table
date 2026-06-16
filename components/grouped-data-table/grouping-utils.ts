@@ -29,7 +29,11 @@ export function normalizeGrouping(
   return result
 }
 
-/** Hide dimension columns that are currently part of the grouping. */
+/**
+ * Hide dimension columns that are currently part of the grouping. Only grouped
+ * ids are returned (mapped to `false`); absent keys fall back to TanStack's
+ * default of visible, so ungrouping a column re-shows it automatically.
+ */
 export function deriveColumnVisibility(grouping: string[]): VisibilityState {
   const visibility: VisibilityState = {}
   for (const id of grouping) {

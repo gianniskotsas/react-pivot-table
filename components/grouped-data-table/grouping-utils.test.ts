@@ -37,6 +37,9 @@ describe("normalizeGrouping", () => {
   it("dedupes repeated ids", () => {
     expect(normalizeGrouping(["bank", "bank"], allowed)).toEqual(["bank"])
   })
+  it("returns an empty array for empty input", () => {
+    expect(normalizeGrouping([], allowed)).toEqual([])
+  })
 })
 
 describe("deriveColumnVisibility", () => {
