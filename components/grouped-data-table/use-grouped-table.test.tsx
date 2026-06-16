@@ -55,4 +55,15 @@ describe("useGroupedTable", () => {
     act(() => result.current.setGrouping(["bank", "ghost"]))
     expect(result.current.grouping).toEqual(["bank"])
   })
+
+  it("re-groups the row model after setGrouping is called", () => {
+    const { result } = setup()
+    expect(result.current.table.getRowModel().rows[0].getIsGrouped()).toBe(false)
+    act(() => result.current.setGrouping(["bank"]))
+    expect(result.current.table.getColumn("bank")?.getIsVisible()).toBe(false)
+    const rows = result.current.table.getRowModel().rows
+    expect(rows.every((row) => row.getIsGrouped())).toBe(true)
+    // 2 distinct banks in the fixture (Citi, HSBC).
+    expect(rows.length).toBe(2)
+  })
 })

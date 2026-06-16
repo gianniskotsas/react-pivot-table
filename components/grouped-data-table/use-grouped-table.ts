@@ -65,7 +65,10 @@ export function useGroupedTable<TData>({
   )
 
   // Synthesized auto group column. The actual cell rendering is handled by
-  // <GroupCell> in the table body (a later task); here we only reserve the slot.
+  // <GroupCell> in the table body; here we only reserve the slot. The def only
+  // reads `groupColumn.header`, so memoize on that alone — depending on the whole
+  // `groupColumn` object would rebuild the column array whenever a consumer passes
+  // an inline config literal (e.g. `groupColumn={{ renderLeaf: ... }}`).
   const groupColumnDef = React.useMemo<ColumnDef<TData, unknown>>(
     () => ({
       id: GROUP_COLUMN_ID,
@@ -73,7 +76,7 @@ export function useGroupedTable<TData>({
       enableGrouping: false,
       cell: () => null,
     }),
-    [groupColumn],
+    [groupColumn.header],
   )
 
   const allColumns = React.useMemo(
@@ -81,6 +84,12 @@ export function useGroupedTable<TData>({
     [groupColumnDef, columns],
   )
 
+  // `columnVisibility` is fully derived from `grouping`: grouped dimension columns
+  // are hidden so their values appear only in the auto group column. This is
+  // intentionally one-way — no `onColumnVisibilityChange` is wired, so consumer
+  // calls to `table.toggleVisibility()` would be overridden on the next render. If
+  // user-toggled visibility is ever needed, merge it here:
+  // `{ ...userVisibility, ...deriveColumnVisibility(grouping) }`.
   const columnVisibility = React.useMemo(
     () => deriveColumnVisibility(grouping),
     [grouping],

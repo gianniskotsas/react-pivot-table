@@ -33,7 +33,11 @@ export type GroupedDataTableProps<TData> = {
   /** Which columns the developer allows grouping on. */
   groupableDimensions: DimensionDef[]
   groupColumn: GroupColumnConfig<TData>
-  /** Initial hierarchy order, e.g. ["entity", "bank"]. */
+  /**
+   * Initial hierarchy order, e.g. ["entity", "bank"]. Applied once at mount;
+   * later changes to this prop are ignored (use the returned `setGrouping` to
+   * change grouping after mount).
+   */
   initialGrouping?: string[]
   /** Enable client-side pagination. Default true. */
   enablePagination?: boolean
