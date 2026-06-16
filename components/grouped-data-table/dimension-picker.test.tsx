@@ -51,6 +51,19 @@ describe("DimensionPickerContent", () => {
     expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
   })
 
+  it("toggles when the dimension label text is clicked (full-row hit target)", async () => {
+    const onGroupingChange = vi.fn()
+    render(
+      <DimensionPickerContent
+        dimensions={dimensions}
+        grouping={[]}
+        onGroupingChange={onGroupingChange}
+      />,
+    )
+    await userEvent.click(screen.getByText("Entity"))
+    expect(onGroupingChange).toHaveBeenCalledWith(["entity"])
+  })
+
   it("renders selected dimensions as reorderable hierarchy items", () => {
     render(
       <DimensionPickerContent

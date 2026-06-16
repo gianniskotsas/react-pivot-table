@@ -75,12 +75,15 @@ function SortableDimension({
         "flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 text-sm",
         isDragging && "opacity-70 shadow-sm",
       )}
+      // attributes (incl. aria-roledescription="sortable") belong on the item
+      // root so AT announces it when the item is focused; the handle gets only
+      // the keyboard/pointer listeners.
+      {...attributes}
     >
       <button
         type="button"
         className="cursor-grab text-muted-foreground active:cursor-grabbing"
         aria-label={`Drag ${dimension.label}`}
-        {...attributes}
         {...listeners}
       >
         <GripVertical className="size-4" />
@@ -115,44 +118,56 @@ export function DimensionPickerContent({
     [dimensions],
   )
 
-  const orderedSelected = grouping
-    .map((id) => byId.get(id))
-    .filter((d): d is DimensionDef => Boolean(d))
+  const orderedSelected = React.useMemo(
+    () =>
+      grouping
+        .map((id) => byId.get(id))
+        .filter((d): d is DimensionDef => Boolean(d)),
+    [grouping, byId],
+  )
 
-  function toggle(id: string, checked: boolean) {
-    if (checked) {
-      if (!grouping.includes(id)) onGroupingChange([...grouping, id])
-    } else {
-      onGroupingChange(grouping.filter((g) => g !== id))
-    }
-  }
+  const toggle = React.useCallback(
+    (id: string, checked: boolean) => {
+      if (checked) {
+        if (!grouping.includes(id)) onGroupingChange([...grouping, id])
+      } else {
+        onGroupingChange(grouping.filter((g) => g !== id))
+      }
+    },
+    [grouping, onGroupingChange],
+  )
 
-  function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event
-    if (!over || active.id === over.id) return
-    onGroupingChange(
-      reorderGrouping(grouping, String(active.id), String(over.id)),
-    )
-  }
+  const handleDragEnd = React.useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event
+      if (!over || active.id === over.id) return
+      onGroupingChange(
+        reorderGrouping(grouping, String(active.id), String(over.id)),
+      )
+    },
+    [grouping, onGroupingChange],
+  )
 
   return (
     <div className="space-y-3">
       <div className="space-y-1.5">
         <p className="text-xs font-medium text-muted-foreground">Dimensions</p>
         {dimensions.map((dimension) => (
-          <div
+          // Native <label> wrapping makes the whole row a hit target; base-ui
+          // Checkbox associates the label text as its single accessible name, so
+          // no aria-label is needed (and adding one would double the name).
+          <label
             key={dimension.id}
-            className="flex items-center gap-2 text-sm"
+            className="flex cursor-pointer items-center gap-2 text-sm select-none"
           >
             <Checkbox
               checked={grouping.includes(dimension.id)}
               onCheckedChange={(checked) =>
                 toggle(dimension.id, checked === true)
               }
-              aria-label={dimension.label}
             />
-            <span aria-hidden="true">{dimension.label}</span>
-          </div>
+            {dimension.label}
+          </label>
         ))}
       </div>
 
