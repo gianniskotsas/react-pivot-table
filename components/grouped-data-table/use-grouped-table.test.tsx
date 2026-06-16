@@ -66,4 +66,38 @@ describe("useGroupedTable", () => {
     // 2 distinct banks in the fixture (Citi, HSBC).
     expect(rows.length).toBe(2)
   })
+
+  it("filters leaf rows from initialFilters and recomputes groups", () => {
+    const { result } = renderHook(() =>
+      useGroupedTable<Acct>({
+        data,
+        columns,
+        groupableDimensions: [{ id: "entity", label: "Entity" }],
+        groupColumn: { renderLeaf: (row) => row.original.id },
+        initialGrouping: ["entity"],
+        enablePagination: false,
+        filterableColumns: [{ id: "currency", label: "Ccy", type: "select" }],
+        initialFilters: [
+          { id: "f1", columnId: "currency", operator: "is", value: "EUR" },
+        ],
+      }),
+    )
+    // Only EUR leaf rows survive (ids 2 and 3 in the fixture).
+    const leafCount = result.current.table
+      .getRowModel()
+      .rows.flatMap((r) => r.getLeafRows())
+      .filter((r) => !r.getIsGrouped()).length
+    expect(leafCount).toBe(2)
+  })
+
+  it("setFilterConditions drops conditions on non-filterable columns", () => {
+    const { result } = setup()
+    act(() =>
+      result.current.setFilterConditions([
+        { id: "f1", columnId: "entity", operator: "is", value: "Coffee Inc" },
+        { id: "f2", columnId: "ghost", operator: "is", value: "x" },
+      ]),
+    )
+    expect(result.current.filterConditions.map((c) => c.columnId)).toEqual([])
+  })
 })

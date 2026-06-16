@@ -10,7 +10,6 @@ import {
   getSortedRowModel,
   useReactTable,
   type ColumnDef,
-  type ColumnFiltersState,
   type ExpandedState,
   type GroupingState,
   type PaginationState,
@@ -22,12 +21,20 @@ import {
   deriveColumnVisibility,
   normalizeGrouping,
 } from "./grouping-utils"
+import {
+  conditionsToColumnFilters,
+  makeFilterFn,
+  normalizeConditions,
+} from "./filter-utils"
+import type { FilterCondition } from "./types"
 import { GROUP_COLUMN_ID, type GroupedDataTableProps } from "./types"
 
 export type UseGroupedTableResult<TData> = {
   table: Table<TData>
   grouping: GroupingState
   setGrouping: (next: GroupingState) => void
+  filterConditions: FilterCondition[]
+  setFilterConditions: (next: FilterCondition[]) => void
 }
 
 export function useGroupedTable<TData>({
@@ -37,6 +44,8 @@ export function useGroupedTable<TData>({
   groupColumn,
   initialGrouping = [],
   enablePagination = true,
+  filterableColumns = [],
+  initialFilters = [],
 }: GroupedDataTableProps<TData>): UseGroupedTableResult<TData> {
   const allowedIds = React.useMemo(
     () => groupableDimensions.map((d) => d.id),
@@ -48,13 +57,33 @@ export function useGroupedTable<TData>({
   )
   const [expanded, setExpanded] = React.useState<ExpandedState>({})
   const [sorting, setSorting] = React.useState<SortingState>([])
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
-    [],
-  )
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
     pageSize: 50,
   })
+
+  const filterableIds = React.useMemo(
+    () => filterableColumns.map((f) => f.id),
+    [filterableColumns],
+  )
+
+  const [filterConditions, setFilterConditionsState] = React.useState<
+    FilterCondition[]
+  >(() => normalizeConditions(initialFilters, filterableIds))
+
+  const setFilterConditions = React.useCallback(
+    (next: FilterCondition[]) => {
+      setFilterConditionsState(normalizeConditions(next, filterableIds))
+    },
+    [filterableIds],
+  )
+
+  const columnFilters = React.useMemo(
+    () => conditionsToColumnFilters(filterConditions),
+    [filterConditions],
+  )
+
+  const filterFn = React.useMemo(() => makeFilterFn<TData>(), [])
 
   // setGrouping that always normalizes against allowed dimensions.
   const setGrouping = React.useCallback(
@@ -79,9 +108,20 @@ export function useGroupedTable<TData>({
     [groupColumn.header],
   )
 
+  const columnsWithFilters = React.useMemo(
+    () =>
+      columns.map((col) => {
+        const id =
+          (col as { id?: string }).id ??
+          (col as { accessorKey?: string }).accessorKey
+        return id && filterableIds.includes(id) ? { ...col, filterFn } : col
+      }),
+    [columns, filterableIds, filterFn],
+  )
+
   const allColumns = React.useMemo(
-    () => [groupColumnDef, ...columns],
-    [groupColumnDef, columns],
+    () => [groupColumnDef, ...columnsWithFilters],
+    [groupColumnDef, columnsWithFilters],
   )
 
   // `columnVisibility` is fully derived from `grouping`: grouped dimension columns
@@ -117,7 +157,6 @@ export function useGroupedTable<TData>({
     },
     onExpandedChange: setExpanded,
     onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -131,5 +170,5 @@ export function useGroupedTable<TData>({
     autoResetExpanded: false,
   })
 
-  return { table, grouping, setGrouping }
+  return { table, grouping, setGrouping, filterConditions, setFilterConditions }
 }
