@@ -35,6 +35,8 @@ export function MultiSelectContent({
   selected,
   onChange,
 }: Pick<MultiSelectProps, "options" | "selected" | "onChange">) {
+  // Controlled: each checkbox reflects `selected`, so duplicate-adds can't occur
+  // as long as the caller feeds the updated `selected` back before the next click.
   function toggle(value: string, checked: boolean) {
     onChange(checked ? [...selected, value] : selected.filter((v) => v !== value))
   }

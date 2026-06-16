@@ -30,4 +30,10 @@ describe("MultiSelectContent", () => {
     await userEvent.click(screen.getByRole("checkbox", { name: "Citi" }))
     expect(onChange).toHaveBeenCalledWith(["HSBC"])
   })
+  it("toggles via the row label text (full-row hit target)", async () => {
+    const onChange = vi.fn()
+    render(<MultiSelectContent options={options} selected={[]} onChange={onChange} />)
+    await userEvent.click(screen.getByText("HSBC"))
+    expect(onChange).toHaveBeenCalledWith(["HSBC"])
+  })
 })
