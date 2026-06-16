@@ -21,3 +21,21 @@ export {
   type FilterCondition,
   type FilterValue,
 } from "./types"
+// Pure filter helpers — for custom UIs and for a future MCP tool that emits or
+// describes filter config/conditions.
+export {
+  OPERATOR_LABELS,
+  conditionsToColumnFilters,
+  createCondition,
+  defaultOperatorsFor,
+  describeCondition,
+  evaluateCondition,
+  makeFilterFn,
+  normalizeConditions,
+  operatorsForDef,
+  removeCondition,
+  replaceCondition,
+  withColumn,
+  withOperator,
+  withValue,
+} from "./filter-utils"

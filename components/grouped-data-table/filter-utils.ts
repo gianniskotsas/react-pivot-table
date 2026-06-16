@@ -78,6 +78,9 @@ export function evaluateCondition(
       // (e.g. only one bound entered) is treated as no constraint, not a crash.
       if (!Array.isArray(value)) return true
       const [min, max] = value as [number, number]
+      // Either bound still blank (mid-build) → no constraint, so the table
+      // doesn't go empty while the user is typing the first bound.
+      if (String(min).trim() === "" || String(max).trim() === "") return true
       const n = Number(cellValue)
       return n >= Number(min) && n <= Number(max)
     }
@@ -94,6 +97,7 @@ export function evaluateCondition(
     case "dateBetween": {
       if (!Array.isArray(value)) return true
       const [start, end] = value as string[]
+      if (String(start).trim() === "" || String(end).trim() === "") return true
       const t = new Date(String(cellValue)).getTime()
       return t >= new Date(start).getTime() && t <= new Date(end).getTime()
     }

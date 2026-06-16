@@ -59,7 +59,7 @@ function ConditionValueInput({
   const ariaLabel = `Filter value for ${def.label}`
   const op = condition.operator
 
-  if (def.type === "select" && def.options) {
+  if (def.type === "select" && def.options && def.options.length > 0) {
     if (op === "isAnyOf") {
       const selected = Array.isArray(condition.value)
         ? (condition.value as string[])

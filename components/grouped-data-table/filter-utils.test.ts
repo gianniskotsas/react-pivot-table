@@ -64,6 +64,11 @@ describe("evaluateCondition", () => {
     expect(evaluateCondition(10, "between", 5)).toBe(true)
     expect(evaluateCondition("2024-03-01", "dateBetween", "2024-01-01")).toBe(true)
   })
+  it("between/dateBetween treat a half-built pair (one bound blank) as no constraint", () => {
+    expect(evaluateCondition(10, "between", ["5", ""])).toBe(true)
+    expect(evaluateCondition(10, "between", ["", "15"])).toBe(true)
+    expect(evaluateCondition("2024-03-01", "dateBetween", ["2024-01-01", ""])).toBe(true)
+  })
   it("select is / isAnyOf", () => {
     expect(evaluateCondition("HSBC", "is", "HSBC")).toBe(true)
     expect(evaluateCondition("HSBC", "isAnyOf", ["HSBC", "Citi"])).toBe(true)

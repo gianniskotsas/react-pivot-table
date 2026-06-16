@@ -182,6 +182,8 @@ export function useGroupedTable<TData>({
       : {}),
     paginateExpandedRows: false,
     autoResetExpanded: false,
+    // Don't bounce the user back to page 1 when filters/grouping/sorting change.
+    autoResetPageIndex: false,
   })
 
   return { table, grouping, setGrouping, filterConditions, setFilterConditions }
