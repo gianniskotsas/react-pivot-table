@@ -29,19 +29,10 @@ export type GroupColumnConfig<TData> = {
 export type FilterType = "text" | "number" | "select" | "date"
 
 export type FilterOperator =
-  | "contains"
-  | "equals"
-  | "startsWith"
-  | "eq"
-  | "ne"
-  | "gt"
-  | "lt"
-  | "between"
-  | "is"
-  | "isAnyOf"
-  | "before"
-  | "after"
-  | "dateBetween"
+  | "contains" | "doesNotContain" | "equals" | "isNot" | "startsWith"
+  | "eq" | "ne" | "gt" | "lt" | "between"
+  | "is" | "isAnyOf" | "isNoneOf"
+  | "before" | "after" | "dateBetween"
 
 export type FilterDef = {
   /** Must match a column id. */
@@ -69,6 +60,10 @@ export type FilterCondition = {
   value: FilterValue
 }
 
+export type Combinator = "and" | "or"
+export type FilterGroup = { id: string; combinator: Combinator; conditions: FilterCondition[] }
+export type FilterState = { combinator: Combinator; groups: FilterGroup[] }
+
 export type GroupedDataTableProps<TData> = {
   data: TData[]
   /** Measure / attribute columns. Groupable columns must set `enableGrouping: true`. */
@@ -88,4 +83,6 @@ export type GroupedDataTableProps<TData> = {
   filterableColumns?: FilterDef[]
   /** Optional initial active conditions (config-level; mirrors initialGrouping). */
   initialFilters?: FilterCondition[]
+  /** Initial filter state (groups + AND/OR). Replaces initialFilters in v2. */
+  initialFilterState?: FilterState
 }

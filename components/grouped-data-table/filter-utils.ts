@@ -1,34 +1,28 @@
 import type { ColumnFiltersState, FilterFn } from "@tanstack/react-table"
 
 import type {
+  Combinator,
   FilterCondition,
   FilterDef,
+  FilterGroup,
   FilterOperator,
+  FilterState,
   FilterType,
   FilterValue,
 } from "./types"
 
 const DEFAULT_OPERATORS: Record<FilterType, FilterOperator[]> = {
-  text: ["contains", "equals", "startsWith"],
+  text: ["contains", "doesNotContain", "equals", "isNot", "startsWith"],
   number: ["eq", "ne", "gt", "lt", "between"],
-  select: ["is", "isAnyOf"],
+  select: ["isAnyOf", "isNoneOf", "is"],
   date: ["before", "after", "dateBetween"],
 }
 
 export const OPERATOR_LABELS: Record<FilterOperator, string> = {
-  contains: "contains",
-  equals: "equals",
-  startsWith: "starts with",
-  eq: "=",
-  ne: "≠",
-  gt: ">",
-  lt: "<",
-  between: "between",
-  is: "is",
-  isAnyOf: "is any of",
-  before: "before",
-  after: "after",
-  dateBetween: "between",
+  contains: "contains", doesNotContain: "does not contain", equals: "is", isNot: "is not", startsWith: "starts with",
+  eq: "equals", ne: "not equal", gt: "greater than", lt: "less than", between: "between",
+  is: "is", isAnyOf: "is any of", isNoneOf: "is none of",
+  before: "before", after: "after", dateBetween: "between",
 }
 
 export function defaultOperatorsFor(type: FilterType): FilterOperator[] {
@@ -84,6 +78,12 @@ export function evaluateCondition(
       const n = Number(cellValue)
       return n >= Number(min) && n <= Number(max)
     }
+    case "doesNotContain":
+      return !text.includes(String(value).toLowerCase())
+    case "isNot":
+      return String(cellValue ?? "").toLowerCase() !== String(value).toLowerCase()
+    case "isNoneOf":
+      return !(value as string[]).map(String).includes(String(cellValue ?? ""))
     // `is`/`isAnyOf` are case-sensitive by design: select columns hold exact
     // enum values (e.g. "HSBC"), unlike the case-insensitive text operators.
     case "is":
@@ -215,4 +215,77 @@ export function normalizeConditions(
 ): FilterCondition[] {
   const allowed = new Set(filterableIds)
   return conditions.filter((c) => allowed.has(c.columnId))
+}
+
+// ─── Filter v2: group model + tree evaluation ────────────────────────────────
+
+export function isConditionComplete(condition: FilterCondition): boolean {
+  return !isEmpty(condition.value)
+}
+
+export function evaluateGroup(group: FilterGroup, get: (columnId: string) => unknown): boolean {
+  const active = group.conditions.filter(isConditionComplete)
+  if (active.length === 0) return true
+  const results = active.map((c) => evaluateCondition(get(c.columnId), c.operator, c.value))
+  return group.combinator === "and" ? results.every(Boolean) : results.some(Boolean)
+}
+
+export function evaluateFilterState(state: FilterState, get: (columnId: string) => unknown): boolean {
+  const active = state.groups.filter((g) => g.conditions.some(isConditionComplete))
+  if (active.length === 0) return true
+  const results = active.map((g) => evaluateGroup(g, get))
+  return state.combinator === "and" ? results.every(Boolean) : results.some(Boolean)
+}
+
+export function countActiveConditions(state: FilterState): number {
+  return state.groups.reduce((sum, g) => sum + g.conditions.filter(isConditionComplete).length, 0)
+}
+
+export function emptyFilterState(): FilterState {
+  return { combinator: "and", groups: [] }
+}
+
+export function newGroup(id: string, conditionId: string, filterDefs: FilterDef[]): FilterGroup {
+  return { id, combinator: "and", conditions: [createCondition(filterDefs, conditionId)] }
+}
+
+export function addGroup(state: FilterState, groupId: string, conditionId: string, filterDefs: FilterDef[]): FilterState {
+  return { ...state, groups: [...state.groups, newGroup(groupId, conditionId, filterDefs)] }
+}
+
+function mapGroup(state: FilterState, groupId: string, fn: (g: FilterGroup) => FilterGroup): FilterState {
+  return { ...state, groups: state.groups.map((g) => (g.id === groupId ? fn(g) : g)) }
+}
+
+export function addConditionToGroup(state: FilterState, groupId: string, condition: FilterCondition): FilterState {
+  return mapGroup(state, groupId, (g) => ({ ...g, conditions: [...g.conditions, condition] }))
+}
+
+export function updateConditionInGroup(state: FilterState, groupId: string, condition: FilterCondition): FilterState {
+  return mapGroup(state, groupId, (g) => ({ ...g, conditions: g.conditions.map((c) => (c.id === condition.id ? condition : c)) }))
+}
+
+export function removeConditionFromGroup(state: FilterState, groupId: string, conditionId: string): FilterState {
+  const next = mapGroup(state, groupId, (g) => ({ ...g, conditions: g.conditions.filter((c) => c.id !== conditionId) }))
+  return { ...next, groups: next.groups.filter((g) => g.conditions.length > 0) }
+}
+
+export function removeGroup(state: FilterState, groupId: string): FilterState {
+  return { ...state, groups: state.groups.filter((g) => g.id !== groupId) }
+}
+
+export function setGroupCombinator(state: FilterState, groupId: string, combinator: Combinator): FilterState {
+  return mapGroup(state, groupId, (g) => ({ ...g, combinator }))
+}
+
+export function setTopCombinator(state: FilterState, combinator: Combinator): FilterState {
+  return { ...state, combinator }
+}
+
+export function normalizeFilterState(state: FilterState, filterableIds: string[]): FilterState {
+  const allowed = new Set(filterableIds)
+  const groups = state.groups
+    .map((g) => ({ ...g, conditions: g.conditions.filter((c) => allowed.has(c.columnId)) }))
+    .filter((g) => g.conditions.length > 0)
+  return { ...state, groups }
 }

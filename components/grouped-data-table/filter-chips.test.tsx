@@ -16,8 +16,8 @@ describe("FilterChips", () => {
     render(
       <FilterChips conditions={conditions} filterDefs={defs} onRemove={onRemove} />,
     )
-    expect(screen.getByText("Balance > 100")).toBeInTheDocument()
-    await userEvent.click(screen.getByRole("button", { name: /remove balance > 100/i }))
+    expect(screen.getByText("Balance greater than 100")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: /remove balance greater than 100/i }))
     expect(onRemove).toHaveBeenCalledWith("c1")
   })
 
