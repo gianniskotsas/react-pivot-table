@@ -24,22 +24,17 @@ const filterableColumns: FilterDef[] = [
   { id: "balance", label: "Balance", type: "number" },
 ]
 
-// Hoisted to module scope so the config (and its renderLeaf) keeps a stable
-// reference across renders, avoiding needless rebuilds of the table's columns.
+// Hoisted to module scope so the config keeps a stable reference across renders.
+// Declarative leaf: a primary label with an optional icon and optional secondary
+// line — drop `icon`/`secondary` when your data doesn't have them.
 const groupColumn: GroupColumnConfig<Account> = {
   header: "Account",
   countMode: "leaf",
-  renderLeaf: (row) => (
-    <div className="flex items-center gap-2">
-      <Landmark className="size-4 shrink-0 text-muted-foreground" />
-      <div className="flex flex-col">
-        <span className="font-medium underline-offset-2 hover:underline">
-          {row.original.accountName}
-        </span>
-        <span className="text-xs text-muted-foreground">{row.original.iban}</span>
-      </div>
-    </div>
-  ),
+  leaf: {
+    icon: () => <Landmark className="size-4 shrink-0 text-muted-foreground" />,
+    primary: (row) => row.original.accountName,
+    secondary: (row) => row.original.iban,
+  },
 }
 
 export function AccountsTable({ data }: { data: Account[] }) {

@@ -10,6 +10,7 @@ export {
   GROUP_COLUMN_ID,
   type DimensionDef,
   type GroupColumnConfig,
+  type GroupLeafConfig,
   type GroupedDataTableProps,
 } from "./types"
 export { FilterPopover, FilterBuilderContent } from "./filter-builder"

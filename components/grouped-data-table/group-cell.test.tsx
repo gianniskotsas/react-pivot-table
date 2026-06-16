@@ -105,6 +105,52 @@ describe("GroupCell", () => {
     expect(screen.getByText("leaf:Payroll")).toBeInTheDocument()
   })
 
+  const leafCell = () => {
+    const row = {
+      depth: 1,
+      original: { id: "1", name: "Payroll" },
+      getIsGrouped: () => false,
+    } as unknown as Row<Acct>
+    return {
+      column: { id: GROUP_COLUMN_ID },
+      row,
+      getIsGrouped: () => false,
+      getIsAggregated: () => false,
+      getIsPlaceholder: () => false,
+    } as unknown as Cell<Acct, unknown>
+  }
+
+  it("renders a declarative leaf with only a primary label (no icon, no secondary)", () => {
+    const { container } = render(
+      <GroupCell
+        cell={leafCell()}
+        groupColumn={{ leaf: { primary: (row) => row.original.name } }}
+      />,
+    )
+    expect(screen.getByText("Payroll")).toBeInTheDocument()
+    // No icon (svg) and no secondary line rendered.
+    expect(container.querySelector("svg")).toBeNull()
+    expect(container.querySelectorAll("span")).toHaveLength(1)
+  })
+
+  it("renders a declarative leaf with optional icon and secondary when provided", () => {
+    render(
+      <GroupCell
+        cell={leafCell()}
+        groupColumn={{
+          leaf: {
+            icon: () => <svg data-testid="leaf-icon" />,
+            primary: (row) => row.original.name,
+            secondary: () => "NL00 1234",
+          },
+        }}
+      />,
+    )
+    expect(screen.getByText("Payroll")).toBeInTheDocument()
+    expect(screen.getByText("NL00 1234")).toBeInTheDocument()
+    expect(screen.getByTestId("leaf-icon")).toBeInTheDocument()
+  })
+
   it("renders nothing for a placeholder cell", () => {
     const cell = {
       column: { id: "currency" },
