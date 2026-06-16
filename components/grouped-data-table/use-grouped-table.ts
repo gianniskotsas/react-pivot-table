@@ -26,8 +26,12 @@ import {
   makeFilterFn,
   normalizeConditions,
 } from "./filter-utils"
-import type { FilterCondition } from "./types"
+import type { FilterCondition, FilterDef } from "./types"
 import { GROUP_COLUMN_ID, type GroupedDataTableProps } from "./types"
+
+// Stable empty default so omitting `filterableColumns` doesn't create a new
+// array reference each render (which would churn the derived memos/callbacks).
+const EMPTY_FILTER_COLUMNS: FilterDef[] = []
 
 export type UseGroupedTableResult<TData> = {
   table: Table<TData>
@@ -44,7 +48,7 @@ export function useGroupedTable<TData>({
   groupColumn,
   initialGrouping = [],
   enablePagination = true,
-  filterableColumns = [],
+  filterableColumns = EMPTY_FILTER_COLUMNS,
   initialFilters = [],
 }: GroupedDataTableProps<TData>): UseGroupedTableResult<TData> {
   const allowedIds = React.useMemo(
@@ -111,9 +115,10 @@ export function useGroupedTable<TData>({
   const columnsWithFilters = React.useMemo(
     () =>
       columns.map((col) => {
+        const rawKey = (col as { accessorKey?: unknown }).accessorKey
         const id =
           (col as { id?: string }).id ??
-          (col as { accessorKey?: string }).accessorKey
+          (typeof rawKey === "string" ? rawKey : undefined)
         return id && filterableIds.includes(id) ? { ...col, filterFn } : col
       }),
     [columns, filterableIds, filterFn],

@@ -90,14 +90,28 @@ describe("useGroupedTable", () => {
     expect(leafCount).toBe(2)
   })
 
-  it("setFilterConditions drops conditions on non-filterable columns", () => {
-    const { result } = setup()
+  it("setFilterConditions keeps only filterable columns and drops the rest", () => {
+    const { result } = renderHook(() =>
+      useGroupedTable<Acct>({
+        data,
+        columns,
+        groupableDimensions: [{ id: "entity", label: "Entity" }],
+        groupColumn: { renderLeaf: (row) => row.original.id },
+        enablePagination: false,
+        // Only `currency` is filterable; `entity` is a real column but NOT
+        // filterable, and `ghost` does not exist at all — both must drop.
+        filterableColumns: [{ id: "currency", label: "Ccy", type: "select" }],
+      }),
+    )
     act(() =>
       result.current.setFilterConditions([
-        { id: "f1", columnId: "entity", operator: "is", value: "Coffee Inc" },
-        { id: "f2", columnId: "ghost", operator: "is", value: "x" },
+        { id: "f1", columnId: "currency", operator: "is", value: "EUR" },
+        { id: "f2", columnId: "entity", operator: "is", value: "Coffee Inc" },
+        { id: "f3", columnId: "ghost", operator: "is", value: "x" },
       ]),
     )
-    expect(result.current.filterConditions.map((c) => c.columnId)).toEqual([])
+    expect(result.current.filterConditions.map((c) => c.columnId)).toEqual([
+      "currency",
+    ])
   })
 })
