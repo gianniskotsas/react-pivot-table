@@ -24,7 +24,7 @@ An AG-Grid-style **row-grouping / drill-down** data table for React, built on
 
 ```bash
 # from the hosted registry
-npx shadcn@latest add https://react-pivot-table.vercel.app/r/grouped-data-table.json
+npx shadcn@latest add https://ui.kotsas.com/r/grouped-data-table.json
 
 # …or from GitHub raw
 npx shadcn@latest add https://raw.githubusercontent.com/gianniskotsas/react-pivot-table/main/public/r/grouped-data-table.json
@@ -35,7 +35,7 @@ Or add the namespace to your `components.json` and install by alias:
 ```json
 {
   "registries": {
-    "@kotsas-ui": "https://react-pivot-table.vercel.app/r/{name}.json"
+    "@kotsas-ui": "https://ui.kotsas.com/r/{name}.json"
   }
 }
 ```

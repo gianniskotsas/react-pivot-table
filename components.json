@@ -22,6 +22,6 @@
   "menuColor": "default",
   "menuAccent": "subtle",
   "registries": {
-    "@kotsas-ui": "https://react-pivot-table.vercel.app/r/{name}.json"
+    "@kotsas-ui": "https://ui.kotsas.com/r/{name}.json"
   }
 }
