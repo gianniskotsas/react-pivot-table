@@ -1,0 +1,82 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "kotsas-ui",
+  "homepage": "https://github.com/gianniskotsas/react-pivot-table",
+  "items": [
+    {
+      "name": "grouped-data-table",
+      "type": "registry:block",
+      "title": "Grouped Data Table",
+      "description": "AG-Grid-style row grouping/drill-down table built on TanStack Table v8: a single auto group column with indented hierarchy and counts, a drag-and-drop dimension picker, and AND/OR filter groups. Requires a base-ui shadcn setup.",
+      "dependencies": [
+        "@tanstack/react-table",
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/utilities",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "table",
+        "button",
+        "badge",
+        "checkbox",
+        "popover",
+        "select",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "components/grouped-data-table/types.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/types.ts"
+        },
+        {
+          "path": "components/grouped-data-table/grouping-utils.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/grouping-utils.ts"
+        },
+        {
+          "path": "components/grouped-data-table/filter-utils.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/filter-utils.ts"
+        },
+        {
+          "path": "components/grouped-data-table/use-grouped-table.ts",
+          "type": "registry:hook",
+          "target": "components/grouped-data-table/use-grouped-table.ts"
+        },
+        {
+          "path": "components/grouped-data-table/multi-select.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/multi-select.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/group-cell.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/group-cell.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/dimension-picker.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/dimension-picker.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/filter-builder.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/filter-builder.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/grouped-data-table.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/grouped-data-table.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/index.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/index.ts"
+        }
+      ]
+    }
+  ]
+}
