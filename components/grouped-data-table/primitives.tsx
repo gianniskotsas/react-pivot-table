@@ -1,5 +1,15 @@
 "use client"
 
+// base-ui build of the primitives shim. Keep the EXPORTED API identical to its
+// Radix twin, primitives.radix.tsx — only the function bodies may differ. The
+// divergences between the two files are exactly:
+//   1. <Select> takes the base-ui-only `items` prop here; the Radix build omits it.
+//   2. base-ui `onValueChange` is nullable, so FieldSelect guards `v != null`;
+//      the Radix build's is `(value: string) => void` and needs no guard.
+//   3. PopoverButtonTrigger composes via base-ui's `render` prop here; the Radix
+//      build uses `asChild` with a nested <Button>.
+// If you change a prop name, type, or default below, mirror it in the twin.
+
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
