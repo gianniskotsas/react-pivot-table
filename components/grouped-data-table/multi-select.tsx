@@ -3,13 +3,10 @@
 import { ChevronDown } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent } from "@/components/ui/popover"
+
+import { PopoverButtonTrigger } from "./primitives"
 
 export type MultiSelectOption = { label: string; value: string }
 
@@ -68,23 +65,15 @@ export function MultiSelect({
 }: MultiSelectProps) {
   return (
     <Popover>
-      <PopoverTrigger
-        render={(p) => (
-          <Button
-            {...p}
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label={ariaLabel}
-            className={cn("h-8 justify-between gap-2 font-normal", className)}
-          />
-        )}
+      <PopoverButtonTrigger
+        ariaLabel={ariaLabel}
+        className={cn("h-8 justify-between gap-2 font-normal", className)}
       >
         <span className={cn(selected.length === 0 && "text-muted-foreground")}>
           {multiSelectLabel(selected, placeholder)}
         </span>
         <ChevronDown className="size-3 shrink-0 opacity-60" aria-hidden="true" />
-      </PopoverTrigger>
+      </PopoverButtonTrigger>
       <PopoverContent align="start" className="w-56">
         <MultiSelectContent options={options} selected={selected} onChange={onChange} />
       </PopoverContent>
