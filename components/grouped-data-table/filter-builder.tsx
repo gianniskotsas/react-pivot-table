@@ -6,19 +6,9 @@ import { Filter, Plus, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 
+import { FieldSelect, PopoverButtonTrigger } from "./primitives"
 import { MultiSelect } from "./multi-select"
 import {
   addConditionToGroup,
@@ -75,18 +65,13 @@ function CombinatorSelect({
   ariaLabel: string
 }) {
   return (
-    <Select value={value} onValueChange={(v) => v != null && onChange(v as Combinator)}>
-      <SelectTrigger aria-label={ariaLabel} size="sm" className="w-20 text-xs">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {COMBINATOR_OPTIONS.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <FieldSelect
+      value={value}
+      items={COMBINATOR_OPTIONS}
+      onValueChange={(v) => onChange(v as Combinator)}
+      ariaLabel={ariaLabel}
+      className="w-20 text-xs"
+    />
   )
 }
 
@@ -117,22 +102,14 @@ function ConditionValueInput({
       )
     }
     return (
-      <Select
+      <FieldSelect
         value={condition.value == null ? "" : String(condition.value)}
         items={def.options}
-        onValueChange={(v) => onValueChange(v ?? "")}
-      >
-        <SelectTrigger aria-label={ariaLabel} size="sm" className="h-8 w-full">
-          <SelectValue placeholder="Select…" />
-        </SelectTrigger>
-        <SelectContent>
-          {def.options.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onValueChange={(v) => onValueChange(v)}
+        ariaLabel={ariaLabel}
+        placeholder="Select…"
+        className="h-8 w-full"
+      />
     )
   }
 
@@ -196,38 +173,20 @@ function ConditionRow({
       <div className="w-14 shrink-0 pt-1.5 text-right text-xs text-muted-foreground">
         {index === 0 ? "Where" : null}
       </div>
-      <Select
+      <FieldSelect
         value={condition.columnId}
         items={filterableColumns.map((d) => ({ value: d.id, label: d.label }))}
-        onValueChange={(v) => v != null && update(withColumn(condition, String(v), filterableColumns))}
-      >
-        <SelectTrigger aria-label="Filter column" size="sm" className="h-8 w-28">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {filterableColumns.map((d) => (
-            <SelectItem key={d.id} value={d.id}>
-              {d.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
+        onValueChange={(v) => update(withColumn(condition, v, filterableColumns))}
+        ariaLabel="Filter column"
+        className="h-8 w-28"
+      />
+      <FieldSelect
         value={condition.operator}
         items={operators.map((op) => ({ value: op, label: OPERATOR_LABELS[op] }))}
-        onValueChange={(v) => v != null && update(withOperator(condition, v as FilterOperator))}
-      >
-        <SelectTrigger aria-label="Filter operator" size="sm" className="h-8 w-32">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {operators.map((op) => (
-            <SelectItem key={op} value={op}>
-              {OPERATOR_LABELS[op]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        onValueChange={(v) => update(withOperator(condition, v as FilterOperator))}
+        ariaLabel="Filter operator"
+        className="h-8 w-32"
+      />
       <div className="flex-1">
         <ConditionValueInput
           def={def}
@@ -355,11 +314,11 @@ export function FilterPopover(props: FilterBuilderProps) {
   const count = countActiveConditions(props.filterState)
   return (
     <Popover>
-      <PopoverTrigger render={(p) => <Button {...p} variant="outline" size="sm" className="gap-2" />}>
+      <PopoverButtonTrigger className="gap-2">
         <Filter className="size-4" />
         Filters
         {count > 0 && <Badge variant="secondary">{count}</Badge>}
-      </PopoverTrigger>
+      </PopoverButtonTrigger>
       <PopoverContent align="start" className="w-[34rem]">
         <FilterBuilderContent {...props} />
       </PopoverContent>
