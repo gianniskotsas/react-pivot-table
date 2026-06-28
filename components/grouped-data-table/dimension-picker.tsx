@@ -23,15 +23,11 @@ import { GripVertical, Layers, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+import { Popover, PopoverContent } from "@/components/ui/popover"
 
 import type { DimensionDef } from "./types"
 import { MultiSelect } from "./multi-select"
+import { PopoverButtonTrigger } from "./primitives"
 
 /** Pure reorder used on drag end. Returns a new array; unchanged if an id is missing. */
 export function reorderGrouping(
@@ -188,17 +184,13 @@ export function DimensionPickerContent({
 export function DimensionPicker(props: DimensionPickerProps) {
   return (
     <Popover>
-      <PopoverTrigger
-        render={(p) => (
-          <Button {...p} variant="outline" size="sm" className="gap-2" />
-        )}
-      >
+      <PopoverButtonTrigger className="gap-2">
         <Layers className="size-4" />
         Group by
         {props.grouping.length > 0 && (
           <Badge variant="secondary">{props.grouping.length}</Badge>
         )}
-      </PopoverTrigger>
+      </PopoverButtonTrigger>
       <PopoverContent align="start" className="w-64">
         <DimensionPickerContent {...props} />
       </PopoverContent>
