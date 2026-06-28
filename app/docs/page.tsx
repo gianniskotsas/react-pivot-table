@@ -112,13 +112,14 @@ export default function DocsPage() {
           <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
             <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">Two builds.</span>{" "}
-              The default <code className="font-mono text-foreground">grouped-data-table</code>{" "}
-              targets a base-ui shadcn setup
-              (<code className="font-mono text-foreground">npx shadcn@latest init --base base-ui</code>).
-              If your project uses the default Radix primitives instead, install{" "}
-              <code className="font-mono text-foreground">grouped-data-table-radix</code> (below) —
-              same component and API.
+              <span className="font-medium text-foreground">Two builds — match your project.</span>{" "}
+              <code className="font-mono text-foreground">grouped-data-table</code> is for{" "}
+              <span className="text-foreground">Base UI</span> shadcn projects;{" "}
+              <code className="font-mono text-foreground">grouped-data-table-radix</code> (below) is for{" "}
+              <span className="text-foreground">Radix UI</span> projects — same component and API.
+              Not sure which you have? Check the <code className="font-mono text-foreground">base</code>{" "}
+              in your <code className="font-mono text-foreground">components.json</code> (Base UI is{" "}
+              <code className="font-mono text-foreground">npx shadcn@latest init --base base-ui</code>).
             </p>
           </div>
 

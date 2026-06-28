@@ -87,7 +87,7 @@
       "name": "grouped-data-table-radix",
       "type": "registry:block",
       "title": "Grouped Data Table (Radix)",
-      "description": "Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses the default Radix primitives (the standard `npx shadcn init`); install grouped-data-table instead if your project was set up with base-ui.",
+      "description": "Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses Radix UI primitives; install grouped-data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
       "dependencies": [
         "@tanstack/react-table",
         "@dnd-kit/core",
