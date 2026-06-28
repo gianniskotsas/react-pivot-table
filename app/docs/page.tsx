@@ -26,6 +26,11 @@ const NAMESPACE = `// components.json
 
 const NAMESPACE_CMD = "npx shadcn@latest add @kotsas-ui/grouped-data-table"
 
+const INSTALL_RADIX_URL =
+  "npx shadcn@latest add https://ui.kotsas.com/r/grouped-data-table-radix.json"
+
+const NAMESPACE_RADIX_CMD = "npx shadcn@latest add @kotsas-ui/grouped-data-table-radix"
+
 const USAGE = `import { GroupedDataTable } from "@/components/grouped-data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 
@@ -107,10 +112,13 @@ export default function DocsPage() {
           <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
             <p className="text-muted-foreground">
-              <span className="font-medium text-foreground">Requires base-ui.</span>{" "}
-              Your project must be a base-ui shadcn setup
+              <span className="font-medium text-foreground">Two builds.</span>{" "}
+              The default <code className="font-mono text-foreground">grouped-data-table</code>{" "}
+              targets a base-ui shadcn setup
               (<code className="font-mono text-foreground">npx shadcn@latest init --base base-ui</code>).
-              The component uses base-ui primitive APIs.
+              If your project uses the default Radix primitives instead, install{" "}
+              <code className="font-mono text-foreground">grouped-data-table-radix</code> (below) —
+              same component and API.
             </p>
           </div>
 
@@ -125,7 +133,13 @@ export default function DocsPage() {
           <CodeBlock filename="components.json" code={NAMESPACE} />
           <CodeBlock code={NAMESPACE_CMD} />
           <p className="text-sm text-muted-foreground">
-            This installs the component into{" "}
+            <span className="font-medium text-foreground">Radix projects:</span> install the
+            Radix build instead (by URL or namespace):
+          </p>
+          <CodeBlock code={INSTALL_RADIX_URL} />
+          <CodeBlock code={NAMESPACE_RADIX_CMD} />
+          <p className="text-sm text-muted-foreground">
+            Either build installs the component into{" "}
             <code className="font-mono">components/grouped-data-table/</code>, the npm deps
             (<code className="font-mono">@tanstack/react-table</code>,{" "}
             <code className="font-mono">@dnd-kit/*</code>,{" "}
