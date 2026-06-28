@@ -47,6 +47,91 @@
           "target": "components/grouped-data-table/use-grouped-table.ts"
         },
         {
+          "path": "components/grouped-data-table/primitives.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/primitives.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/multi-select.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/multi-select.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/group-cell.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/group-cell.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/dimension-picker.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/dimension-picker.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/filter-builder.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/filter-builder.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/grouped-data-table.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/grouped-data-table.tsx"
+        },
+        {
+          "path": "components/grouped-data-table/index.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/index.ts"
+        }
+      ]
+    },
+    {
+      "name": "grouped-data-table-radix",
+      "type": "registry:block",
+      "title": "Grouped Data Table (Radix)",
+      "description": "Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses the default Radix primitives (the standard `npx shadcn init`); install grouped-data-table instead if your project was set up with base-ui.",
+      "dependencies": [
+        "@tanstack/react-table",
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/utilities",
+        "lucide-react"
+      ],
+      "registryDependencies": [
+        "table",
+        "button",
+        "badge",
+        "checkbox",
+        "popover",
+        "select",
+        "input"
+      ],
+      "files": [
+        {
+          "path": "components/grouped-data-table/types.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/types.ts"
+        },
+        {
+          "path": "components/grouped-data-table/grouping-utils.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/grouping-utils.ts"
+        },
+        {
+          "path": "components/grouped-data-table/filter-utils.ts",
+          "type": "registry:lib",
+          "target": "components/grouped-data-table/filter-utils.ts"
+        },
+        {
+          "path": "components/grouped-data-table/use-grouped-table.ts",
+          "type": "registry:hook",
+          "target": "components/grouped-data-table/use-grouped-table.ts"
+        },
+        {
+          "path": "components/grouped-data-table/primitives.radix.tsx",
+          "type": "registry:component",
+          "target": "components/grouped-data-table/primitives.tsx"
+        },
+        {
           "path": "components/grouped-data-table/multi-select.tsx",
           "type": "registry:component",
           "target": "components/grouped-data-table/multi-select.tsx"
