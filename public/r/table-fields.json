@@ -10,7 +10,9 @@
   ],
   "registryDependencies": [
     "badge",
-    "button"
+    "button",
+    "checkbox",
+    "input"
   ],
   "files": [
     {
