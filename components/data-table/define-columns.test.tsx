@@ -52,6 +52,10 @@ function stubRuntime(overrides: Partial<DataTableRuntime> = {}): DataTableRuntim
     isColumnEditable: () => false,
     updateData: vi.fn(),
     handleKeyDown: vi.fn(),
+    manualPagination: false,
+    totalRowCount: undefined,
+    isAllMatchingSelected: false,
+    setAllMatchingSelected: vi.fn(),
     ...overrides,
   }
 }

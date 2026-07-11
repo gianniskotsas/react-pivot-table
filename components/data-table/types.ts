@@ -14,6 +14,41 @@ export type DataTableColumnMeta = {
   label: string
 }
 
+/** Supported footer/selection-summary aggregation methods. */
+export type AggregationMethod = "sum" | "avg" | "min" | "max" | "count"
+
+/** Dev-declared: which columns support footer aggregation and which methods. */
+export type CalculableColumn = {
+  columnId: string
+  /** Methods offered in the picker; defaults to all five. */
+  methods?: AggregationMethod[]
+  /** Initial method shown before the user picks one; defaults to off (null). */
+  default?: AggregationMethod | null
+}
+
+/** Args passed to the dev-supplied computeAggregate callback for scopes that exceed what's loaded client-side. */
+export type ComputeAggregateArgs = {
+  columnId: string
+  method: AggregationMethod
+  scope: "all-matching" | "selection-all-matching"
+}
+
+/**
+ * Lifecycle of a server-computed aggregate value. `idle` before the user has
+ * triggered a calculation; `stale` when a prior server value's inputs
+ * (method or scope) have since changed but a fresh value hasn't been
+ * requested yet. `partial` on a `value`/`stale` state means the number was
+ * computed from loaded rows only (no `computeAggregate` was provided even
+ * though the scope exceeds what's loaded) — the UI shows a qualifier rather
+ * than silently presenting a wrong-looking total as authoritative.
+ */
+export type AggregateCellState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "value"; value: number; partial?: boolean }
+  | { status: "stale"; value: number; partial?: boolean }
+  | { status: "error"; message: string }
+
 /**
  * The live grid state + actions, provided via React Context so cell renderers
  * (built once per column by defineColumns) can read/act without prop-drilling.
@@ -45,4 +80,27 @@ export type DataTableRuntime = {
   updateData: (rowId: string, columnId: string, value: unknown) => void
   /** Wired once on the grid's root element (not per-cell) to drive arrow-key/Tab/Enter navigation of the active cell. */
   handleKeyDown: (e: React.KeyboardEvent) => void
+  /** Whether pagination is server-driven (useDataTable's manualPagination option) — lets cell renderers (row-gutter, footer) tell whether more rows exist beyond what's loaded. */
+  manualPagination: boolean
+  /** Total row count across all pages when manualPagination is true; undefined for client-side pagination, where loaded rows already are all rows. */
+  totalRowCount: number | undefined
+  /**
+   * True once the user's select-all click cycle has advanced past "every
+   * loaded/filtered row" to "every row matching the current filter,
+   * including any not yet loaded" — a logical selection, not a
+   * materialization of every id. Only meaningful when `totalRowCount`
+   * exceeds the loaded row count; otherwise selecting every loaded row
+   * already means "everything," and this stays false.
+   */
+  isAllMatchingSelected: boolean
+  /**
+   * Sets `isAllMatchingSelected`. Turning it on also selects every
+   * currently-loaded row (via the table's own row-selection state) so the
+   * visible checkboxes agree with the logical "everything" state; turning
+   * it off does NOT automatically deselect loaded rows, since the caller
+   * may be narrowing from "all-matching" back to "all loaded" rather than
+   * to "none" — the row-gutter's click-cycle (a later task) owns that
+   * distinction and calls the appropriate table method itself when needed.
+   */
+  setAllMatchingSelected: (matching: boolean) => void
 }

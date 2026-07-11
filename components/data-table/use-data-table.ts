@@ -177,7 +177,21 @@ export function useDataTable<TData>({
     [onUpdateData],
   )
 
-  const runtime: DataTableRuntime = { ...nav, isColumnEditable, updateData }
+  // manualPagination/totalRowCount/isAllMatchingSelected/setAllMatchingSelected
+  // are stubbed off here; useDataTable doesn't yet expose row-selection or
+  // manual-pagination options. Real wiring lands in a later task (per the
+  // plan's Task 3, which adds enableRowSelection/manualPagination/
+  // totalRowCount options and TanStack rowSelection state) — these defaults
+  // exist only so DataTableRuntime's now-required fields type-check.
+  const runtime: DataTableRuntime = {
+    ...nav,
+    isColumnEditable,
+    updateData,
+    manualPagination: false,
+    totalRowCount: undefined,
+    isAllMatchingSelected: false,
+    setAllMatchingSelected: () => {},
+  }
 
   return { table, runtime }
 }
