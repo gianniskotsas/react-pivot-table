@@ -1,6 +1,8 @@
 import type * as React from "react"
 import type { CellContext } from "@tanstack/react-table"
+import { Check, X } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
 import { FIELD_ICONS } from "./icons"
@@ -59,7 +61,22 @@ export function checkboxField(): FieldType<boolean> {
     name: "checkbox",
     icon: FIELD_ICONS.checkbox,
     align: "center",
-    display: (ctx) => (ctx.getValue() ? <span aria-label="checked">✓</span> : null),
+    display: (ctx) => {
+      const on = ctx.getValue()
+      return (
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+            on
+              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+              : "bg-rose-500/15 text-rose-600 dark:text-rose-400",
+          )}
+        >
+          {on ? <Check className="size-3" /> : <X className="size-3" />}
+          {on ? "True" : "False"}
+        </span>
+      )
+    },
     toClipboard: (v) => (v ? "true" : "false"),
     fromClipboard: (t) => t.trim().toLowerCase() === "true",
   }

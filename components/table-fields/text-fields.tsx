@@ -119,7 +119,13 @@ export function phoneField(): FieldType<string> {
           href={parsed.getURI()}
           label={parsed.formatInternational()}
           copyValue={parsed.number ?? parsed.formatInternational()}
-          leading={flag ? <span aria-hidden="true">{flag}</span> : null}
+          leading={
+            flag ? (
+              <span aria-hidden="true" className="mr-1 text-[1.15rem] leading-none">
+                {flag}
+              </span>
+            ) : null
+          }
         />
       )
     },

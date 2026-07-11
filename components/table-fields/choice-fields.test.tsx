@@ -29,12 +29,12 @@ describe("choice fields", () => {
     expect(f.fromClipboard("sales, eng")).toEqual(["sales", "eng"])
   })
 
-  it("checkboxField shows a check for true and clipboard booleans", () => {
+  it("checkboxField shows True/False pills and clipboard booleans", () => {
     const f = checkboxField()
     const { container: on } = render(<>{f.display(ctx(true))}</>)
-    expect(on.textContent).toBe("✓")
+    expect(on.textContent).toBe("True")
     const { container: off } = render(<>{f.display(ctx(false))}</>)
-    expect(off.textContent).toBe("")
+    expect(off.textContent).toBe("False")
     expect(f.toClipboard(true)).toBe("true")
     expect(f.fromClipboard("true")).toBe(true)
     expect(f.fromClipboard("false")).toBe(false)
