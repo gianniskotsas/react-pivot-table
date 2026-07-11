@@ -1126,13 +1126,39 @@ describe("useGridNavigation", () => {
     expect(result.current.activeCell).toEqual({ rowId: "r1", columnId: "c" })
   })
 
-  it("moveActive clamps at the grid edges", () => {
+  it("moveActive clamps at the grid start (up/prev at r1/a)", () => {
     const { result } = setup()
     act(() => result.current.setActiveCell({ rowId: "r1", columnId: "a" }))
     act(() => result.current.moveActive("up"))
     expect(result.current.activeCell).toEqual({ rowId: "r1", columnId: "a" })
     act(() => result.current.moveActive("prev"))
     expect(result.current.activeCell).toEqual({ rowId: "r1", columnId: "a" })
+  })
+
+  it("moveActive clamps at the grid end (down/next at the last row/column)", () => {
+    const { result } = setup()
+    act(() => result.current.setActiveCell({ rowId: "r3", columnId: "c" }))
+    act(() => result.current.moveActive("down"))
+    expect(result.current.activeCell).toEqual({ rowId: "r3", columnId: "c" })
+    act(() => result.current.moveActive("next"))
+    expect(result.current.activeCell).toEqual({ rowId: "r3", columnId: "c" })
+  })
+
+  it("moveActive is a no-op on an empty grid", () => {
+    const { result } = renderHook(() =>
+      useGridNavigation({ rowIds: [], columnIds: [], isColumnEditable: () => true }),
+    )
+    act(() => result.current.moveActive("next"))
+    expect(result.current.activeCell).toBeNull()
+  })
+
+  it("setActiveCell exits edit mode on a different cell", () => {
+    const { result } = setup()
+    act(() => result.current.beginEdit({ rowId: "r1", columnId: "a" }))
+    expect(result.current.editingCell).toEqual({ rowId: "r1", columnId: "a" })
+    act(() => result.current.setActiveCell({ rowId: "r2", columnId: "b" }))
+    expect(result.current.editingCell).toBeNull()
+    expect(result.current.activeCell).toEqual({ rowId: "r2", columnId: "b" })
   })
 
   it("beginEdit enters edit mode only for editable columns", () => {
@@ -1219,6 +1245,13 @@ function samePos(a: CellPos | null, b: CellPos): boolean {
  * plain row/column id lists. No TanStack Table dependency — testable with
  * fabricated ids. `use-data-table.ts` supplies the real ids and combines this
  * with column-editability and data persistence into the full DataTableRuntime.
+ *
+ * Two responsibilities that belong to `use-data-table.ts`, not here:
+ * 1. Memoize `rowIds`/`columnIds` (e.g. `useMemo` over `table.getRowModel().rows`).
+ *    `moveActive`/`handleKeyDown` depend on both arrays by reference, so a
+ *    fresh array every render defeats memoization on every consumer.
+ * 2. Revalidate `activeCell` when the id lists change under it (sort/filter/
+ *    delete) — see the comment on the orphaned-id guard in `moveActive` below.
  */
 export function useGridNavigation({
   rowIds,
@@ -1229,6 +1262,11 @@ export function useGridNavigation({
   const [editingCell, setEditingCell] = React.useState<CellPos | null>(null)
 
   const setActiveCell = React.useCallback((pos: CellPos) => {
+    // Focusing a different cell always exits whatever was being edited — a
+    // click elsewhere is an implicit "stop editing", not a silent orphan of
+    // editingCell (which would otherwise still be "editing" a cell that's no
+    // longer active, while the newly active cell shows no editor).
+    setEditingCell(null)
     setActiveCellState(pos)
   }, [])
 
@@ -1249,13 +1287,21 @@ export function useGridNavigation({
     (dir: MoveDirection) => {
       setEditingCell(null)
       setActiveCellState((current) => {
-        if (!current || rowIds.length === 0 || columnIds.length === 0) {
-          return rowIds.length && columnIds.length
-            ? { rowId: rowIds[0], columnId: columnIds[0] }
-            : current
-        }
+        if (rowIds.length === 0 || columnIds.length === 0) return current
+        if (!current) return { rowId: rowIds[0], columnId: columnIds[0] }
+
         const rowIdx = rowIds.indexOf(current.rowId)
         const colIdx = columnIds.indexOf(current.columnId)
+        // `current` points at a row/column id no longer in the live lists —
+        // e.g. a sort/filter/delete on the table removed it while it was
+        // active. This hook is deliberately table-agnostic (see the module
+        // doc comment) and has no principled way to pick a replacement
+        // position, so it holds still rather than guessing. The owner of
+        // `rowIds`/`columnIds` (use-data-table.ts) is responsible for
+        // resetting or revalidating `activeCell` — e.g. via setActiveCell —
+        // when the id lists it derives from the table change out from under
+        // an active cell; a silently-frozen active cell is otherwise a real
+        // dead end for keyboard navigation.
         if (rowIdx === -1 || colIdx === -1) return current
 
         if (dir === "up") {
@@ -2361,6 +2407,10 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Test: `components/data-table/use-data-table.test.tsx`
 
 Wires TanStack state (sorting/visibility/pinning/sizing/pagination) and combines it with `useGridNavigation` into the full `DataTableRuntime`.
+
+**Two requirements inherited from `use-grid-navigation.ts`'s module doc comment (added during Task 7's code review — do not drop these when implementing Step 3 below):**
+1. **Memoize `rowIds`/`columnIds`** before passing them to `useGridNavigation` (e.g. `React.useMemo(() => table.getRowModel().rows.map(r => r.id), [table.getRowModel().rows])`) — `table.getRowModel().rows` is a fresh array every render, and `moveActive`/`handleKeyDown` depend on both id arrays by reference, so an unmemoized pass-through defeats their memoization on every render.
+2. **Revalidate `activeCell` when the id lists change under it** (sort/filter/delete removes the active row/column). `useGridNavigation` deliberately holds the active cell still rather than guessing a replacement when its own `rowIds`/`columnIds` no longer contain it — see the comment on the orphaned-id guard in `moveActive`. Add a `React.useEffect` here that clears or resets `activeCell` (via `runtime.setActiveCell`/a runtime reset, whichever this task's design lands on) when `activeCell` points at a row/column id no longer present in the memoized `rowIds`/`columnIds`, so keyboard navigation never silently freezes.
 
 - [ ] **Step 1: Write the failing test**
 
