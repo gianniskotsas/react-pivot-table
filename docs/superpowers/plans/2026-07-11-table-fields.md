@@ -850,6 +850,12 @@ export function singleSelectField(opts: { options: SelectOption[] }): FieldType<
   }
 }
 
+/**
+ * Clipboard format is a human-readable, Excel-pasteable comma-joined list
+ * (matching Airtable). Consequence: option `value`s must not contain a comma,
+ * or the copy/paste round-trip splits them apart. Keep values comma-free
+ * (labels may contain commas; only the serialized `value` is affected).
+ */
 export function multiSelectField(opts: { options: SelectOption[] }): FieldType<string[]> {
   return {
     name: "multiSelect",
