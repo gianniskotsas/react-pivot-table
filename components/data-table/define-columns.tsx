@@ -89,6 +89,9 @@ function makeFieldCell<TData, V>(
     const isEditing = runtime ? runtime.isEditing(pos) : false
     const isActive = runtime ? runtime.isActive(pos) : false
     const cellRef = React.useRef<HTMLDivElement>(null)
+    // Captured in onMouseDown, read in onClick — see the comment on
+    // onMouseDown below for why onClick can't just read `isActive` directly.
+    const wasActiveBeforeMouseDownRef = React.useRef(false)
 
     React.useEffect(() => {
       if (isEditing) setStaged(value)
@@ -103,15 +106,31 @@ function makeFieldCell<TData, V>(
     // works (the keydown listener sits on an ancestor and catches bubbled
     // events regardless of which descendant has focus).
     //
-    // Deliberately narrowed to [isActive] — fires only on the
-    // inactive→active transition, not on every render, so it never steals
-    // focus from an editor mid-edit in another cell and can't loop: calling
-    // .focus() here re-triggers this cell's onFocus → runtime.setActiveCell
-    // with the same pos, which is a same-value state update (no-op re-render,
-    // isActive stays true, this effect's dependency doesn't change).
+    // Depends on BOTH [isActive, isEditing], not just [isActive]: this cell's
+    // <div ref={cellRef}> is unmounted while isEditing is true (the
+    // `field.edit(...)` branch below returns a completely different tree,
+    // e.g. an <input>) and remounted — a fresh DOM node, ref reattached from
+    // scratch — the moment isEditing flips back to false. beginEdit/
+    // stopEditing never touch activeCell, so a cell can stay active the
+    // entire time isEditing goes true→false (Escape, or committing an edit);
+    // with only [isActive] as the dependency, isActive never changes across
+    // that cycle, so the effect wouldn't rerun and the newly-remounted div
+    // would never get focused — document.activeElement would fall back to
+    // <body> (whatever last had focus, e.g. the just-unmounted <input>) even
+    // though the ring still shows this cell as active. That's not just a
+    // cosmetic miss: with focus on <body>, the wrapper's onKeyDown (bound on
+    // a div that is an ANCESTOR of body's children, not of body itself) never
+    // sees the event — Enter, arrows, everything silently does nothing until
+    // the user clicks again. Depending on isEditing too makes the effect
+    // rerun exactly on that remount and reclaim focus. Still can't steal
+    // focus from an editor mid-edit in another cell (that cell's own isActive
+    // is false) and still can't loop (calling .focus() here re-triggers this
+    // cell's onFocus → setActiveCell with the same pos, a same-value update:
+    // isActive and isEditing both stay put, so this effect's deps don't
+    // change and it doesn't refire).
     React.useEffect(() => {
-      if (isActive) cellRef.current?.focus()
-    }, [isActive])
+      if (isActive && !isEditing) cellRef.current?.focus()
+    }, [isActive, isEditing])
 
     if (!runtime) {
       // No <DataTable> runtime in scope — degrade to a plain read-only cell.
@@ -143,8 +162,26 @@ function makeFieldCell<TData, V>(
         ref={cellRef}
         tabIndex={0}
         data-active={isActive ? "true" : undefined}
+        // A real mouse click dispatches `mousedown` → native focus move →
+        // `focus` → `mouseup` → `click`, as separate top-level browser
+        // events. Each one gets its own React commit, so by the time
+        // `onClick` runs, the `focus` event above has *already* called
+        // `runtime.setActiveCell(pos)` and re-rendered this cell with
+        // `isActive: true` — even on a cell that was NOT active before this
+        // click. Reading `isActive` inside `onClick` therefore can't tell
+        // "was already active" (click #2, should edit) apart from "just
+        // became active via this click's own focus event" (click #1, should
+        // only activate): both read `isActive === true`. Every first click on
+        // an inactive editable cell would incorrectly jump straight to edit
+        // mode. `onMouseDown` fires BEFORE the browser moves focus, so it's
+        // the only handler that sees the true pre-click state; capture it
+        // here and have onClick decide off the captured ref instead of the
+        // (by-then-stale-for-this-purpose) live `isActive`.
+        onMouseDown={() => {
+          wasActiveBeforeMouseDownRef.current = isActive
+        }}
         onClick={() => {
-          if (isActive && editable) runtime.beginEdit(pos)
+          if (wasActiveBeforeMouseDownRef.current && editable) runtime.beginEdit(pos)
           else runtime.setActiveCell(pos)
         }}
         onFocus={() => runtime.setActiveCell(pos)}

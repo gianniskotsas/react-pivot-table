@@ -16,6 +16,21 @@ function columns() {
   return [col.text("name", { header: "Name" }), col.number("age", { header: "Age" })]
 }
 
+// A real click fires mousedown → native focus (→ a `focus` event) → mouseup
+// → click as four separate browser events. jsdom does not move focus (or
+// fire a `focus` event) on a plain `fireEvent.click`, so tests that only
+// call `fireEvent.click` can't catch bugs caused by that real event
+// interleaving — e.g. a "click to activate, click again to edit" cell
+// jumping straight to edit on the very first click because the focus event
+// (which fires before click) already flipped isActive to true. Use this
+// helper wherever a test needs to faithfully exercise a real click.
+function realClick(el: HTMLElement) {
+  fireEvent.mouseDown(el)
+  el.focus()
+  fireEvent.mouseUp(el)
+  fireEvent.click(el)
+}
+
 describe("DataTable", () => {
   it("renders headers and rows", () => {
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
@@ -41,12 +56,43 @@ describe("DataTable", () => {
       />,
     )
     const cell = screen.getByText("Bailey")
-    fireEvent.click(cell) // first click: activate
-    fireEvent.click(screen.getByText("Bailey")) // second click on active cell: edit
+    realClick(cell) // first real click: activate only
+    // A single real click must NOT jump straight to edit mode. This guards
+    // against a regression where onFocus (fired by the browser on mousedown,
+    // before click) sets isActive=true in time for onClick's own
+    // isActive-check to see it, collapsing "click to activate, click again
+    // to edit" into a single click.
+    expect(screen.queryByRole("textbox")).toBeNull()
+    realClick(screen.getByText("Bailey")) // second real click on active cell: edit
     const input = screen.getByRole("textbox")
     fireEvent.change(input, { target: { value: "Grace" } })
     fireEvent.blur(input)
     expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Grace")
+  })
+
+  it("real DOM focus returns to the cell (not document.body) after leaving edit mode, so Enter re-opens it", () => {
+    render(
+      <DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} editable />,
+    )
+    const cell = screen.getByText("Bailey")
+    realClick(cell) // activate
+    realClick(screen.getByText("Bailey")) // edit
+    const input = screen.getByRole("textbox")
+    fireEvent.keyDown(input, { key: "Escape" }) // cancel edit, stays active
+
+    // The cell (not <body>) must hold real DOM focus here. Regression guard:
+    // FieldCell's focus-restoration effect used to depend on [isActive]
+    // only; since beginEdit/stopEditing never touch activeCell, isActive
+    // never changes across an edit→escape cycle, so the effect wouldn't
+    // rerun when the cell's <div> remounted after the editor unmounted —
+    // leaving focus stranded on <body>, where the table wrapper's
+    // onKeyDown can never see it (body is an ancestor of the wrapper, not a
+    // descendant), so Enter would silently do nothing.
+    const reactivatedCell = screen.getByText("Bailey").closest("div") as HTMLElement
+    expect(document.activeElement).toBe(reactivatedCell)
+
+    fireEvent.keyDown(reactivatedCell, { key: "Enter" })
+    expect(screen.getByRole("textbox")).toBeInTheDocument()
   })
 
   it("renders the Columns menu toolbar button", () => {

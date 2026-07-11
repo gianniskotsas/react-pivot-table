@@ -11,6 +11,25 @@ type Row = { id: string; name: string; age: number; active: boolean }
 
 const ROW: Row = { id: "r1", name: "Ada", age: 30, active: true }
 
+// jsdom does NOT reproduce a real browser's native "mousedown moves focus"
+// behavior for arbitrary tabIndex=0 elements the way Chrome/Firefox/Safari
+// do — a plain `fireEvent.click(el)` never touches document.activeElement or
+// fires a `focus` event. That gap is exactly what let a previous "fix" pass
+// its unit test (via a `rerender()`-simulated isActive transition) while
+// being broken for every real mouse click: real clicks fire mousedown →
+// native focus (→ a `focus` event) → mouseup → click, as four separate
+// browser events, each producing its own React commit — and it's that
+// interleaving (onFocus's setActiveCell committing before onClick runs) that
+// the click-vs-focus race in FieldCell's onClick handler has to account for.
+// This helper reproduces that real sequence so tests exercise the actual
+// event order instead of only the click.
+function realClick(el: HTMLElement) {
+  fireEvent.mouseDown(el)
+  el.focus()
+  fireEvent.mouseUp(el)
+  fireEvent.click(el)
+}
+
 function ctxFor(columnId: string, value: unknown) {
   return {
     getValue: () => value,
@@ -88,7 +107,7 @@ describe("defineColumns / col builder", () => {
         {flexRender(column.cell, ctxFor("name", "Ada"))}
       </DataTableRuntimeContext.Provider>,
     )
-    fireEvent.click(screen.getByText("Ada"))
+    realClick(screen.getByText("Ada"))
     expect(runtime.beginEdit).toHaveBeenCalledWith(pos)
   })
 
