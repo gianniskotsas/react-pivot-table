@@ -127,6 +127,24 @@ describe("number field edit renderers", () => {
     expect(percentField().edit).toBeTypeOf("function")
     expect(durationField().edit).toBeTypeOf("function")
   })
+
+  it("a fully-typed negative value commits correctly (onChange only ever sees '' or a parseable number)", () => {
+    const setValue = vi.fn()
+    render(
+      <>
+        {currencyField().edit!({
+          value: 100,
+          setValue,
+          commit: vi.fn(),
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const input = screen.getByRole("spinbutton")
+    fireEvent.change(input, { target: { value: "-5" } })
+    expect(setValue).toHaveBeenCalledWith(-5)
+  })
 })
 ```
 
@@ -142,7 +160,17 @@ In `components/table-fields/number-fields.tsx`, add `import { Input } from "@/co
 Add this helper right after `toClipboardNumber`:
 
 ```tsx
-/** Shared numeric edit renderer for number/currency/percent/duration. */
+/**
+ * Shared numeric edit renderer for number/currency/percent/duration.
+ *
+ * Controlled by ctx.value: a lone "-" or trailing "." never round-trips
+ * through this at all — native `type="number"` inputs withhold the change
+ * event entirely for an incomplete/invalid value (per the WHATWG value
+ * sanitization algorithm), so onChange only ever fires with "" or a fully
+ * parseable number. Controlled is required so re-entering edit mode on the
+ * same cell (after a commit/cancel) reflects the fresh `ctx.value` instead of
+ * stale DOM content from a prior edit session.
+ */
 function numericEdit(ctx: import("./types").FieldEditContext<number>) {
   return (
     <Input

@@ -1,6 +1,6 @@
-import { render } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import type { CellContext } from "@tanstack/react-table"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   currencyField,
   durationField,
@@ -38,5 +38,76 @@ describe("number fields", () => {
   it("durationField displays a humanized duration", () => {
     const { container } = render(<>{durationField().display(ctx(5400))}</>)
     expect(container.textContent).toBe("1h 30m")
+  })
+})
+
+describe("number field edit renderers", () => {
+  it("numberField.edit renders a number input wired to the edit context", () => {
+    const setValue = vi.fn()
+    const commit = vi.fn()
+    render(
+      <>
+        {numberField().edit!({
+          value: 5,
+          setValue,
+          commit,
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const input = screen.getByRole("spinbutton")
+    expect(input).toHaveValue(5)
+    fireEvent.change(input, { target: { value: "9" } })
+    expect(setValue).toHaveBeenCalledWith(9)
+    fireEvent.blur(input)
+    expect(commit).toHaveBeenCalled()
+  })
+
+  it("numberField.edit commits and moves down on Enter, cancels on Escape", () => {
+    const commit = vi.fn()
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {numberField().edit!({
+          value: 5,
+          setValue: vi.fn(),
+          commit,
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const input = screen.getByRole("spinbutton")
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("down")
+    fireEvent.keyDown(input, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("currencyField/percentField/durationField all expose an edit renderer", () => {
+    expect(currencyField().edit).toBeTypeOf("function")
+    expect(percentField().edit).toBeTypeOf("function")
+    expect(durationField().edit).toBeTypeOf("function")
+  })
+
+  it("a fully-typed negative value commits correctly (onChange only ever sees '' or a parseable number)", () => {
+    const setValue = vi.fn()
+    render(
+      <>
+        {currencyField().edit!({
+          value: 100,
+          setValue,
+          commit: vi.fn(),
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const input = screen.getByRole("spinbutton")
+    fireEvent.change(input, { target: { value: "-5" } })
+    expect(setValue).toHaveBeenCalledWith(-5)
   })
 })
