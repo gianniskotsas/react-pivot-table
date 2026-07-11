@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import type { CellContext } from "@tanstack/react-table"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import {
   emailField,
   longTextField,
@@ -66,5 +66,62 @@ describe("text fields", () => {
   it("round-trips clipboard as identity", () => {
     expect(urlField().toClipboard("x")).toBe("x")
     expect(urlField().fromClipboard("x")).toBe("x")
+  })
+})
+
+describe("text field edit renderers", () => {
+  it("textField.edit renders a text input wired to the edit context", () => {
+    const setValue = vi.fn()
+    const commit = vi.fn()
+    render(
+      <>
+        {textField().edit!({
+          value: "hi",
+          setValue,
+          commit,
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const input = screen.getByRole("textbox")
+    expect(input).toHaveValue("hi")
+    fireEvent.change(input, { target: { value: "hello" } })
+    expect(setValue).toHaveBeenCalledWith("hello")
+    fireEvent.blur(input)
+    expect(commit).toHaveBeenCalled()
+  })
+
+  it("longTextField.edit renders a textarea", () => {
+    render(
+      <>
+        {longTextField().edit!({
+          value: "note",
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    expect(screen.getByRole("textbox").tagName).toBe("TEXTAREA")
+  })
+
+  it("urlField/emailField/phoneField all expose a plain text edit renderer", () => {
+    expect(urlField().edit).toBeTypeOf("function")
+    expect(emailField().edit).toBeTypeOf("function")
+    expect(phoneField().edit).toBeTypeOf("function")
+    render(
+      <>
+        {urlField().edit!({
+          value: "https://x.com",
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    expect(screen.getByRole("textbox")).toHaveValue("https://x.com")
   })
 })

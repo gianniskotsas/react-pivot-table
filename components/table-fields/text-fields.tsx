@@ -3,9 +3,11 @@ import type { CellContext } from "@tanstack/react-table"
 import { ExternalLink } from "lucide-react"
 import parsePhoneNumber from "libphonenumber-js"
 
+import { Input } from "@/components/ui/input"
+
 import { ChipCell } from "./chip"
 import { FIELD_ICONS } from "./icons"
-import type { FieldType } from "./types"
+import type { FieldEditContext, FieldType } from "./types"
 
 const identityClipboard = {
   toClipboard: (v: string) => v ?? "",
@@ -41,11 +43,63 @@ function flagEmoji(country: string): string {
     .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)))
 }
 
+/** Shared single-line text edit renderer for text/url/email/phone (edits the raw value). */
+function textEdit(ctx: FieldEditContext<string>) {
+  return (
+    <Input
+      autoFocus
+      value={ctx.value ?? ""}
+      onChange={(e) => ctx.setValue(e.target.value)}
+      onBlur={ctx.commit}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === "Enter") {
+          e.preventDefault()
+          ctx.commit()
+          ctx.focusNext("down")
+        } else if (e.key === "Escape") {
+          e.preventDefault()
+          ctx.cancel()
+        } else if (e.key === "Tab") {
+          e.preventDefault()
+          ctx.commit()
+          ctx.focusNext(e.shiftKey ? "prev" : "next")
+        }
+      }}
+      className="h-8"
+    />
+  )
+}
+
+/** Multi-line edit renderer for longText. Native textarea (no shadcn Textarea installed). */
+function longTextEdit(ctx: FieldEditContext<string>) {
+  return (
+    <textarea
+      autoFocus
+      value={ctx.value ?? ""}
+      onChange={(e) => ctx.setValue(e.target.value)}
+      onBlur={ctx.commit}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === "Escape") {
+          e.preventDefault()
+          ctx.cancel()
+        }
+        // Enter inserts a newline (default textarea behavior); Shift+Enter is
+        // not required to commit — blur or Escape are the exit paths.
+      }}
+      rows={3}
+      className="w-full rounded-md border border-input bg-transparent px-2.5 py-1.5 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+    />
+  )
+}
+
 export function textField(): FieldType<string> {
   return {
     name: "text",
     icon: FIELD_ICONS.text,
     display: (ctx) => ctx.getValue(),
+    edit: textEdit,
     ...identityClipboard,
   }
 }
@@ -59,6 +113,7 @@ export function longTextField(): FieldType<string> {
         {ctx.getValue()}
       </span>
     ),
+    edit: longTextEdit,
     ...identityClipboard,
   }
 }
@@ -85,6 +140,7 @@ export function urlField(): FieldType<string> {
         />
       )
     },
+    edit: textEdit,
     ...identityClipboard,
   }
 }
@@ -97,6 +153,7 @@ export function emailField(): FieldType<string> {
       const v = ctx.getValue()
       return v ? <ChipCell href={`mailto:${v}`} label={v} copyValue={v} /> : null
     },
+    edit: textEdit,
     ...identityClipboard,
   }
 }
@@ -129,6 +186,7 @@ export function phoneField(): FieldType<string> {
         />
       )
     },
+    edit: textEdit,
     ...identityClipboard,
   }
 }
