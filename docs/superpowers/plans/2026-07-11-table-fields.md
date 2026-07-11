@@ -947,6 +947,13 @@ describe("widget fields", () => {
     expect(container.querySelectorAll('[data-star="filled"]')).toHaveLength(3)
   })
 
+  it("ratingField clamps pasted values to [0, max]", () => {
+    const f = ratingField({ max: 5 })
+    expect(f.fromClipboard("999")).toBe(5)
+    expect(f.fromClipboard("-3")).toBe(0)
+    expect(f.fromClipboard("abc")).toBeUndefined()
+  })
+
   it("buttonField renders a button that calls onClick with the row", () => {
     const onClick = vi.fn()
     render(<>{buttonField({ label: "Open", onClick }).display(ctx(null, { id: "r1" }))}</>)
@@ -957,7 +964,9 @@ describe("widget fields", () => {
   it("dateField displays a locale date and round-trips ISO", () => {
     const f = dateField()
     const { container } = render(<>{f.display(ctx("2026-07-11"))}</>)
-    expect(container.textContent).toContain("2026")
+    // UTC-pinned, so this is the same calendar day in every timezone (guards
+    // the off-by-one where a UTC-midnight date renders as the previous day).
+    expect(container.textContent).toBe("Jul 11, 2026")
     expect(f.toClipboard("2026-07-11")).toBe("2026-07-11")
     expect(f.fromClipboard("2026-07-11")).toBe("2026-07-11")
   })
@@ -1012,7 +1021,10 @@ export function ratingField(opts: { max?: number } = {}): FieldType<number> {
     toClipboard: (v) => (v == null ? "" : String(v)),
     fromClipboard: (t) => {
       const n = Number(t)
-      return Number.isNaN(n) ? undefined : n
+      if (Number.isNaN(n)) return undefined
+      // Clamp to the field's [0, max] range so a pasted out-of-range value
+      // can't desync the display (which caps at `max`) from the stored data.
+      return Math.max(0, Math.min(max, n))
     },
   }
 }
@@ -1026,6 +1038,7 @@ export function buttonField<TData = unknown>(opts: {
     icon: FIELD_ICONS.button,
     display: (ctx) => (
       <Button
+        type="button"
         variant="outline"
         size="sm"
         onClick={(e) => {
@@ -1059,6 +1072,10 @@ export function dateField(
       return (
         <span>
           {new Intl.DateTimeFormat(opts.locale ?? "en-US", {
+            // Values are stored/round-tripped in UTC (ISO), so format in UTC too
+            // — otherwise a plain date parsed as UTC midnight renders as the
+            // previous day for viewers west of UTC.
+            timeZone: "UTC",
             dateStyle: "medium",
             ...(opts.withTime ? { timeStyle: "short" } : {}),
           }).format(d)}
