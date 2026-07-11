@@ -38,3 +38,113 @@ describe("widget fields", () => {
     expect(f.fromClipboard("2026-07-11")).toBe("2026-07-11")
   })
 })
+
+describe("widget field edit renderers", () => {
+  it("ratingField.edit renders clickable stars that set and commit", () => {
+    const setValue = vi.fn()
+    const commit = vi.fn()
+    const { container } = render(
+      <>
+        {ratingField({ max: 5 }).edit!({
+          value: 2,
+          setValue,
+          commit,
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const stars = container.querySelectorAll("button[aria-label]")
+    expect(stars).toHaveLength(5)
+    fireEvent.click(stars[3]) // 4th star -> rating 4
+    expect(setValue).toHaveBeenCalledWith(4)
+    expect(commit).toHaveBeenCalled()
+  })
+
+  it("ratingField.edit forwards Tab to focusNext and Escape to cancel", () => {
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    const { container } = render(
+      <>
+        {ratingField({ max: 5 }).edit!({
+          value: 2,
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const wrapper = container.firstElementChild!
+    fireEvent.keyDown(wrapper, { key: "Tab" })
+    expect(focusNext).toHaveBeenCalledWith("next")
+    fireEvent.keyDown(wrapper, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("dateField.edit renders a native date input seeded with the ISO date", () => {
+    const setValue = vi.fn()
+    render(
+      <>
+        {dateField().edit!({
+          value: "2026-07-11",
+          setValue,
+          commit: vi.fn(),
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const input = screen.getByDisplayValue("2026-07-11")
+    expect(input).toHaveAttribute("type", "date")
+    fireEvent.change(input, { target: { value: "2026-08-01" } })
+    expect(setValue).toHaveBeenCalledWith("2026-08-01")
+  })
+
+  it("dateField.edit commits and moves down on Enter, cancels on Escape", () => {
+    const commit = vi.fn()
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {dateField().edit!({
+          value: "2026-07-11",
+          setValue: vi.fn(),
+          commit,
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const input = screen.getByDisplayValue("2026-07-11")
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("down")
+    fireEvent.keyDown(input, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("dateField.edit commits and advances on Tab", () => {
+    const commit = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {dateField().edit!({
+          value: "2026-07-11",
+          setValue: vi.fn(),
+          commit,
+          cancel: vi.fn(),
+          focusNext,
+        })}
+      </>,
+    )
+    const input = screen.getByDisplayValue("2026-07-11")
+    fireEvent.keyDown(input, { key: "Tab" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("next")
+  })
+
+  it("buttonField has no edit renderer", () => {
+    expect(buttonField({ label: "x", onClick: () => {} }).edit).toBeUndefined()
+  })
+})

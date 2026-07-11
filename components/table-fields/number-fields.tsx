@@ -1,9 +1,11 @@
 import type * as React from "react"
 import type { CellContext } from "@tanstack/react-table"
 
+import { Input } from "@/components/ui/input"
+
 import { formatCurrency, formatDuration, formatNumber, formatPercent } from "./format"
 import { FIELD_ICONS } from "./icons"
-import type { FieldType } from "./types"
+import type { FieldEditContext, FieldType } from "./types"
 
 /** Parse a possibly-formatted numeric string (e.g. "$1,000.00") to a number. */
 function parseNumeric(text: string): number | undefined {
@@ -17,6 +19,45 @@ function toClipboardNumber(value: number): string {
   return value == null || Number.isNaN(value) ? "" : String(value)
 }
 
+/**
+ * Shared numeric edit renderer for number/currency/percent/duration.
+ *
+ * Controlled by ctx.value: a lone "-" or trailing "." never round-trips
+ * through this at all — native `type="number"` inputs withhold the change
+ * event entirely for an incomplete/invalid value (per the WHATWG value
+ * sanitization algorithm), so onChange only ever fires with "" or a fully
+ * parseable number. Controlled is required so re-entering edit mode on the
+ * same cell (after a commit/cancel) reflects the fresh `ctx.value` instead of
+ * stale DOM content from a prior edit session.
+ */
+function numericEdit(ctx: FieldEditContext<number>) {
+  return (
+    <Input
+      type="number"
+      autoFocus
+      value={Number.isNaN(ctx.value) ? "" : ctx.value}
+      onChange={(e) => ctx.setValue(e.target.value === "" ? Number.NaN : Number(e.target.value))}
+      onBlur={ctx.commit}
+      onKeyDown={(e) => {
+        e.stopPropagation()
+        if (e.key === "Enter") {
+          e.preventDefault()
+          ctx.commit()
+          ctx.focusNext("down")
+        } else if (e.key === "Escape") {
+          e.preventDefault()
+          ctx.cancel()
+        } else if (e.key === "Tab") {
+          e.preventDefault()
+          ctx.commit()
+          ctx.focusNext(e.shiftKey ? "prev" : "next")
+        }
+      }}
+      className="h-8"
+    />
+  )
+}
+
 export function numberField(
   opts: { locale?: string; maximumFractionDigits?: number } = {},
 ): FieldType<number> {
@@ -27,6 +68,7 @@ export function numberField(
     display: (ctx) => (
       <span className="tabular-nums">{formatNumber(ctx.getValue(), opts)}</span>
     ),
+    edit: numericEdit,
     toClipboard: toClipboardNumber,
     fromClipboard: parseNumeric,
   }
@@ -42,6 +84,7 @@ export function currencyField(
     display: (ctx) => (
       <span className="tabular-nums">{formatCurrency(ctx.getValue(), opts)}</span>
     ),
+    edit: numericEdit,
     toClipboard: toClipboardNumber,
     fromClipboard: parseNumeric,
   }
@@ -57,6 +100,7 @@ export function percentField(
     display: (ctx) => (
       <span className="tabular-nums">{formatPercent(ctx.getValue(), opts)}</span>
     ),
+    edit: numericEdit,
     toClipboard: toClipboardNumber,
     fromClipboard: parseNumeric,
   }
@@ -72,6 +116,7 @@ export function durationField(
     display: (ctx) => (
       <span className="tabular-nums">{formatDuration(ctx.getValue(), opts)}</span>
     ),
+    edit: numericEdit,
     toClipboard: toClipboardNumber,
     fromClipboard: parseNumeric,
   }

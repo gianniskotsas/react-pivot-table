@@ -1,0 +1,21 @@
+import { describe, expect, it } from "vitest"
+import * as dataTable from "./index"
+
+describe("data-table barrel", () => {
+  it("re-exports the public surface", () => {
+    for (const name of [
+      "DataTable",
+      "defineColumns",
+      "ColumnHeader",
+      "ColumnsMenu",
+      "ColumnsMenuContent",
+      "useDataTable",
+      "useGridNavigation",
+      "DataTableRuntimeContext",
+      "useDataTableRuntime",
+      "PopoverButtonTrigger",
+    ]) {
+      expect(dataTable).toHaveProperty(name)
+    }
+  })
+})
