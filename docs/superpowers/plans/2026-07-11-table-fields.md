@@ -601,6 +601,12 @@ describe("text fields", () => {
     expect(a).toHaveAttribute("rel", "noreferrer")
   })
 
+  it("urlField renders non-http(s) values as plain text, not a link", () => {
+    const { container } = render(<>{urlField().display(ctx("javascript:alert(1)"))}</>)
+    expect(container.querySelector("a")).toBeNull()
+    expect(container.textContent).toBe("javascript:alert(1)")
+  })
+
   it("emailField renders a mailto link and phoneField a tel link", () => {
     render(<>{emailField().display(ctx("a@b.com"))}</>)
     expect(screen.getByRole("link", { name: "a@b.com" })).toHaveAttribute("href", "mailto:a@b.com")
@@ -653,6 +659,16 @@ function LinkCell({ href, text }: { href: string; text: string }) {
   )
 }
 
+/**
+ * Only http(s) URLs render as clickable links. React does not sanitize `href`,
+ * so rendering a raw cell value (which, in an editable grid, may be attacker- or
+ * import-supplied) as a link would allow `javascript:`/`data:` href injection.
+ * Non-http(s) values fall back to plain, non-clickable text.
+ */
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value)
+}
+
 export function textField(): FieldType<string> {
   return {
     name: "text",
@@ -681,7 +697,12 @@ export function urlField(): FieldType<string> {
     icon: FIELD_ICONS.url,
     display: (ctx) => {
       const v = ctx.getValue()
-      return v ? <LinkCell href={v} text={v} /> : null
+      if (!v) return null
+      return isHttpUrl(v) ? (
+        <LinkCell href={v} text={v} />
+      ) : (
+        <span className="truncate inline-block max-w-full align-bottom">{v}</span>
+      )
     },
     ...identityClipboard,
   }
