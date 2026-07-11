@@ -162,6 +162,24 @@
           "target": "components/grouped-data-table/index.ts"
         }
       ]
+    },
+    {
+      "name": "table-fields",
+      "type": "registry:lib",
+      "title": "Table Fields",
+      "description": "Standalone, type-safe Airtable-style field types (number, currency, percent, duration, text, url, email, phone, single/multi select, checkbox, rating, button, date) for any shadcn + TanStack Table. Display renderers, Intl formatters, header icons, and clipboard serialization.",
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "registryDependencies": ["badge", "button"],
+      "files": [
+        { "path": "components/table-fields/types.ts", "type": "registry:lib", "target": "components/table-fields/types.ts" },
+        { "path": "components/table-fields/format.ts", "type": "registry:lib", "target": "components/table-fields/format.ts" },
+        { "path": "components/table-fields/icons.ts", "type": "registry:lib", "target": "components/table-fields/icons.ts" },
+        { "path": "components/table-fields/number-fields.tsx", "type": "registry:component", "target": "components/table-fields/number-fields.tsx" },
+        { "path": "components/table-fields/text-fields.tsx", "type": "registry:component", "target": "components/table-fields/text-fields.tsx" },
+        { "path": "components/table-fields/choice-fields.tsx", "type": "registry:component", "target": "components/table-fields/choice-fields.tsx" },
+        { "path": "components/table-fields/widget-fields.tsx", "type": "registry:component", "target": "components/table-fields/widget-fields.tsx" },
+        { "path": "components/table-fields/index.ts", "type": "registry:lib", "target": "components/table-fields/index.ts" }
+      ]
     }
   ]
 }
