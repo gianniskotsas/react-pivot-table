@@ -120,6 +120,19 @@ export function checkboxField(): FieldType<boolean> {
           ctx.setValue(checked === true)
           ctx.commit()
         }}
+        onKeyDown={(e) => {
+          // Checkbox commits synchronously on toggle (no "draft" value), so
+          // Escape has nothing to revert but is still handled for
+          // consistency: it exits edit mode without toggling.
+          e.stopPropagation()
+          if (e.key === "Escape") {
+            e.preventDefault()
+            ctx.cancel()
+          } else if (e.key === "Tab") {
+            e.preventDefault()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
+          }
+        }}
       />
     ),
     toClipboard: (v) => (v ? "true" : "false"),

@@ -33,6 +33,48 @@ export function ratingField(opts: { max?: number } = {}): FieldType<number> {
         </div>
       )
     },
+    edit: (ctx) => (
+      <div
+        className="flex items-center gap-0.5"
+        onKeyDown={(e) => {
+          // Tab bubbles up here from whichever star button has focus — one
+          // handler covers the whole widget. Rating commits synchronously on
+          // click (no "draft" value), so Escape has nothing to revert but is
+          // still handled for consistency: it exits edit mode without a click.
+          e.stopPropagation()
+          if (e.key === "Escape") {
+            e.preventDefault()
+            ctx.cancel()
+          } else if (e.key === "Tab") {
+            e.preventDefault()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
+          }
+        }}
+      >
+        {Array.from({ length: max }, (_, i) => {
+          const filled = i < (ctx.value ?? 0)
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Rate ${i + 1}`}
+              onClick={() => {
+                ctx.setValue(i + 1)
+                ctx.commit()
+              }}
+              className="cursor-pointer"
+            >
+              <Star
+                className={cn(
+                  "size-4",
+                  filled ? "fill-current text-amber-500" : "text-muted-foreground/40",
+                )}
+              />
+            </button>
+          )
+        })}
+      </div>
+    ),
     toClipboard: (v) => (v == null ? "" : String(v)),
     fromClipboard: (t) => {
       const n = Number(t)
@@ -95,6 +137,35 @@ export function dateField(
             ...(opts.withTime ? { timeStyle: "short" } : {}),
           }).format(d)}
         </span>
+      )
+    },
+    edit: (ctx) => {
+      const d = toDate(ctx.value)
+      const iso = d ? d.toISOString().slice(0, 10) : ""
+      return (
+        <input
+          type="date"
+          autoFocus
+          value={iso}
+          onChange={(e) => ctx.setValue(e.target.value)}
+          onBlur={ctx.commit}
+          onKeyDown={(e) => {
+            e.stopPropagation()
+            if (e.key === "Enter") {
+              e.preventDefault()
+              ctx.commit()
+              ctx.focusNext("down")
+            } else if (e.key === "Escape") {
+              e.preventDefault()
+              ctx.cancel()
+            } else if (e.key === "Tab") {
+              e.preventDefault()
+              ctx.commit()
+              ctx.focusNext(e.shiftKey ? "prev" : "next")
+            }
+          }}
+          className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+        />
       )
     },
     // Round-trips as an ISO date (yyyy-mm-dd) or full ISO when time is present.

@@ -461,6 +461,27 @@ describe("choice field edit renderers", () => {
     expect(commit).toHaveBeenCalled()
   })
 
+  it("checkboxField.edit forwards Tab to focusNext and Escape to cancel", () => {
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {checkboxField().edit!({
+          value: false,
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const checkbox = screen.getByRole("checkbox")
+    fireEvent.keyDown(checkbox, { key: "Tab" })
+    expect(focusNext).toHaveBeenCalledWith("next")
+    fireEvent.keyDown(checkbox, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
   it("multiSelectField has no edit renderer (deferred)", () => {
     expect(multiSelectField({ options: OPTS }).edit).toBeUndefined()
   })
@@ -582,6 +603,19 @@ export function checkboxField(): FieldType<boolean> {
           ctx.setValue(checked === true)
           ctx.commit()
         }}
+        onKeyDown={(e) => {
+          // Checkbox commits synchronously on toggle (no "draft" value), so
+          // Escape has nothing to revert but is still handled for
+          // consistency: it exits edit mode without toggling.
+          e.stopPropagation()
+          if (e.key === "Escape") {
+            e.preventDefault()
+            ctx.cancel()
+          } else if (e.key === "Tab") {
+            e.preventDefault()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
+          }
+        }}
       />
     ),
     toClipboard: (v) => (v ? "true" : "false"),
@@ -643,6 +677,27 @@ describe("widget field edit renderers", () => {
     expect(commit).toHaveBeenCalled()
   })
 
+  it("ratingField.edit forwards Tab to focusNext and Escape to cancel", () => {
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    const { container } = render(
+      <>
+        {ratingField({ max: 5 }).edit!({
+          value: 2,
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const wrapper = container.firstElementChild!
+    fireEvent.keyDown(wrapper, { key: "Tab" })
+    expect(focusNext).toHaveBeenCalledWith("next")
+    fireEvent.keyDown(wrapper, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
   it("dateField.edit renders a native date input seeded with the ISO date", () => {
     const setValue = vi.fn()
     render(
@@ -660,6 +715,49 @@ describe("widget field edit renderers", () => {
     expect(input).toHaveAttribute("type", "date")
     fireEvent.change(input, { target: { value: "2026-08-01" } })
     expect(setValue).toHaveBeenCalledWith("2026-08-01")
+  })
+
+  it("dateField.edit commits and moves down on Enter, cancels on Escape", () => {
+    const commit = vi.fn()
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {dateField().edit!({
+          value: "2026-07-11",
+          setValue: vi.fn(),
+          commit,
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const input = screen.getByDisplayValue("2026-07-11")
+    fireEvent.keyDown(input, { key: "Enter" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("down")
+    fireEvent.keyDown(input, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
+  it("dateField.edit commits and advances on Tab", () => {
+    const commit = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {dateField().edit!({
+          value: "2026-07-11",
+          setValue: vi.fn(),
+          commit,
+          cancel: vi.fn(),
+          focusNext,
+        })}
+      </>,
+    )
+    const input = screen.getByDisplayValue("2026-07-11")
+    fireEvent.keyDown(input, { key: "Tab" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("next")
   })
 
   it("buttonField has no edit renderer", () => {
@@ -706,7 +804,23 @@ export function ratingField(opts: { max?: number } = {}): FieldType<number> {
       )
     },
     edit: (ctx) => (
-      <div className="flex items-center gap-0.5">
+      <div
+        className="flex items-center gap-0.5"
+        onKeyDown={(e) => {
+          // Tab bubbles up here from whichever star button has focus — one
+          // handler covers the whole widget. Rating commits synchronously on
+          // click (no "draft" value), so Escape has nothing to revert but is
+          // still handled for consistency: it exits edit mode without a click.
+          e.stopPropagation()
+          if (e.key === "Escape") {
+            e.preventDefault()
+            ctx.cancel()
+          } else if (e.key === "Tab") {
+            e.preventDefault()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
+          }
+        }}
+      >
         {Array.from({ length: max }, (_, i) => {
           const filled = i < (ctx.value ?? 0)
           return (

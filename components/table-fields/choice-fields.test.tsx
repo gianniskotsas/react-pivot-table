@@ -82,6 +82,27 @@ describe("choice field edit renderers", () => {
     expect(commit).toHaveBeenCalled()
   })
 
+  it("checkboxField.edit forwards Tab to focusNext and Escape to cancel", () => {
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {checkboxField().edit!({
+          value: false,
+          setValue: vi.fn(),
+          commit: vi.fn(),
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const checkbox = screen.getByRole("checkbox")
+    fireEvent.keyDown(checkbox, { key: "Tab" })
+    expect(focusNext).toHaveBeenCalledWith("next")
+    fireEvent.keyDown(checkbox, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+  })
+
   it("singleSelectField.edit cancels on Escape and commits+advances on Tab", () => {
     const commit = vi.fn()
     const cancel = vi.fn()
