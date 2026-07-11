@@ -45,6 +45,37 @@ describe("useDataTable", () => {
     expect(result.current.runtime.isColumnEditable("age")).toBe(true) // falls back to table default
   })
 
+  // Regression guard: with a table-level `editable: true` default, a column
+  // built from a field with no `edit` renderer (col.multiSelect, col.button)
+  // must still resolve as non-editable. Without this, useGridNavigation's
+  // beginEdit (invoked directly by handleKeyDown on Enter) would pass its
+  // isColumnEditable check, set editingCell, and freeze keyboard nav — the
+  // cell's own field.edit is undefined so no editor ever renders, but
+  // handleKeyDown now believes it's mid-edit and swallows every key except
+  // Escape.
+  it("a field with no edit renderer (multiSelect/button) is never editable, even under a table-level editable default", () => {
+    type TagsRow = { id: string; tags: string[] }
+    const tagsCol = defineColumns<TagsRow>()
+    const { result: msResult } = renderHook(() =>
+      useDataTable({
+        data: [{ id: "1", tags: ["a"] }],
+        columns: [tagsCol.multiSelect("tags", { options: [{ value: "a", label: "A" }] })],
+        editable: true,
+      }),
+    )
+    expect(msResult.current.runtime.isColumnEditable("tags")).toBe(false)
+
+    const col = defineColumns<Row>()
+    const { result: btnResult } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.button("action", { label: "Go", onClick: () => {} })],
+        editable: true,
+      }),
+    )
+    expect(btnResult.current.runtime.isColumnEditable("action")).toBe(false)
+  })
+
   it("runtime.updateData calls the onUpdateData callback", () => {
     const onUpdateData = vi.fn()
     const col = defineColumns<Row>()

@@ -199,7 +199,20 @@ function buildColumn<TData, V>(
   opts: ColumnOptions = {},
   buildOpts: { noAccessor?: boolean } = {},
 ): ColumnDef<TData, unknown> {
-  const meta: DataTableColumnMeta = { editable: opts.editable, label: labelFor(key, opts.header) }
+  // A column whose field has no `edit` renderer (e.g. col.multiSelect,
+  // col.button) can never actually be edited, no matter what the table-level
+  // default or an explicit opts.editable says — editing without an editor is
+  // meaningless. Forcing `editable: false` here (an explicit false, not
+  // undefined) makes isColumnEditable's `override ?? tableDefault`
+  // resolution (use-data-table.ts) correctly return false for these columns
+  // regardless of the table default, which in turn makes
+  // useGridNavigation.beginEdit's existing isColumnEditable check correctly
+  // refuse to enter edit mode via Enter — closing the gap at the source
+  // instead of teaching beginEdit about field.edit. When field.edit IS
+  // defined, this passes opts.editable through unchanged (including
+  // undefined, which correctly falls back to the table default).
+  const editable = field.edit ? opts.editable : false
+  const meta: DataTableColumnMeta = { editable, label: labelFor(key, opts.header) }
   return {
     id: key,
     // `key` is a validated TData key for every field method except
@@ -210,7 +223,7 @@ function buildColumn<TData, V>(
     // isn't statically known to have a string-keyed shape at this call site.
     ...(buildOpts.noAccessor ? {} : { accessorKey: key as never }),
     header: meta.label,
-    cell: makeFieldCell<TData, V>(field, opts.editable),
+    cell: makeFieldCell<TData, V>(field, editable),
     meta,
     enableSorting: opts.enableSorting ?? true,
     enableHiding: opts.enableHiding ?? true,

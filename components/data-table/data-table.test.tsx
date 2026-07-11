@@ -108,11 +108,13 @@ describe("DataTable", () => {
 
     const cell = screen.getByText("Bailey").closest("td") as HTMLTableCellElement
     // The plain `background` that used to always beat TableRow's
-    // `hover:bg-muted/50` class now lives in Tailwind classes instead, keyed
-    // off TableRow's `group` class — so a pinned cell still tracks the row's
-    // hover/selected state.
-    expect(cell.className).toContain("group-hover:bg-muted/50")
-    expect(cell.className).toContain("group-data-[state=selected]:bg-muted")
+    // `hover:bg-muted/50` class now lives in Tailwind classes instead, as
+    // arbitrary-variant ancestor selectors targeting a hovered/selected
+    // ancestor <tr> directly — no `group` marker class needed on TableRow,
+    // so a pinned cell still tracks the row's hover/selected state without
+    // requiring registry consumers to have a modified components/ui/table.tsx.
+    expect(cell.className).toContain("[tr:hover_&]:bg-muted/50")
+    expect(cell.className).toContain("[tr[data-state=selected]_&]:bg-muted")
     expect(cell.style.background).toBe("")
     expect(cell.style.position).toBe("sticky")
   })

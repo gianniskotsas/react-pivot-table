@@ -145,7 +145,17 @@ describe("defineColumns / col builder", () => {
         {flexRender(column.cell, ctxFor("name", "Ada"))}
       </DataTableRuntimeContext.Provider>,
     )
-    fireEvent.click(screen.getByText("Ada"))
+    // Two real clicks, matching the sibling "already-active editable cell"
+    // test's pattern: the first click's mousedown/focus sequence sets
+    // wasActiveBeforeMouseDownRef to the (stubbed) isActive value, then the
+    // second click is the one that actually exercises onClick with
+    // wasActive === true. A plain single `fireEvent.click` never fires
+    // mousedown, so wasActiveBeforeMouseDownRef stays false and the
+    // `&& editable` half of onClick's condition is never reached at all —
+    // this test would then pass even with the editable guard deleted. Two
+    // realClicks close that gap.
+    realClick(screen.getByText("Ada"))
+    realClick(screen.getByText("Ada"))
     expect(runtime.setActiveCell).toHaveBeenCalledWith(pos)
     expect(runtime.beginEdit).not.toHaveBeenCalled()
   })

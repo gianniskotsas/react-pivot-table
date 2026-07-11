@@ -38,10 +38,19 @@ type PinnedCellStyle = { style: React.CSSProperties; className?: string }
 // A plain inline `background` on the pinned cell would always beat the row's
 // class (inline styles win over class-based pseudo-classes/variants), so on
 // hover every column would highlight except the pinned ones. Instead, the
-// background lives in `className` as `group-*` variants keyed off TableRow's
-// `group` class: base background normally, tracking the row's hover/selected
-// background when the row is hovered/selected. Sticky positioning, zIndex,
-// and the box-shadow divider stay inline since they aren't state-dependent.
+// background lives in `className` as arbitrary-variant ancestor selectors:
+// `[tr:hover_&]`/`[tr[data-state=selected]_&]` target the pinned cell
+// whenever it's a descendant of a hovered/selected <tr>, via a plain CSS
+// descendant combinator — no `group` marker class required on TableRow.
+// Deliberately NOT keyed off TableRow's `group` class (the earlier approach):
+// `components/ui/table.tsx` is a `registryDependency: "table"` in this
+// registry's items, so a fresh `npx shadcn add data-table` on a consumer
+// project installs the stock, unmodified shadcn table.tsx with no `group`
+// class — that would silently break pinned-column hover/selected
+// highlighting for every real registry consumer even though it works in this
+// repo. The ancestor-selector form has no such dependency. Sticky
+// positioning, zIndex, and the box-shadow divider stay inline since they
+// aren't state-dependent.
 function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
   const pinned = column.getIsPinned()
   if (!pinned) return { style: {} }
@@ -56,7 +65,7 @@ function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
           ? "1px 0 0 0 var(--border) inset"
           : "-1px 0 0 0 var(--border) inset",
     },
-    className: "bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted",
+    className: "bg-background [tr:hover_&]:bg-muted/50 [tr[data-state=selected]_&]:bg-muted",
   }
 }
 
