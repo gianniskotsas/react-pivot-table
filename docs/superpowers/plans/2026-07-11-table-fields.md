@@ -123,7 +123,7 @@ export type FieldType<V> = {
   icon: React.ComponentType<{ className?: string }>
   align?: "left" | "right" | "center"
   /** Pure display renderer — usable standalone as a ColumnDef cell. */
-  display: (ctx: CellContext<any, V>) => React.ReactNode
+  display: (ctx: CellContext<unknown, V>) => React.ReactNode
   /** Optional edit renderer; implemented in `data-table` (Plan 2), not here. */
   edit?: (ctx: FieldEditContext<V>) => React.ReactNode
   /** Serialize a value to a clipboard/CSV cell string. */
