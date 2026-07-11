@@ -1,0 +1,35 @@
+import {
+  AlignLeft,
+  Calendar,
+  CheckSquare,
+  Clock,
+  Hash,
+  Link as LinkIcon,
+  List,
+  ListChecks,
+  Mail,
+  MousePointerClick,
+  Percent,
+  Phone,
+  Star,
+  Type,
+} from "lucide-react"
+
+/** Header type icon per field name (Airtable-style). */
+export const FIELD_ICONS = {
+  number: Hash,
+  currency: Hash,
+  percent: Percent,
+  duration: Clock,
+  text: Type,
+  longText: AlignLeft,
+  url: LinkIcon,
+  email: Mail,
+  phone: Phone,
+  singleSelect: List,
+  multiSelect: ListChecks,
+  checkbox: CheckSquare,
+  rating: Star,
+  button: MousePointerClick,
+  date: Calendar,
+} as const
