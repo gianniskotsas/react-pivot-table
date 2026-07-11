@@ -63,7 +63,7 @@ describe("choice field edit renderers", () => {
     expect(commit).toHaveBeenCalled()
   })
 
-  it("checkboxField.edit renders a Checkbox and commits on toggle", () => {
+  it("checkboxField.edit renders a native select of True/False and commits on change", () => {
     const setValue = vi.fn()
     const commit = vi.fn()
     render(
@@ -77,7 +77,9 @@ describe("choice field edit renderers", () => {
         })}
       </>,
     )
-    fireEvent.click(screen.getByRole("checkbox"))
+    const select = screen.getByRole("combobox")
+    expect(select).toHaveValue("false")
+    fireEvent.change(select, { target: { value: "true" } })
     expect(setValue).toHaveBeenCalledWith(true)
     expect(commit).toHaveBeenCalled()
   })
@@ -96,10 +98,10 @@ describe("choice field edit renderers", () => {
         })}
       </>,
     )
-    const checkbox = screen.getByRole("checkbox")
-    fireEvent.keyDown(checkbox, { key: "Tab" })
+    const select = screen.getByRole("combobox")
+    fireEvent.keyDown(select, { key: "Tab" })
     expect(focusNext).toHaveBeenCalledWith("next")
-    fireEvent.keyDown(checkbox, { key: "Escape" })
+    fireEvent.keyDown(select, { key: "Escape" })
     expect(cancel).toHaveBeenCalledTimes(1)
   })
 

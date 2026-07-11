@@ -4,7 +4,6 @@ import { Check, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 
 import { FIELD_ICONS } from "./icons"
 import type { FieldType, SelectOption } from "./types"
@@ -113,17 +112,17 @@ export function checkboxField(): FieldType<boolean> {
       )
     },
     edit: (ctx) => (
-      <Checkbox
+      <select
         autoFocus
-        checked={ctx.value ?? false}
-        onCheckedChange={(checked) => {
-          ctx.setValue(checked === true)
+        value={ctx.value ? "true" : "false"}
+        onChange={(e) => {
+          ctx.setValue(e.target.value === "true")
           ctx.commit()
         }}
         onKeyDown={(e) => {
-          // Checkbox commits synchronously on toggle (no "draft" value), so
+          // Select commits synchronously on change (no "draft" value), so
           // Escape has nothing to revert but is still handled for
-          // consistency: it exits edit mode without toggling.
+          // consistency: it exits edit mode without changing the value.
           e.stopPropagation()
           if (e.key === "Escape") {
             e.preventDefault()
@@ -133,7 +132,11 @@ export function checkboxField(): FieldType<boolean> {
             ctx.focusNext(e.shiftKey ? "prev" : "next")
           }
         }}
-      />
+        className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <option value="true">True</option>
+        <option value="false">False</option>
+      </select>
     ),
     toClipboard: (v) => (v ? "true" : "false"),
     fromClipboard: (t) => t.trim().toLowerCase() === "true",
