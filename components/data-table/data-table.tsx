@@ -93,7 +93,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                       <TableHead
                         key={header.id}
                         style={{ width: header.getSize(), ...pinned.style }}
-                        className={pinned.className}
+                        className={cn("overflow-hidden text-ellipsis", pinned.className)}
                       >
                         {header.isPlaceholder ? null : (
                           <ColumnHeader
@@ -123,7 +123,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                         <TableCell
                           key={cell.id}
                           style={{ width: cell.column.getSize(), ...pinned.style }}
-                          className={cn("p-0", pinned.className)}
+                          className={cn("overflow-hidden p-0", pinned.className)}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </TableCell>

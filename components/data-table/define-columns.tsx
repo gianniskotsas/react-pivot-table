@@ -185,7 +185,7 @@ function makeFieldCell<TData, V>(
           else runtime.setActiveCell(pos)
         }}
         onFocus={() => runtime.setActiveCell(pos)}
-        className="rounded-sm px-2 py-1 outline-none data-[active=true]:ring-2 data-[active=true]:ring-ring data-[active=true]:ring-inset"
+        className="overflow-hidden text-ellipsis whitespace-nowrap rounded-sm px-2 py-1 outline-none data-[active=true]:ring-2 data-[active=true]:ring-ring data-[active=true]:ring-inset"
       >
         {field.display(ctx as CellContext<unknown, V>)}
       </div>
