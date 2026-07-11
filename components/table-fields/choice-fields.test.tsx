@@ -1,6 +1,6 @@
-import { render } from "@testing-library/react"
+import { fireEvent, render, screen } from "@testing-library/react"
 import type { CellContext } from "@tanstack/react-table"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { checkboxField, multiSelectField, singleSelectField } from "./choice-fields"
 
 const OPTS = [
@@ -38,5 +38,74 @@ describe("choice fields", () => {
     expect(f.toClipboard(true)).toBe("true")
     expect(f.fromClipboard("true")).toBe(true)
     expect(f.fromClipboard("false")).toBe(false)
+  })
+})
+
+describe("choice field edit renderers", () => {
+  it("singleSelectField.edit renders a native select and commits on change", () => {
+    const setValue = vi.fn()
+    const commit = vi.fn()
+    render(
+      <>
+        {singleSelectField({ options: OPTS }).edit!({
+          value: "sales",
+          setValue,
+          commit,
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    const select = screen.getByRole("combobox")
+    expect(select).toHaveValue("sales")
+    fireEvent.change(select, { target: { value: "eng" } })
+    expect(setValue).toHaveBeenCalledWith("eng")
+    expect(commit).toHaveBeenCalled()
+  })
+
+  it("checkboxField.edit renders a Checkbox and commits on toggle", () => {
+    const setValue = vi.fn()
+    const commit = vi.fn()
+    render(
+      <>
+        {checkboxField().edit!({
+          value: false,
+          setValue,
+          commit,
+          cancel: vi.fn(),
+          focusNext: vi.fn(),
+        })}
+      </>,
+    )
+    fireEvent.click(screen.getByRole("checkbox"))
+    expect(setValue).toHaveBeenCalledWith(true)
+    expect(commit).toHaveBeenCalled()
+  })
+
+  it("singleSelectField.edit cancels on Escape and commits+advances on Tab", () => {
+    const commit = vi.fn()
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {singleSelectField({ options: OPTS }).edit!({
+          value: "sales",
+          setValue: vi.fn(),
+          commit,
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const select = screen.getByRole("combobox")
+    fireEvent.keyDown(select, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    fireEvent.keyDown(select, { key: "Tab" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("next")
+  })
+
+  it("multiSelectField has no edit renderer (deferred)", () => {
+    expect(multiSelectField({ options: OPTS }).edit).toBeUndefined()
   })
 })

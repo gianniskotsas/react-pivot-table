@@ -464,6 +464,29 @@ describe("choice field edit renderers", () => {
   it("multiSelectField has no edit renderer (deferred)", () => {
     expect(multiSelectField({ options: OPTS }).edit).toBeUndefined()
   })
+
+  it("singleSelectField.edit cancels on Escape and commits+advances on Tab", () => {
+    const commit = vi.fn()
+    const cancel = vi.fn()
+    const focusNext = vi.fn()
+    render(
+      <>
+        {singleSelectField({ options: OPTS }).edit!({
+          value: "sales",
+          setValue: vi.fn(),
+          commit,
+          cancel,
+          focusNext,
+        })}
+      </>,
+    )
+    const select = screen.getByRole("combobox")
+    fireEvent.keyDown(select, { key: "Escape" })
+    expect(cancel).toHaveBeenCalledTimes(1)
+    fireEvent.keyDown(select, { key: "Tab" })
+    expect(commit).toHaveBeenCalledTimes(1)
+    expect(focusNext).toHaveBeenCalledWith("next")
+  })
 })
 ```
 
@@ -500,6 +523,13 @@ export function singleSelectField(opts: { options: SelectOption[] }): FieldType<
           if (e.key === "Escape") {
             e.preventDefault()
             ctx.cancel()
+          } else if (e.key === "Tab") {
+            // Consistent with the text/number editors: Tab commits (if a
+            // value is selected) and advances the grid's active cell, rather
+            // than being silently swallowed by stopPropagation above.
+            e.preventDefault()
+            if (ctx.value) ctx.commit()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
           }
         }}
         className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
@@ -547,7 +577,7 @@ export function checkboxField(): FieldType<boolean> {
     edit: (ctx) => (
       <Checkbox
         autoFocus
-        checked={ctx.value}
+        checked={ctx.value ?? false}
         onCheckedChange={(checked) => {
           ctx.setValue(checked === true)
           ctx.commit()

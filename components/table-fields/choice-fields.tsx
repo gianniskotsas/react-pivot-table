@@ -4,6 +4,7 @@ import { Check, X } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 
 import { FIELD_ICONS } from "./icons"
 import type { FieldType, SelectOption } from "./types"
@@ -20,6 +21,40 @@ export function singleSelectField(opts: { options: SelectOption[] }): FieldType<
       const v = ctx.getValue()
       return v ? <Badge variant="secondary">{labelFor(opts.options, v)}</Badge> : null
     },
+    edit: (ctx) => (
+      <select
+        autoFocus
+        value={ctx.value ?? ""}
+        onChange={(e) => {
+          ctx.setValue(e.target.value)
+          ctx.commit()
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation()
+          if (e.key === "Escape") {
+            e.preventDefault()
+            ctx.cancel()
+          } else if (e.key === "Tab") {
+            // Consistent with the text/number editors: Tab commits (if a
+            // value is selected) and advances the grid's active cell, rather
+            // than being silently swallowed by stopPropagation above.
+            e.preventDefault()
+            if (ctx.value) ctx.commit()
+            ctx.focusNext(e.shiftKey ? "prev" : "next")
+          }
+        }}
+        className="h-8 w-full rounded-md border border-input bg-transparent px-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
+        <option value="" disabled hidden>
+          Select…
+        </option>
+        {opts.options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    ),
     toClipboard: (v) => v ?? "",
     fromClipboard: (t) => t,
   }
@@ -77,6 +112,16 @@ export function checkboxField(): FieldType<boolean> {
         </span>
       )
     },
+    edit: (ctx) => (
+      <Checkbox
+        autoFocus
+        checked={ctx.value ?? false}
+        onCheckedChange={(checked) => {
+          ctx.setValue(checked === true)
+          ctx.commit()
+        }}
+      />
+    ),
     toClipboard: (v) => (v ? "true" : "false"),
     fromClipboard: (t) => t.trim().toLowerCase() === "true",
   }
