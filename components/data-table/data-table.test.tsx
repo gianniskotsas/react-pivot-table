@@ -54,6 +54,23 @@ describe("DataTable", () => {
     expect(screen.getByRole("button", { name: /columns/i })).toBeInTheDocument()
   })
 
+  it("a pinned cell gets a hover-aware background class instead of a flat inline background", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /columns/i }))
+    fireEvent.click(screen.getByRole("button", { name: "Pin Name left" }))
+
+    const cell = screen.getByText("Bailey").closest("td") as HTMLTableCellElement
+    // The plain `background` that used to always beat TableRow's
+    // `hover:bg-muted/50` class now lives in Tailwind classes instead, keyed
+    // off TableRow's `group` class — so a pinned cell still tracks the row's
+    // hover/selected state.
+    expect(cell.className).toContain("group-hover:bg-muted/50")
+    expect(cell.className).toContain("group-data-[state=selected]:bg-muted")
+    expect(cell.style.background).toBe("")
+    expect(cell.style.position).toBe("sticky")
+  })
+
   it("pagination controls are shown by default and can be disabled", () => {
     const { rerender } = render(
       <DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />,

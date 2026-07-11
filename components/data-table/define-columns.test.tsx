@@ -198,6 +198,35 @@ describe("defineColumns / col builder", () => {
     expect(reopenedInput.value).toBe("Ada")
   })
 
+  it("moves real DOM focus to a cell when it becomes the active cell (not via click)", () => {
+    const pos: CellPos = { rowId: "r1", columnId: "name" }
+    let active = false
+    const runtime = stubRuntime({
+      isActive: (p) => active && p.rowId === pos.rowId && p.columnId === pos.columnId,
+    })
+    const col = defineColumns<Row>()
+    const column = col.text("name")
+
+    // A fresh element each call, same reasoning as the isEditing-resync test
+    // above: rerender bails out of re-invoking the component when handed the
+    // exact same element reference.
+    const renderTree = () => (
+      <DataTableRuntimeContext.Provider value={runtime}>
+        {flexRender(column.cell, ctxFor("name", "Ada"))}
+      </DataTableRuntimeContext.Provider>
+    )
+    const { rerender } = render(renderTree())
+    const cell = screen.getByText("Ada").closest("div") as HTMLElement
+    expect(document.activeElement).not.toBe(cell)
+
+    // The runtime reports this cell as active from outside (e.g. keyboard
+    // navigation moved here), not via a click on the cell itself.
+    active = true
+    rerender(renderTree())
+
+    expect(document.activeElement).toBe(cell)
+  })
+
   it("col.checkbox honors a false editable override even when the table default is editable", () => {
     const runtime = stubRuntime({ isColumnEditable: () => true }) // table-level default: editable
     const col = defineColumns<Row>()

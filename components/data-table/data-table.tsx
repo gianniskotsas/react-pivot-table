@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
@@ -28,19 +29,34 @@ export type DataTableProps<TData> = {
   enablePagination?: boolean
 }
 
-function pinnedStyle<TData>(column: Column<TData, unknown>): React.CSSProperties {
+type PinnedCellStyle = { style: React.CSSProperties; className?: string }
+
+// Pinned cells need their own background so they stay opaque over the
+// scrolling columns behind them — but TableRow (components/ui/table.tsx)
+// applies its hover/selected background as a CSS class on the <tr>, relying
+// on <td>/<th> children being transparent so that background shows through.
+// A plain inline `background` on the pinned cell would always beat the row's
+// class (inline styles win over class-based pseudo-classes/variants), so on
+// hover every column would highlight except the pinned ones. Instead, the
+// background lives in `className` as `group-*` variants keyed off TableRow's
+// `group` class: base background normally, tracking the row's hover/selected
+// background when the row is hovered/selected. Sticky positioning, zIndex,
+// and the box-shadow divider stay inline since they aren't state-dependent.
+function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
   const pinned = column.getIsPinned()
-  if (!pinned) return {}
+  if (!pinned) return { style: {} }
   return {
-    position: "sticky",
-    left: pinned === "left" ? column.getStart("left") : undefined,
-    right: pinned === "right" ? column.getAfter("right") : undefined,
-    zIndex: 1,
-    background: "var(--background)",
-    boxShadow:
-      pinned === "left"
-        ? "1px 0 0 0 var(--border) inset"
-        : "-1px 0 0 0 var(--border) inset",
+    style: {
+      position: "sticky",
+      left: pinned === "left" ? column.getStart("left") : undefined,
+      right: pinned === "right" ? column.getAfter("right") : undefined,
+      zIndex: 1,
+      boxShadow:
+        pinned === "left"
+          ? "1px 0 0 0 var(--border) inset"
+          : "-1px 0 0 0 var(--border) inset",
+    },
+    className: "bg-background group-hover:bg-muted/50 group-data-[state=selected]:bg-muted",
   }
 }
 
@@ -63,10 +79,12 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as DataTableColumnMeta | undefined
+                    const pinned = pinnedStyle(header.column)
                     return (
                       <TableHead
                         key={header.id}
-                        style={{ width: header.getSize(), ...pinnedStyle(header.column) }}
+                        style={{ width: header.getSize(), ...pinned.style }}
+                        className={pinned.className}
                       >
                         {header.isPlaceholder ? null : (
                           <ColumnHeader
@@ -90,15 +108,18 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
               ) : (
                 table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id}>
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell
-                        key={cell.id}
-                        style={{ width: cell.column.getSize(), ...pinnedStyle(cell.column) }}
-                        className="p-0"
-                      >
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
+                    {row.getVisibleCells().map((cell) => {
+                      const pinned = pinnedStyle(cell.column)
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          style={{ width: cell.column.getSize(), ...pinned.style }}
+                          className={cn("p-0", pinned.className)}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </TableCell>
+                      )
+                    })}
                   </TableRow>
                 ))
               )}

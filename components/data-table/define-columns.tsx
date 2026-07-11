@@ -82,15 +82,36 @@ function makeFieldCell<TData, V>(
     const value = ctx.getValue() as V
     const pos: CellPos = { rowId: ctx.row.id, columnId: ctx.column.id }
     const [staged, setStaged] = React.useState<V>(value)
-    // isEditing must be computed before any hook call below (Rules of Hooks
-    // forbid calling useEffect only on some render paths), so it can't be
-    // read from `runtime` after the `if (!runtime)` early return.
+    // isEditing and isActive must both be computed before any hook call below
+    // (Rules of Hooks forbid calling useEffect only on some render paths), so
+    // they can't be read from `runtime` after the `if (!runtime)` early
+    // return.
     const isEditing = runtime ? runtime.isEditing(pos) : false
+    const isActive = runtime ? runtime.isActive(pos) : false
+    const cellRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
       if (isEditing) setStaged(value)
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isEditing])
+
+    // Keep real DOM focus in sync with the logical active cell — arrow-key/
+    // Tab navigation (useGridNavigation.moveActive) only updates React state,
+    // it never calls .focus() itself. Without this, document.activeElement
+    // can drift from the cell that's visually/logically active, which is a
+    // real screen-reader bug even though keyboard nav still mechanically
+    // works (the keydown listener sits on an ancestor and catches bubbled
+    // events regardless of which descendant has focus).
+    //
+    // Deliberately narrowed to [isActive] — fires only on the
+    // inactive→active transition, not on every render, so it never steals
+    // focus from an editor mid-edit in another cell and can't loop: calling
+    // .focus() here re-triggers this cell's onFocus → runtime.setActiveCell
+    // with the same pos, which is a same-value state update (no-op re-render,
+    // isActive stays true, this effect's dependency doesn't change).
+    React.useEffect(() => {
+      if (isActive) cellRef.current?.focus()
+    }, [isActive])
 
     if (!runtime) {
       // No <DataTable> runtime in scope — degrade to a plain read-only cell.
@@ -99,7 +120,6 @@ function makeFieldCell<TData, V>(
 
     const editable =
       (columnEditableOverride ?? runtime.isColumnEditable(pos.columnId)) && Boolean(field.edit)
-    const isActive = runtime.isActive(pos)
 
     if (isEditing && field.edit) {
       return field.edit({
@@ -120,6 +140,7 @@ function makeFieldCell<TData, V>(
 
     return (
       <div
+        ref={cellRef}
         tabIndex={0}
         data-active={isActive ? "true" : undefined}
         onClick={() => {
