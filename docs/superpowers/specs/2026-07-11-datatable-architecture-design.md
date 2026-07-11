@@ -56,7 +56,7 @@ separate state** (`grouping`, `filterState`).
   anticipated in the contract).
 - Relational types (Linked record, Lookup, Rollup) and identity types (Created/Modified
   By, User ownership), barcode, autonumber auto-increment.
-- Full spreadsheet range paste with formula-fill; R1 does rectangular value paste only.
+- Formula-fill on paste; R1 does rectangular value paste (fill existing + create new rows).
 - Docs-site rebuild; refactoring `grouped-data-table` onto `DataTable` (later release).
 
 ---
@@ -184,6 +184,8 @@ in the cell/row components — independently testable with fired key events.
 - The library **never owns the data**; it renders `data` and reports intended mutations
   through `updateData`. The consumer applies them (optimistic local state, server write,
   whatever) — the same boundary as the AI/aggregate callbacks.
+- **Row creation** (from paste extending past the last row) is reported via
+  `onCreateRows(partialRows: Partial<TData>[])`; the library never appends to `data` itself.
 - `editable` resolves table-default → column-override. A fully read-only grid passes
   nothing and gets focus/keyboard/copy/sort/select but no edit affordances.
 - Type safety is enforced at the builder boundary (accessor/value/field alignment) and at
@@ -207,18 +209,20 @@ in the cell/row components — independently testable with fired key events.
 - **Copy** — copy the active cell or the selected rows/range to the clipboard as TSV
   (Excel/Sheets-pasteable) via each field's `toClipboard`. Read-only tables still copy.
 - **Paste** — in editable mode, rectangular TSV paste starting at the active cell, mapped
-  through `fromClipboard`, committed as one undoable batch (one toast). Range paste with
-  formula-fill is out of scope for R1.
+  through `fromClipboard`. Fills existing rows in place; when the block extends past the
+  last row, the extra rows are reported via `onCreateRows(partialRows)` (the library never
+  appends to `data`). The whole paste commits as one undoable batch (one toast).
+  Formula-fill is out of scope for R1.
 - **Export** — a toolbar action exporting the current view to **CSV** (respects column
   visibility, sort, and filters; optionally scoped to the selection). `exportCsv(rows,
-  columns)` is a pure, tested util. JSON export is a trivial add flagged optional.
+  columns)` is a pure, tested util. **CSV only in R1**; JSON deferred.
 
 ## Columns control — sort, hide, freeze, resize
 
 A per-column header menu (caret in the screenshot) plus a "Columns" popover:
 
-- **Sort** — click header or menu → asc/desc/none, TanStack `sorting` state; multi-sort
-  with Shift optional. (Glaring omission in rev. 1; now core.)
+- **Sort** — click header or menu → asc/desc/none, **single-column** (TanStack `sorting`
+  state). (Glaring omission in rev. 1; now core.) Multi-column sort deferred to a later release.
 - **Hide** — two-way `columnVisibility` (`onColumnVisibilityChange` wired), merged cleanly
   with any grouping-derived rules.
 - **Freeze/pin** — TanStack `columnPinning`; sticky CSS with computed left/right offsets
@@ -353,12 +357,12 @@ Given the size, plan this as two sequential cycles:
    aggregation, undo/redo + sonner, copy/paste/export), then the typed `defineColumns`
    builder tying it together.
 
-## Open questions (settle during planning, not blockers)
+## Resolved decisions (from review)
 
-1. **Multi-sort** — ship Shift-click multi-column sort in R1 or single-sort only?
-2. **Paste extent** — confirm rectangular value paste only for R1 (no formula-fill), and
-   whether paste may create rows or only fill existing ones.
-3. **Export formats** — CSV confirmed; include JSON in R1 or defer?
-4. **Duration formatting** — default unit display (h/m/s vs ms) and optional format token.
-5. **Pinned/grouped interaction** — deferred with the grouped-table refactor; the pinning
-   and gutter APIs must not assume a flat-only table.
+1. **Sort** — single-column only in R1; multi-column sort deferred.
+2. **Paste** — rectangular value paste; fills existing rows and creates new rows past the
+   end via `onCreateRows`; no formula-fill.
+3. **Export** — CSV only in R1; JSON deferred.
+4. **Duration** — default display unit is **minutes** (accepts an explicit unit option).
+5. **Pinned/grouped interaction** — stays deferred with the grouped-table refactor; the
+   pinning and gutter APIs must not assume a flat-only table.
