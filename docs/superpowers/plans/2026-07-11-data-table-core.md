@@ -1512,7 +1512,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ## Task 9: data-table — typed column builder (defineColumns)
 
 **Files:**
-- Create: `components/data-table/define-columns.ts`
+- Create: `components/data-table/define-columns.tsx` (renamed from `.ts` during implementation — the file contains JSX, which a `.ts` extension cannot parse in this toolchain; confirmed by a direct `tsc` parse failure on a `.ts` copy. The barrel's extensionless import is unaffected.)
 - Test: `components/data-table/define-columns.test.tsx`
 
 This is the centerpiece: it builds the editable-cell renderer (reads `DataTableRuntimeContext`, renders `field.display` or `field.edit` depending on grid state) and the typed `col.*` builder that produces `ColumnDef`s using it.
@@ -1658,9 +1658,9 @@ describe("defineColumns / col builder", () => {
 Run: `pnpm exec vitest run components/data-table/define-columns.test.tsx`
 Expected: FAIL — cannot resolve `./define-columns`.
 
-- [ ] **Step 3: Implement `define-columns.ts`**
+- [ ] **Step 3: Implement `define-columns.tsx`**
 
-Create `components/data-table/define-columns.ts`:
+Create `components/data-table/define-columns.tsx` (note the `.tsx` extension — see the Files note above):
 
 ```tsx
 "use client"
@@ -1729,6 +1729,22 @@ function makeFieldCell<TData, V>(
     const pos: CellPos = { rowId: ctx.row.id, columnId: ctx.column.id }
     const [staged, setStaged] = React.useState<V>(value)
 
+    // isEditing must be computed unconditionally, before any hook call — see
+    // the rules-of-hooks note below. When `runtime` is null it's always
+    // `false`, so the effect underneath is a no-op in that branch.
+    const isEditing = runtime ? runtime.isEditing(pos) : false
+
+    // NOTE — deviation from the plan's originally-sketched code: this
+    // useEffect must run unconditionally, on every render, in the same
+    // position. The plan's own given code called it AFTER the `if (!runtime)`
+    // early return below, which is a genuine react-hooks/rules-of-hooks
+    // violation (hooks can't be called conditionally). Fixed by computing
+    // `isEditing` above and moving this call before the early return.
+    React.useEffect(() => {
+      if (isEditing) setStaged(value)
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isEditing])
+
     if (!runtime) {
       // No <DataTable> runtime in scope — degrade to a plain read-only cell.
       return field.display(ctx as CellContext<unknown, V>)
@@ -1736,13 +1752,7 @@ function makeFieldCell<TData, V>(
 
     const editable =
       (columnEditableOverride ?? runtime.isColumnEditable(pos.columnId)) && Boolean(field.edit)
-    const isEditing = runtime.isEditing(pos)
     const isActive = runtime.isActive(pos)
-
-    React.useEffect(() => {
-      if (isEditing) setStaged(value)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isEditing])
 
     if (isEditing && field.edit) {
       return field.edit({
@@ -1753,10 +1763,9 @@ function makeFieldCell<TData, V>(
           runtime.stopEditing()
         },
         cancel: () => runtime.stopEditing(),
-        focusNext: (dir) => {
-          runtime.stopEditing()
-          runtime.moveActive(dir)
-        },
+        // moveActive already clears editingCell internally (see
+        // use-grid-navigation.ts), so no separate stopEditing() call here.
+        focusNext: (dir) => runtime.moveActive(dir),
       })
     }
 
@@ -1781,11 +1790,20 @@ function buildColumn<TData, V>(
   field: FieldType<V>,
   key: string,
   opts: ColumnOptions = {},
+  // Deviation, added during quality review: col.button's `key` is really an
+  // `id`, not a real TData accessor (buttonField.display never reads
+  // ctx.getValue()). noAccessor omits `accessorKey` entirely so button
+  // columns are id-only display columns per TanStack's idiomatic pattern,
+  // rather than a phantom accessor that only "works" by being ignored.
+  buildOpts: { noAccessor?: boolean } = {},
 ): ColumnDef<TData, unknown> {
   const meta: DataTableColumnMeta = { editable: opts.editable, label: labelFor(key, opts.header) }
   return {
     id: key,
-    accessorKey: key as never,
+    // `as never`: ColumnDef's accessorKey type is a literal union of TData's
+    // own keys, which this generic helper can't express (key is a plain
+    // string here, already validated by KeysMatching at the col.* call site).
+    ...(buildOpts.noAccessor ? {} : { accessorKey: key as never }),
     header: meta.label,
     cell: makeFieldCell<TData, V>(field, opts.editable),
     meta,
@@ -1850,7 +1868,18 @@ export function defineColumns<TData>() {
     button: (
       id: string,
       opts: ColumnOptions & { label: string; onClick: (row: TData) => void },
-    ) => buildColumn<TData, unknown>(buttonField<TData>(opts), id, opts),
+    ) =>
+      // Deviation, added during quality review: buttonField's display never
+      // reads ctx.getValue(), so a sort affordance on this column has
+      // nothing meaningful to sort by. Defaults enableSorting to false
+      // (still overridable via opts.enableSorting) and passes noAccessor so
+      // no phantom accessorKey is set — see buildColumn above.
+      buildColumn<TData, unknown>(
+        buttonField<TData>(opts),
+        id,
+        { ...opts, enableSorting: opts.enableSorting ?? false },
+        { noAccessor: true },
+      ),
   }
 }
 ```
@@ -1858,18 +1887,28 @@ export function defineColumns<TData>() {
 - [ ] **Step 4: Run the test to verify it passes**
 
 Run: `pnpm exec vitest run components/data-table/define-columns.test.tsx`
-Expected: PASS (7 tests).
+Expected: PASS. Grew from the plan's original 7 to **10 tests** during the quality-review pass (see below): two covering click-on-inactive-cell / click-on-active-but-non-editable-cell (both must call `setActiveCell`, not `beginEdit`), and one covering `cancel()` + resync-on-reentry (stage an edit, cancel, reopen the same cell, assert the edit UI shows the original live value, not the abandoned staged edit — the exact scenario the `eslint-disable-next-line react-hooks/exhaustive-deps` is meant to make safe).
 
 - [ ] **Step 5: Lint + typecheck + commit**
 
-Run: `pnpm exec eslint components/data-table/define-columns.ts components/data-table/define-columns.test.tsx` (fix any errors; the `eslint-disable-next-line react-hooks/exhaustive-deps` comment is intentional — the effect must run only on `isEditing` transitions, not on `value`), then `pnpm typecheck` (expect clean — this also proves the `@ts-expect-error` in the test is a REAL compile error, since `@ts-expect-error` itself fails typecheck if the following line does NOT error).
+Run: `pnpm exec eslint components/data-table/define-columns.tsx components/data-table/define-columns.test.tsx` (fix any errors; the `eslint-disable-next-line react-hooks/exhaustive-deps` comment is intentional — the effect must run only on `isEditing` transitions, not on `value`), then `pnpm typecheck` (expect clean — this also proves the `@ts-expect-error` in the test is a REAL compile error, since `@ts-expect-error` itself fails typecheck if the following line does NOT error).
 
 ```bash
-git add components/data-table/define-columns.ts components/data-table/define-columns.test.tsx
+git add components/data-table/define-columns.tsx components/data-table/define-columns.test.tsx
 git commit -m "feat(data-table): add typed defineColumns builder + editable cell renderer
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+**Deviations applied during this task's review cycle** (independently spec-verified, then quality-reviewed and fixed — see the inline code comments above for the "why" of each):
+1. `.ts` → `.tsx` rename (toolchain necessity, not a style choice).
+2. Rules-of-hooks fix in `makeFieldCell`: `isEditing` computed and the `useEffect` called unconditionally, before the `if (!runtime)` early return (the plan's own original code had the effect after the return, which is invalid).
+3. `col.button` no longer inherits data-column defaults: `enableSorting` defaults to `false` (still overridable) and `accessorKey` is omitted entirely (`noAccessor`) rather than set to a phantom key, via a new `buildOpts: { noAccessor?: boolean }` param on `buildColumn` used only by `col.button`.
+4. `focusNext` no longer calls the now-redundant `runtime.stopEditing()` — `moveActive` already clears `editingCell`.
+5. Added doc comments: `KeysMatching`'s bidirectional-extends behavior, the `accessorKey: key as never` cast, per-field `ColumnOptions` docs, and `labelFor`'s camelCase caveat.
+6. Test file grew 7→10 (see Step 4).
+
+Full regression after these fixes: 77/77 passing across `components/data-table/` + `components/table-fields/`. Lint and typecheck clean. Amended into the original commit (unpushed branch) — final SHA `a77d819`.
 
 ---
 
@@ -1976,6 +2015,8 @@ export function PopoverButtonTrigger({
 Run: `pnpm exec vitest run components/data-table/primitives.test.tsx`
 Expected: PASS (1 test).
 
+**Deviation, added during quality review:** the original test only covers the `ariaLabel`-supplied path (`getByLabelText`), but the plan's own `ColumnsMenu` consumer (Task 12) never passes `ariaLabel` — it relies on the button's visible text content for its accessible name. Added a second test asserting `getByRole("button", { name: "Columns" })` finds the trigger with `ariaLabel` omitted, so the actually-shipped code path has coverage. Test count is 2, not 1.
+
 - [ ] **Step 5: Implement the Radix twin**
 
 Create `components/data-table/primitives.radix.tsx`:
@@ -2079,6 +2120,8 @@ git commit -m "feat(data-table): add base-ui/Radix primitives shim (PopoverButto
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+Independently spec-verified (type parity between builds confirmed character-for-character; confirmed `primitives.radix.tsx` is genuinely excluded from `tsc` via the `tsconfig.json` glob, not just coincidentally valid; confirmed the parity test's regex isn't a no-op). Quality-reviewed with no Critical issues; the one actionable Important finding (no-`ariaLabel` test coverage) was fixed — see the Step 4 deviation note above. Full regression after the fix: 80/80 passing across `components/data-table/` + `components/table-fields/`. Final commit SHA `482c263`.
 
 ---
 
@@ -2210,6 +2253,15 @@ git commit -m "feat(data-table): add sortable ColumnHeader
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+**Deviations applied during this task's quality-review cycle** (spec compliance independently verified first — component behavior, and the TanStack `Column` method signatures confirmed real via `node_modules`, not hallucinated):
+1. **Accessibility — sort state announced.** Added a dynamic `aria-label` on the sort `<button>` (e.g. `"Name, sorted ascending"`), matching this codebase's established pattern for visual-only state (`group-cell.tsx`, `chip.tsx`). Falls back gracefully when `label` isn't a plain string.
+2. **Accessibility — decorative icons hidden.** All icons (`Icon` prop, `ArrowUp`/`ArrowDown`/`ChevronsUpDown`) now carry `aria-hidden="true"`, since the accessible name comes from the text content.
+3. **Simplified generic.** `ColumnHeader<TData, TValue>` → `ColumnHeader<TData>`, relying on `Column<TData, TValue = unknown>`'s default — `TValue` was never used in the component body.
+4. **Icon sizing normalized** from `size-3.5` to `size-4`, matching sibling small interactive icons (`group-cell.tsx`, `widget-fields.tsx`).
+5. **Test coverage added** for the `icon` prop (previously untested in all 3 branches). Test count grew 3→4.
+
+Full regression after these fixes: 84/84 passing across `components/data-table/` + `components/table-fields/`. Lint and typecheck clean. Amended into the original commit (unpushed branch) — final SHA `fa0b632`.
+
 ---
 
 ## Task 12: data-table — columns menu (hide + pin)
@@ -2315,9 +2367,13 @@ import { PopoverButtonTrigger } from "./primitives"
 import type { DataTableColumnMeta } from "./types"
 
 export function ColumnsMenuContent<TData>({ table }: { table: Table<TData> }) {
-  const columns = table
-    .getAllLeafColumns()
-    .filter((column) => column.getCanHide() || column.getCanPin())
+  // Deviation: the plan's own sketched code filtered to
+  // `getCanHide() || getCanPin()` here, but that excludes a column where
+  // both are false from the list entirely — contradicting the plan's own
+  // test 4, which requires exactly such a column to still render its label
+  // (with no checkbox/pin buttons). Dropped the top-level filter; the
+  // per-row conditionals below already gate the checkbox/pin controls.
+  const columns = table.getAllLeafColumns()
 
   return (
     <div className="space-y-0.5">
@@ -2347,7 +2403,7 @@ export function ColumnsMenuContent<TData>({ table }: { table: Table<TData> }) {
                   aria-label={`Pin ${label} left`}
                   onClick={() => column.pin(pinned === "left" ? false : "left")}
                 >
-                  <ArrowLeftToLine className="size-3.5" />
+                  <ArrowLeftToLine className="size-3.5" aria-hidden="true" />
                 </Button>
                 <Button
                   type="button"
@@ -2356,7 +2412,7 @@ export function ColumnsMenuContent<TData>({ table }: { table: Table<TData> }) {
                   aria-label={`Pin ${label} right`}
                   onClick={() => column.pin(pinned === "right" ? false : "right")}
                 >
-                  <ArrowRightToLine className="size-3.5" />
+                  <ArrowRightToLine className="size-3.5" aria-hidden="true" />
                 </Button>
               </div>
             ) : null}
@@ -2371,7 +2427,7 @@ export function ColumnsMenu<TData>({ table }: { table: Table<TData> }) {
   return (
     <Popover>
       <PopoverButtonTrigger className="gap-2">
-        <Columns3 className="size-4" />
+        <Columns3 className="size-4" aria-hidden="true" />
         Columns
       </PopoverButtonTrigger>
       <PopoverContent align="start" className="w-64">
@@ -2397,6 +2453,14 @@ git commit -m "feat(data-table): add columns menu (hide + pin)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+**Deviations applied during this task's review cycle:**
+1. **Spec fix (independently verified sound):** dropped the top-level `getCanHide() || getCanPin()` filter — see the code comment above. Without this fix, the plan's own test 4 (a column with both capabilities disabled must still render its label) would fail, since the filter excluded such a column from the list entirely.
+2. **Accessibility, quality review:** `ArrowLeftToLine`/`ArrowRightToLine`/`Columns3` marked `aria-hidden="true"`, matching the convention established in Task 11's `column-header.tsx` fix (accessible name already comes from each button's `aria-label`/text content).
+3. **Test coverage, quality review:** extended the pin-toggle test ("clicking pin-left calls column.pin('left'); clicking again unpins") to actually assert the second half of its own title — a second click after simulating the pinned state asserts `column.pin(false)`. Previously only the first click was tested.
+4. **Noted, not applied (advisory only):** the quality reviewer flagged that a column with both `getCanHide()`/`getCanPin()` false renders as an inert, uncontrollable label-only row with a misleading `hover:bg-muted` affordance. Left as-is — it's spec-compliant (test 4 requires the row to render) and changing the hover/visual treatment would be a UX decision beyond this task's scope; worth revisiting if this ever comes up in practice.
+
+Full regression after these fixes: 88/88 passing across `components/data-table/` + `components/table-fields/`. Lint and typecheck clean. Amended into the original commit (unpushed branch) — final SHA `8d30303`.
 
 ---
 
@@ -2626,6 +2690,16 @@ git commit -m "feat(data-table): add useDataTable state hook
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+**Deviations applied during this task's review cycle** (this is one of the plan's centerpiece files, so both the CRITICAL requirement below and the subsequent design refinement got extra scrutiny):
+
+1. **Implemented the activeCell-revalidation requirement the plan's own code sketch above omits.** The sketch only memoizes `rowIds`/`columnIds` (requirement 1 from `use-grid-navigation.ts`'s module doc comment); it does not revalidate `activeCell` when those lists change under it (requirement 2). A `React.useEffect` was added, gated on `[rowIds, columnIds, nav.setActiveCell]`, that detects when the active row and/or column id has dropped out of the live lists and snaps to a replacement via the existing `nav.setActiveCell` (there is no API to clear `activeCell` to `null` — see the in-code comment for why widening `use-grid-navigation.ts`'s API wasn't the right call here).
+2. **Design refinement (quality review):** the first cut of the revalidation logic snapped to `{ rowId: rowIds[0], columnId: columnIds[0] }` unconditionally — jarring for a user editing deep in the grid. Replaced with a **column-stable, clamped-index snap**: if only the row vanished, stay on the same column and move to whichever row now sits at the vanished row's *previous* index (clamped to the new list's bounds — mirrors Excel/Sheets' behavior on row deletion); symmetric logic for a vanished column with the row preserved; both apply independently if both vanish. Implemented via a `prevIdsRef` tracking the immediately-prior `rowIds`/`columnIds`.
+3. **Bug fix (quality review):** the first cut also had a `prevIdsRef`-based early-return guard (`if (prev.rowIds === rowIds && prev.columnIds === columnIds) return`) that was dead code — the effect's own dependency array already gates when the body runs by reference-equality, so this comparison could never actually change control flow. Removed; `prevIdsRef` is now used solely for its one real job (looking up a vanished id's previous index).
+4. **Redundant computation fix (quality review):** `rowIds`/`columnIds` `useMemo` calls were calling `table.getRowModel().rows`/`table.getVisibleLeafColumns()` twice per render each (once in the deps array, once in the factory). Changed to compute once into a local and reuse.
+5. **Test additions:** 2 tests added covering the CRITICAL requirement (a vanished active row snaps correctly and `moveActive` un-freezes afterward; a still-valid `activeCell` is left untouched across an unrelated id-list change), later revised to exercise the column-stable clamped-index logic specifically (3 rows instead of 2, so the old and new snap targets actually differ) plus a new symmetric test for a vanished *column*. Test count: 5 given → 8 final.
+
+Full regression after all fixes: 96/96 passing across `components/data-table/` + `components/table-fields/`. Lint clean (1 pre-existing documented warning). Typecheck clean. Amended into the original commit (unpushed branch) — final SHA `1610300`.
 
 ---
 
@@ -2878,6 +2952,14 @@ git commit -m "feat(data-table): add DataTable composition root
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+Independently spec-verified with zero deviations — every call site (`ColumnHeader`, `ColumnsMenu`, `useDataTable`, shadcn `Table`/`Button`) matched the real shipped signatures of Tasks 8–13 exactly, and the pinned-column TanStack APIs (`getIsPinned`/`getStart`/`getAfter`) were confirmed real against `node_modules`.
+
+**Two cross-cutting bugs found during quality review** — both invisible until this task rendered every prior piece together in one tree for the first time, so both got fixed here rather than deferred:
+1. **Stale DOM focus on keyboard navigation.** `makeFieldCell` (`define-columns.tsx`, Task 9) rendered each cell as a focusable div, but `useGridNavigation.moveActive` (arrow keys/Tab) only ever updated React state — it never moved real DOM focus, so `document.activeElement` could drift from the logically-active cell (a real screen-reader bug; keyboard nav still worked mechanically since the keydown listener sits on an ancestor and catches bubbled events regardless of which descendant has focus, which is why this wasn't caught earlier). Fixed by giving the cell wrapper a `ref` and adding a second `useEffect` in `makeFieldCell`, keyed on the `isActive` transition, that calls `.focus()` — mirroring the existing `isEditing`-resync effect's hook-ordering pattern (computed unconditionally, before the `if (!runtime)` early return).
+2. **Pinned-cell inline background beat `TableRow`'s hover/selected state.** `pinnedStyle()` set `background: var(--background)` as an inline style, which always wins over `TableRow`'s `hover:bg-muted/50`/`data-[state=selected]:bg-muted` classes (inline beats class-based variants) — so pinned columns never highlighted on row hover/selection. Fixed by moving the background out of the inline style into Tailwind `group-hover:`/`group-data-[state=selected]:` classes, keyed off a new `group` class added to `TableRow` in `components/ui/table.tsx` (checked all other `TableRow` usages in the repo — none pass a conflicting className, and `group` has no effect on its own).
+
+Since the fix spans an already-committed earlier-task file (`define-columns.tsx`) and a shared UI primitive outside this plan's own commits (`components/ui/table.tsx`), it was **not** amended into Task 14's commit — it landed as a separate commit `8685c62` on top, to avoid awkwardly rewriting an older, unrelated commit. Full regression after the fix: 103/103 passing across `components/data-table/` + `components/table-fields/`; 184/184 for the FULL suite (run because a shared `components/ui/` file was touched). Lint and typecheck clean.
+
 ---
 
 ## Task 15: data-table — barrel export
@@ -2931,7 +3013,7 @@ export { ColumnsMenu, ColumnsMenuContent } from "./columns-menu"
 export { useDataTable, type UseDataTableOptions, type UseDataTableResult } from "./use-data-table"
 export { useGridNavigation, type GridNavigation, type UseGridNavigationOptions } from "./use-grid-navigation"
 export { DataTableRuntimeContext, useDataTableRuntime } from "./data-table-runtime-context"
-export { PopoverButtonTrigger } from "./primitives"
+export { PopoverButtonTrigger, type PopoverButtonTriggerProps } from "./primitives"
 export type {
   CellPos,
   DataTableColumnMeta,
@@ -2939,6 +3021,8 @@ export type {
   MoveDirection,
 } from "./types"
 ```
+
+**Deviation, added during quality review:** the sketch above originally omitted `PopoverButtonTriggerProps` from the `PopoverButtonTrigger` re-export — inconsistent with every other export in this barrel, which pairs a component/hook with its prop/options type (`DataTableProps`, `UseDataTableOptions`, `GridNavigation`, etc.). Fixed to `export { PopoverButtonTrigger, type PopoverButtonTriggerProps } from "./primitives"`.
 
 - [ ] **Step 4: Run the full data-table suite + typecheck**
 
@@ -2958,6 +3042,8 @@ git commit -m "feat(data-table): add barrel export
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+Independently spec-verified (every export confirmed to exist in its source file, no circular-import issues). Full `components/data-table/` suite: 11 files / 53 tests passing (the plan's own "~105" estimate above was inaccurate — 53 is the real, verified count). Combined with `table-fields`: 21 files / 104 tests. Lint and typecheck clean. Amended into the original commit (unpushed branch) — final SHA `65d172d`.
 
 ---
 
@@ -3061,6 +3147,8 @@ git commit -m "feat(data-table): publish data-table and data-table-radix registr
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+**Deviation, corrected during implementation (flagged upfront, not discovered by review):** the sketch above originally listed `components/data-table/define-columns.ts` in both items' `files` arrays — stale, since Task 9 renamed this file to `.tsx` (it contains JSX). Both `data-table` and `data-table-radix` use the correct `define-columns.tsx` path/target above. Independently spec-verified with a byte-for-byte content-freshness diff of every built file against live source (all matched exactly), and a full audit of `registryDependencies` completeness against actual shadcn primitive imports across all 10 files (no gaps found). Code-quality review: no issues. Commit `1c4e88d`.
+
 ---
 
 ## Task 17: Final verification
@@ -3080,6 +3168,17 @@ Build a small demo at `app/(examples)/data-table-demo/` (data + `defineColumns` 
 - [ ] **Step 4: (Optional) scratch-install smoke test**
 
 In a throwaway shadcn (Radix) project: `npx shadcn@latest add <abs path>/public/r/data-table-radix.json` then `npx tsc --noEmit` — confirms the Radix variant installs and typechecks standalone, per the dual-base verification pattern already established for `grouped-data-table`.
+
+**Results and findings from this task:**
+
+- **Step 1 (full suite):** `pnpm test` → 31 files / 185 passed (before the fixes below; 186 after).
+- **Step 2 (typecheck/lint/build):** all clean. Production build: 7 routes, all prerendered as static, including a new `/data-table-demo` route (Step 3).
+- **Step 3 (manual browser smoke test):** built `app/(examples)/data-table-demo/` (16-row task tracker, 8 columns spanning text/singleSelect/number/currency/checkbox/date, `editable` table default with `priority`/`hoursLogged`/`dueDate` locked via per-column `editable: false`) and verified it directly in a real browser (not just the subagent's own pass) against the running dev server. Sorting (click header → descending arrow + reordered rows), the Columns menu (hide/pin popovers), and rendering all verified working. **Two real bugs were found during this pass that no unit test had caught:**
+  1. **Missing `registryDependencies`, `table-fields` item (pre-existing, from Plan 1, not this plan's own work):** `checkbox` and `input` were never added to the already-shipped `table-fields` registry item despite `choice-fields.tsx`/`number-fields.tsx`/`text-fields.tsx` importing `Checkbox`/`Input` — `npx shadcn add table-fields` would silently fail to install two primitives it needs. Fixed directly (commit `ef4c5e6`), registry rebuilt.
+  2. **Click-to-edit race + lost focus after leaving edit mode, in `define-columns.tsx`'s `makeFieldCell`:** Task 14's cellRef+`useEffect` fix (see Task 14 above) was verified only via a jsdom `rerender()` simulation, which doesn't reproduce two things a REAL browser click does: (a) it fires `mousedown → native focus → focus event → mouseup → click` as four separate top-level events (jsdom's `fireEvent.click` never moves focus or fires a `focus` event), and (b) a cell's `<div ref={cellRef}>` unmounts while `isEditing` is true and remounts as a fresh DOM node when it flips back — while `isActive` stays constant across that whole cycle. Verified live against the dev server: **root cause 1** — because `focus` fires and commits before `click`, `onFocus`'s `setActiveCell(pos)` had already flipped `isActive` to `true` by the time `onClick` read it, so a SINGLE real click on any inactive editable cell jumped straight to edit mode (collapsing the intended two-click flow into one). **root cause 2** — the focus-restoration effect depended on `[isActive]` only, so it never reran on the remount-after-leaving-edit, `document.activeElement` fell back to `<body>`, and since `<body>` is an ancestor (not descendant) of the table wrapper, `onKeyDown` never saw subsequent keypresses — Enter silently did nothing after an Escape/commit. Fixed (commit `a85256f`): `onMouseDown` now captures the true pre-click active state into a ref (mousedown fires before focus moves, so it's the only handler that sees genuine pre-click state), and `onClick` decides `beginEdit` vs. `setActiveCell` off that captured ref instead of the live `isActive`; the focus-restoration effect now depends on `[isActive, isEditing]` and refocuses whenever `isActive && !isEditing`. Added a `realClick()` test helper (`mousedown → focus() → mouseup → click`) replacing plain `fireEvent.click` in the affected test files, plus regression tests for both root causes. Re-verified live in the browser after the fix: single click activates only (ring + real DOM focus, no edit UI); second click enters edit; Escape returns focus to the cell div; Enter re-opens the editor; arrow-key navigation moves the ring and `document.activeElement` together. Registry rebuilt again afterward (commit `b953f22`) since `public/r/data-table*.json` had been built from the pre-fix `define-columns.tsx`.
+- **Step 4:** not performed (optional; skipped for this plan — the base-ui variant received full manual verification above, and the Radix twin's structural parity is already covered by `primitives.parity.test.ts`).
+
+Final state after this task: 186/186 tests passing, typecheck/lint/build clean, both root causes of the click/focus regression fixed and verified live (not just in jsdom), the pre-existing `table-fields` registryDependencies gap closed. Commits: `ef4c5e6`, `a85256f`, `b953f22`.
 
 ---
 
