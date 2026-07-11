@@ -78,11 +78,19 @@ export function durationField(
 }
 
 // Standalone ColumnDef["cell"] factories — display renderers, for any table.
-export const numberCell = <TData,>(o?: Parameters<typeof numberField>[0]) =>
-  numberField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const currencyCell = <TData,>(o?: Parameters<typeof currencyField>[0]) =>
-  currencyField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const percentCell = <TData,>(o?: Parameters<typeof percentField>[0]) =>
-  percentField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const durationCell = <TData,>(o?: Parameters<typeof durationField>[0]) =>
-  durationField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
+export const numberCell = <TData,>(o?: Parameters<typeof numberField>[0]) => {
+  const f = numberField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const currencyCell = <TData,>(o?: Parameters<typeof currencyField>[0]) => {
+  const f = currencyField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const percentCell = <TData,>(o?: Parameters<typeof percentField>[0]) => {
+  const f = percentField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const durationCell = <TData,>(o?: Parameters<typeof durationField>[0]) => {
+  const f = durationField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}

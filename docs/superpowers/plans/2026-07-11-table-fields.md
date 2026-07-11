@@ -523,14 +523,22 @@ export function durationField(
 }
 
 // Standalone ColumnDef["cell"] factories — display renderers, for any table.
-export const numberCell = <TData,>(o?: Parameters<typeof numberField>[0]) =>
-  numberField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const currencyCell = <TData,>(o?: Parameters<typeof currencyField>[0]) =>
-  currencyField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const percentCell = <TData,>(o?: Parameters<typeof percentField>[0]) =>
-  percentField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const durationCell = <TData,>(o?: Parameters<typeof durationField>[0]) =>
-  durationField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
+export const numberCell = <TData,>(o?: Parameters<typeof numberField>[0]) => {
+  const f = numberField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const currencyCell = <TData,>(o?: Parameters<typeof currencyField>[0]) => {
+  const f = currencyField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const percentCell = <TData,>(o?: Parameters<typeof percentField>[0]) => {
+  const f = percentField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const durationCell = <TData,>(o?: Parameters<typeof durationField>[0]) => {
+  const f = durationField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
 ```
 
 Add `import type * as React from "react"` at the top if the `React.ReactNode` annotations require it under the repo's `jsx: react-jsx` setting (they do — include it).
@@ -732,12 +740,15 @@ export function phoneField(): FieldType<string> {
   }
 }
 
-type StringCell<TData> = (ctx: CellContext<TData, string>) => React.ReactNode
-export const textCell = <TData,>() => textField().display as StringCell<TData>
-export const longTextCell = <TData,>() => longTextField().display as StringCell<TData>
-export const urlCell = <TData,>() => urlField().display as StringCell<TData>
-export const emailCell = <TData,>() => emailField().display as StringCell<TData>
-export const phoneCell = <TData,>() => phoneField().display as StringCell<TData>
+type StringCell<TData> = (ctx: CellContext<TData, unknown>) => React.ReactNode
+function stringCell<TData>(f: FieldType<string>): StringCell<TData> {
+  return (ctx) => f.display(ctx as CellContext<unknown, string>)
+}
+export const textCell = <TData,>() => stringCell<TData>(textField())
+export const longTextCell = <TData,>() => stringCell<TData>(longTextField())
+export const urlCell = <TData,>() => stringCell<TData>(urlField())
+export const emailCell = <TData,>() => stringCell<TData>(emailField())
+export const phoneCell = <TData,>() => stringCell<TData>(phoneField())
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -892,12 +903,18 @@ export function checkboxField(): FieldType<boolean> {
   }
 }
 
-export const singleSelectCell = <TData,>(o: { options: SelectOption[] }) =>
-  singleSelectField(o).display as (ctx: CellContext<TData, string>) => React.ReactNode
-export const multiSelectCell = <TData,>(o: { options: SelectOption[] }) =>
-  multiSelectField(o).display as (ctx: CellContext<TData, string[]>) => React.ReactNode
-export const checkboxCell = <TData,>() =>
-  checkboxField().display as (ctx: CellContext<TData, boolean>) => React.ReactNode
+export const singleSelectCell = <TData,>(o: { options: SelectOption[] }) => {
+  const f = singleSelectField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, string>)
+}
+export const multiSelectCell = <TData,>(o: { options: SelectOption[] }) => {
+  const f = multiSelectField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, string[]>)
+}
+export const checkboxCell = <TData,>() => {
+  const f = checkboxField()
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, boolean>)
+}
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -1092,12 +1109,18 @@ export function dateField(
   }
 }
 
-export const ratingCell = <TData,>(o?: { max?: number }) =>
-  ratingField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const buttonCell = <TData,>(o: { label: string; onClick: (row: TData) => void }) =>
-  buttonField<TData>(o).display as (ctx: CellContext<TData, unknown>) => React.ReactNode
-export const dateCell = <TData,>(o?: { withTime?: boolean; locale?: string }) =>
-  dateField(o).display as (ctx: CellContext<TData, Date | string>) => React.ReactNode
+export const ratingCell = <TData,>(o?: { max?: number }) => {
+  const f = ratingField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const buttonCell = <TData,>(o: { label: string; onClick: (row: TData) => void }) => {
+  const f = buttonField<TData>(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, unknown>)
+}
+export const dateCell = <TData,>(o?: { withTime?: boolean; locale?: string }) => {
+  const f = dateField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, Date | string>)
+}
 ```
 
 - [ ] **Step 4: Run the test to verify it passes**
@@ -1193,6 +1216,13 @@ export {
 
 Run: `pnpm exec vitest run components/table-fields/` — Expected: all field tests PASS.
 Run: `pnpm typecheck` — Expected: clean.
+
+- [ ] **Step 5: I1 compile-time guard**
+
+`components/table-fields/column-usage.test.tsx` exists as the I1 guard: it assigns
+standalone `*Cell` factories into a real `ColumnDef<Row>[]` with `accessorKey` (the
+canonical shadcn data-table pattern), so a regression in a `*Cell` return type fails
+`pnpm typecheck` instead of only surfacing at consumer call sites.
 
 - [ ] **Step 5: Commit**
 

@@ -65,9 +65,15 @@ export function checkboxField(): FieldType<boolean> {
   }
 }
 
-export const singleSelectCell = <TData,>(o: { options: SelectOption[] }) =>
-  singleSelectField(o).display as (ctx: CellContext<TData, string>) => React.ReactNode
-export const multiSelectCell = <TData,>(o: { options: SelectOption[] }) =>
-  multiSelectField(o).display as (ctx: CellContext<TData, string[]>) => React.ReactNode
-export const checkboxCell = <TData,>() =>
-  checkboxField().display as (ctx: CellContext<TData, boolean>) => React.ReactNode
+export const singleSelectCell = <TData,>(o: { options: SelectOption[] }) => {
+  const f = singleSelectField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, string>)
+}
+export const multiSelectCell = <TData,>(o: { options: SelectOption[] }) => {
+  const f = multiSelectField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, string[]>)
+}
+export const checkboxCell = <TData,>() => {
+  const f = checkboxField()
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, boolean>)
+}

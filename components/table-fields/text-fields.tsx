@@ -99,9 +99,12 @@ export function phoneField(): FieldType<string> {
   }
 }
 
-type StringCell<TData> = (ctx: CellContext<TData, string>) => React.ReactNode
-export const textCell = <TData,>() => textField().display as StringCell<TData>
-export const longTextCell = <TData,>() => longTextField().display as StringCell<TData>
-export const urlCell = <TData,>() => urlField().display as StringCell<TData>
-export const emailCell = <TData,>() => emailField().display as StringCell<TData>
-export const phoneCell = <TData,>() => phoneField().display as StringCell<TData>
+type StringCell<TData> = (ctx: CellContext<TData, unknown>) => React.ReactNode
+function stringCell<TData>(f: FieldType<string>): StringCell<TData> {
+  return (ctx) => f.display(ctx as CellContext<unknown, string>)
+}
+export const textCell = <TData,>() => stringCell<TData>(textField())
+export const longTextCell = <TData,>() => stringCell<TData>(longTextField())
+export const urlCell = <TData,>() => stringCell<TData>(urlField())
+export const emailCell = <TData,>() => stringCell<TData>(emailField())
+export const phoneCell = <TData,>() => stringCell<TData>(phoneField())

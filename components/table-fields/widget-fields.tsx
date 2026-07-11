@@ -107,9 +107,15 @@ export function dateField(
   }
 }
 
-export const ratingCell = <TData,>(o?: { max?: number }) =>
-  ratingField(o).display as (ctx: CellContext<TData, number>) => React.ReactNode
-export const buttonCell = <TData,>(o: { label: string; onClick: (row: TData) => void }) =>
-  buttonField<TData>(o).display as (ctx: CellContext<TData, unknown>) => React.ReactNode
-export const dateCell = <TData,>(o?: { withTime?: boolean; locale?: string }) =>
-  dateField(o).display as (ctx: CellContext<TData, Date | string>) => React.ReactNode
+export const ratingCell = <TData,>(o?: { max?: number }) => {
+  const f = ratingField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, number>)
+}
+export const buttonCell = <TData,>(o: { label: string; onClick: (row: TData) => void }) => {
+  const f = buttonField<TData>(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, unknown>)
+}
+export const dateCell = <TData,>(o?: { withTime?: boolean; locale?: string }) => {
+  const f = dateField(o)
+  return (ctx: CellContext<TData, unknown>) => f.display(ctx as CellContext<unknown, Date | string>)
+}
