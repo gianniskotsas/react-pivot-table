@@ -1,6 +1,9 @@
 import type * as React from "react"
 import type { CellContext } from "@tanstack/react-table"
+import { ExternalLink } from "lucide-react"
+import parsePhoneNumber from "libphonenumber-js"
 
+import { cn } from "@/lib/utils"
 import { FIELD_ICONS } from "./icons"
 import type { FieldType } from "./types"
 
@@ -36,6 +39,25 @@ function isHttpUrl(value: string): boolean {
   return /^https?:\/\//i.test(value)
 }
 
+/** Bare hostname for display (drops the leading `www.`); falls back to the raw value. */
+function hostname(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return url
+  }
+}
+
+/**
+ * Regional-indicator flag emoji from an ISO 3166-1 alpha-2 country code.
+ * Renders on most platforms; Windows lacks flag-emoji glyphs (shows the letters).
+ */
+function flagEmoji(country: string): string {
+  return country
+    .toUpperCase()
+    .replace(/./g, (c) => String.fromCodePoint(127397 + c.charCodeAt(0)))
+}
+
 export function textField(): FieldType<string> {
   return {
     name: "text",
@@ -65,10 +87,20 @@ export function urlField(): FieldType<string> {
     display: (ctx) => {
       const v = ctx.getValue()
       if (!v) return null
-      return isHttpUrl(v) ? (
-        <LinkCell href={v} text={v} />
-      ) : (
-        <span className="truncate inline-block max-w-full align-bottom">{v}</span>
+      if (!isHttpUrl(v)) {
+        return <span className="truncate inline-block max-w-full align-bottom">{v}</span>
+      }
+      return (
+        <a
+          href={v}
+          target="_blank"
+          rel="noreferrer"
+          className={cn(linkClass, "inline-flex items-center gap-1")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <span className="truncate">{hostname(v)}</span>
+          <ExternalLink className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+        </a>
       )
     },
     ...identityClipboard,
@@ -93,7 +125,23 @@ export function phoneField(): FieldType<string> {
     icon: FIELD_ICONS.phone,
     display: (ctx) => {
       const v = ctx.getValue()
-      return v ? <LinkCell href={`tel:${v}`} text={v} /> : null
+      if (!v) return null
+      const parsed = parsePhoneNumber(v)
+      if (!parsed) {
+        // Unparseable: fall back to a raw tel: link so nothing is lost.
+        return <LinkCell href={`tel:${v}`} text={v} />
+      }
+      const flag = parsed.country ? flagEmoji(parsed.country) : null
+      return (
+        <a
+          href={parsed.getURI()}
+          className={cn(linkClass, "inline-flex items-center gap-1.5")}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {flag ? <span aria-hidden="true">{flag}</span> : null}
+          <span className="truncate">{parsed.formatInternational()}</span>
+        </a>
+      )
     },
     ...identityClipboard,
   }

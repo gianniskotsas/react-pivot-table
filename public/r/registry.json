@@ -168,7 +168,7 @@
       "type": "registry:lib",
       "title": "Table Fields",
       "description": "Standalone, type-safe Airtable-style field types (number, currency, percent, duration, text, url, email, phone, single/multi select, checkbox, rating, button, date) for any shadcn + TanStack Table. Display renderers, Intl formatters, header icons, and clipboard serialization.",
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "libphonenumber-js"],
       "registryDependencies": ["badge", "button"],
       "files": [
         { "path": "components/table-fields/types.ts", "type": "registry:lib", "target": "components/table-fields/types.ts" },

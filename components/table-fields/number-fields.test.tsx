@@ -35,8 +35,8 @@ describe("number fields", () => {
     expect(container.textContent).toBe("75%")
   })
 
-  it("durationField displays minutes by default", () => {
-    const { container } = render(<>{durationField().display(ctx(90))}</>)
-    expect(container.textContent).toBe("1:30")
+  it("durationField displays a humanized duration", () => {
+    const { container } = render(<>{durationField().display(ctx(5400))}</>)
+    expect(container.textContent).toBe("1h 30m")
   })
 })

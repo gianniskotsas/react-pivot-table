@@ -27,11 +27,17 @@ describe("formatPercent", () => {
 })
 
 describe("formatDuration", () => {
-  it("defaults to minutes as m:ss", () => {
-    expect(formatDuration(90)).toBe("1:30")
-    expect(formatDuration(5)).toBe("0:05")
+  it("humanizes seconds into the two most-significant units", () => {
+    expect(formatDuration(90)).toBe("1m 30s")
+    expect(formatDuration(5)).toBe("5s")
+    expect(formatDuration(5400)).toBe("1h 30m")
+    expect(formatDuration(90000)).toBe("1d 1h")
+    expect(formatDuration(0)).toBe("0s")
   })
-  it("supports h:mm:ss with the hms unit", () => {
-    expect(formatDuration(3661, { unit: "hms" })).toBe("1:01:01")
+  it("accepts a millisecond input unit", () => {
+    expect(formatDuration(1500, { unit: "ms" })).toBe("1s 500ms")
+  })
+  it("returns empty string for blank input", () => {
+    expect(formatDuration(NaN)).toBe("")
   })
 })

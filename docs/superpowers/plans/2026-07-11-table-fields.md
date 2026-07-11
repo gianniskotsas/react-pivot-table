@@ -6,7 +6,19 @@
 
 **Architecture:** Each field is a `FieldType<V>` object binding a value type to a pure `display` renderer, a header `icon`, `align`, and pure `toClipboard`/`fromClipboard` functions. A standalone cell factory (`xCell(opts)`) is just `xField(opts).display`, returning a TanStack `ColumnDef["cell"]`. The `edit` renderer is declared optional on `FieldType` but is NOT implemented here (it needs the grid spine from Plan 2). Formatters are thin `Intl` wrappers. No base-ui/Radix divergence (display is plain markup), so no primitives shim.
 
-**Tech Stack:** React 18+, TypeScript strict, `@tanstack/react-table@8` (types only), shadcn primitives (`Badge`, `Button`), `lucide-react` icons, Vitest + Testing Library + jsdom, shadcn registry.
+**Tech Stack:** React 18+, TypeScript strict, `@tanstack/react-table@8` (types only), shadcn primitives (`Badge`, `Button`), `lucide-react` icons, `libphonenumber-js` (phone), Vitest + Testing Library + jsdom, shadcn registry.
+
+---
+
+## Post-implementation UI enhancements (rev. 2)
+
+After the initial kit landed and was visually reviewed, three field renderers were upgraded. The shipped code (and the built `public/r/table-fields.json`) supersedes the original Task 2 / Task 5 code blocks below for these:
+
+- **Duration** (`format.ts` `formatDuration`, used by `durationField`): now humanized into compact units — `1h 30m`, `45s`, `2d 1h`, `1s 500ms` — showing the two most-significant non-zero units. Input unit defaults to seconds; `{ unit: "ms" }` supported. (Replaces the old `m:ss` / `hms` output.)
+- **URL** (`text-fields.tsx` `urlField`): renders the bare hostname (drops `www.`) + a lucide `ExternalLink` icon instead of the raw URL, keeping the http(s) safety gate.
+- **Phone** (`text-fields.tsx` `phoneField`): parses with `libphonenumber-js`, renders a country flag emoji (from the ISO code) + the international format (e.g. `🇺🇸 +1 415 555 2671`) as a `tel:` link; falls back to a raw `tel:` link for unparseable input. Adds the `libphonenumber-js` npm dependency to the registry item. (Windows lacks flag-emoji glyphs and shows the letters instead.)
+
+A live demo of all 15 field types in a plain `ColumnDef<Employee>[]` table lives at `app/(examples)/fields/` (route `/fields`) — it doubles as the standalone-usage proof and is not part of the registry item.
 
 ---
 

@@ -34,23 +34,38 @@ export function formatPercent(
   }).format(value)
 }
 
+const DURATION_UNITS: [label: string, ms: number][] = [
+  ["d", 86_400_000],
+  ["h", 3_600_000],
+  ["m", 60_000],
+  ["s", 1_000],
+  ["ms", 1],
+]
+
 /**
- * Durations are stored as a number of seconds. Default display unit is minutes,
- * rendered as `m:ss`. The `hms` unit renders `h:mm:ss`.
+ * Humanizes a duration into compact units (e.g. `1h 30m`, `45s`, `2d 1h`,
+ * `1s 500ms`), showing the two most-significant non-zero units. The stored
+ * value's unit defaults to seconds; pass `{ unit: "ms" }` for milliseconds.
  */
 export function formatDuration(
-  seconds: number,
-  opts: { unit?: "minutes" | "hms" } = {},
+  value: number,
+  opts: { unit?: "s" | "ms"; maxUnits?: number } = {},
 ): string {
-  if (isBlank(seconds)) return ""
-  const total = Math.max(0, Math.floor(seconds))
-  if (opts.unit === "hms") {
-    const h = Math.floor(total / 3600)
-    const m = Math.floor((total % 3600) / 60)
-    const s = total % 60
-    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+  if (isBlank(value)) return ""
+  let ms = opts.unit === "ms" ? value : value * 1000
+  ms = Math.max(0, Math.round(ms))
+  if (ms === 0) return "0s"
+
+  const maxUnits = opts.maxUnits ?? 2
+  const parts: string[] = []
+  let remaining = ms
+  for (const [label, size] of DURATION_UNITS) {
+    if (parts.length >= maxUnits) break
+    const qty = Math.floor(remaining / size)
+    if (qty > 0) {
+      parts.push(`${qty}${label}`)
+      remaining -= qty * size
+    }
   }
-  const m = Math.floor(total / 60)
-  const s = total % 60
-  return `${m}:${String(s).padStart(2, "0")}`
+  return parts.join(" ")
 }

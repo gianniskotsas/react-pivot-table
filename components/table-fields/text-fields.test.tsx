@@ -25,12 +25,15 @@ describe("text fields", () => {
     expect(container.querySelector(".truncate")).not.toBeNull()
   })
 
-  it("urlField renders an external anchor", () => {
-    render(<>{urlField().display(ctx("https://example.com"))}</>)
-    const a = screen.getByRole("link", { name: "https://example.com" })
-    expect(a).toHaveAttribute("href", "https://example.com")
+  it("urlField renders an external anchor showing the bare hostname", () => {
+    render(<>{urlField().display(ctx("https://www.example.com/path"))}</>)
+    const a = screen.getByRole("link")
+    // Href keeps the full URL; the visible text is the bare hostname (no www.).
+    expect(a).toHaveAttribute("href", "https://www.example.com/path")
     expect(a).toHaveAttribute("target", "_blank")
     expect(a).toHaveAttribute("rel", "noreferrer")
+    expect(a.textContent).toContain("example.com")
+    expect(a.textContent).not.toContain("www.")
   })
 
   it("urlField renders non-http(s) values as plain text, not a link", () => {
@@ -39,11 +42,25 @@ describe("text fields", () => {
     expect(container.textContent).toBe("javascript:alert(1)")
   })
 
-  it("emailField renders a mailto link and phoneField a tel link", () => {
+  it("emailField renders a mailto link", () => {
     render(<>{emailField().display(ctx("a@b.com"))}</>)
-    expect(screen.getByRole("link", { name: "a@b.com" })).toHaveAttribute("href", "mailto:a@b.com")
-    render(<>{phoneField().display(ctx("+15551234567"))}</>)
-    expect(screen.getByRole("link", { name: "+15551234567" })).toHaveAttribute("href", "tel:+15551234567")
+    expect(screen.getByRole("link", { name: "a@b.com" })).toHaveAttribute(
+      "href",
+      "mailto:a@b.com",
+    )
+  })
+
+  it("phoneField renders a formatted tel link with a country flag", () => {
+    render(<>{phoneField().display(ctx("+14155552671"))}</>)
+    const link = screen.getByRole("link")
+    expect(link).toHaveAttribute("href", "tel:+14155552671")
+    expect(link.textContent).toContain("🇺🇸")
+    expect(link.textContent).toContain("+1 415 555 2671")
+  })
+
+  it("phoneField falls back to a raw tel link for unparseable input", () => {
+    render(<>{phoneField().display(ctx("+123"))}</>)
+    expect(screen.getByRole("link")).toHaveAttribute("href", "tel:+123")
   })
 
   it("round-trips clipboard as identity", () => {

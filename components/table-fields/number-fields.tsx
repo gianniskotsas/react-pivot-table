@@ -63,7 +63,7 @@ export function percentField(
 }
 
 export function durationField(
-  opts: { unit?: "minutes" | "hms" } = {},
+  opts: { unit?: "s" | "ms"; maxUnits?: number } = {},
 ): FieldType<number> {
   return {
     name: "duration",
