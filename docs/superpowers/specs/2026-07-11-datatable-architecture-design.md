@@ -1,348 +1,364 @@
 # kotsas-ui DataTable Architecture — Release 1 Design
 
 **Date:** 2026-07-11
-**Status:** Approved for planning
+**Status:** Approved for planning (rev. 2 — editable-grid scope)
 **Author:** brainstormed with Giannis
 
 ## Goal
 
 Evolve `kotsas-ui` from a single specialized `grouped-data-table` into a **three-tier
-data-table family** that brings Airtable-style richness to shadcn + TanStack Table v8,
-optimized for **open-source adoption**: every piece is copy-paste installable, works
-standalone, and is documented for humans and coding agents.
+editable data-grid family** for shadcn + TanStack Table v8 — an open-source,
+copy-paste, shadcn-native answer to the Airtable/Notion grid, which today's mature grids
+(AG Grid, Glide, Material React Table) don't offer in a shadcn-idiomatic form. This is the
+adoption wedge: not "another data table with nice cells," but a **genuinely good editable
+grid you paste into a shadcn app**.
 
-Release 1 delivers a general-purpose base `DataTable` plus a modular field-type kit,
-row selection with calculation summaries, hide/freeze columns, and a hybrid
-client/server aggregation model. Formula, AI, attachment, and relational field types
-are explicitly deferred to R2+; the docs-site rebuild is a separate brainstorm cycle.
+Release 1 delivers a general-purpose base `DataTable` with a real grid interaction spine
+(cell focus, keyboard navigation, edit lifecycle), a modular + type-safe field-type kit,
+row selection with calculation summaries, hide/freeze/sort/resize columns, undo-redo with
+toasts, copy/paste/export, and a hybrid client/server aggregation model. Formula, AI,
+attachment, and relational field types are deferred to R2+; the docs-site rebuild is a
+separate brainstorm cycle.
 
 ## Context / current state
 
-The repo currently ships one registry component, `grouped-data-table` (base-ui + Radix
-builds), providing row grouping / pivot drill-down, AND/OR filter groups, a dimension
-picker, per-group aggregation, and client pagination. It has **no** field-type system:
-consumers hand-write every `ColumnDef.cell`. There is no row selection, no
-user-facing column hide/freeze, no footer calc, and no number/currency formatting
-helpers.
+The repo ships one registry component, `grouped-data-table` (base-ui + Radix builds):
+grouping / pivot drill-down, AND/OR filter groups, dimension picker, per-group
+aggregation, client pagination. It has **no** field-type system, **no** editing, **no**
+row selection, **no** sorting UI, **no** column hide/freeze/resize, **no** footer calc,
+**no** formatting helpers. Consumers hand-write every `ColumnDef.cell`.
 
-The grouped table already establishes a key pattern we will mirror everywhere: the
-**developer declares what is _allowed_** (`groupableDimensions`, `filterableColumns`)
-and the **end-user's live choices are separate state** (`grouping`, `filterState`).
+The grouped table establishes the pattern we mirror: the **developer declares what is
+allowed** (`groupableDimensions`, `filterableColumns`) and the **user's live choices are
+separate state** (`grouping`, `filterState`).
 
 ## Success criteria
 
-1. **Standalone field types** — every field type is installable and usable in a plain
-   shadcn/TanStack table (the official `useReactTable` + `<Table>` recipe), with **no**
-   dependency on `DataTable` or `grouped-data-table`.
-2. **Base is a superset** — `DataTable` cleanly covers everything the current grouped
-   table's non-grouping base does (pagination, filtering, formatting), so
-   `grouped-data-table` can later be refactored to sit on it without behavior loss.
-3. **Zero-backend by default** — footer calc + selection summary work fully client-side
-   with no server, and **degrade gracefully** to a developer callback for datasets
-   larger than what is loaded in memory. The library never performs a fetch itself.
-4. **Adoption-ready** — each feature ships with tests and one documentation page;
-   installs via the existing shadcn registry (base-ui + Radix builds preserved).
+1. **Editable grid, dev-gated** — cells edit inline with real grid keyboard navigation;
+   editing is **off by default** and enabled per-table and/or per-column. A read-only
+   table is a first-class, zero-config mode.
+2. **Type-safe end to end** — a typed column builder ties each column's accessor to its
+   data type to its field type; `updateData` is typed per column; wrong pairings are
+   compile errors.
+3. **Standalone field types** — every field type's display renderer is usable in a plain
+   shadcn/TanStack table with **no** dependency on `DataTable`.
+4. **Base is a superset** — `DataTable` covers everything the current grouped table's
+   non-grouping base does, so `grouped-data-table` can later sit on it without loss.
+5. **Zero-backend by default** — selection summary, footer calc, sorting, and undo/redo
+   work fully client-side; large-dataset aggregation **degrades gracefully** to a
+   developer callback. The library never fetches.
+6. **Adoption-ready** — each feature ships with tests and one doc page; installs via the
+   existing shadcn registry (base-ui + Radix builds, parity test preserved).
 
 ## Non-goals (Release 1)
 
-- Formula cells, AI-computed cells, attachment/file-upload cells.
-- Relational field types (Linked record, Lookup, Rollup) — these require a multi-table
-  data model that a single-table UI library should not own.
-- Identity-dependent types (Created/Modified By, User/Collaborator ownership), barcode
-  scanning, autonumber auto-increment-on-insert (a data-layer concern).
-- The docs-site rebuild (`llms.txt`, copy-page, evilcharts-style) — brainstormed next.
-- Refactoring `grouped-data-table` onto `DataTable` — planned, but a later release.
+- Formula / AI-computed / attachment-upload cells (R2+, but the async cell shape is
+  anticipated in the contract).
+- Relational types (Linked record, Lookup, Rollup) and identity types (Created/Modified
+  By, User ownership), barcode, autonumber auto-increment.
+- Full spreadsheet range paste with formula-fill; R1 does rectangular value paste only.
+- Docs-site rebuild; refactoring `grouped-data-table` onto `DataTable` (later release).
 
 ---
 
 ## Architecture — three registry tiers
 
 ```
-@kotsas-ui/table-fields         pure TanStack cell renderers (Layer 0)
+@kotsas-ui/table-fields         field types: display + edit renderers, type-safe (Layer 0)
         ▲ registryDependency
-@kotsas-ui/data-table           base DataTable<TData> (Layer 1 + shell features)
+@kotsas-ui/data-table           base DataTable<TData>: grid spine + shell features (Layer 1)
         ▲ (future) extends
 @kotsas-ui/grouped-data-table   existing grouping/pivot table (unchanged this release)
 ```
 
-Each tier is an independent registry item (like today's `grouped-data-table` /
-`grouped-data-table-radix`). Tiers compose via `registryDependencies`, not duplication.
-All new components ship **base-ui and Radix builds**, using the same
-`primitives.tsx` / `primitives.radix.tsx` shim pattern already established in the repo,
-with the parity test guarding type-signature drift.
+Each tier is an independent registry item, composed via `registryDependencies`. All new
+components ship **base-ui and Radix builds** using the established
+`primitives.tsx` / `primitives.radix.tsx` shim + parity test.
 
-### Tier 1 — `table-fields` (the modular kit)
+### Tier 1 — `table-fields` (modular, type-safe field kit)
 
-Pure, self-contained cell renderers. **Dependencies:** `@tanstack/react-table` (types)
-+ shadcn primitives only (`Badge`, `Checkbox`, `Button`, `Input`, `Select`, etc.). No
-dnd-kit, no filter-utils, no `DataTable`. This is what makes field types usable in
-anyone's hand-rolled table.
+**Dependencies:** `@tanstack/react-table` (types) + shadcn primitives only. No dnd-kit,
+no `DataTable`. This is what keeps field types usable in anyone's table.
 
-**Layer 0 — cell factories.** Each factory takes field config and returns a plain
-`ColumnDef["cell"]` renderer:
+**The field-type contract.** A field type binds a value type `V` to a display renderer, an
+optional edit renderer, a header icon, and clipboard (de)serialization:
 
 ```ts
-import type { CellContext } from "@tanstack/react-table"
+export type FieldType<V> = {
+  name: string
+  icon?: React.ComponentType<{ className?: string }>       // Airtable-style header icon
+  align?: "left" | "right" | "center"
+  display: (ctx: CellContext<any, V>) => React.ReactNode   // pure, standalone-usable
+  edit?: (ctx: FieldEditContext<V>) => React.ReactNode      // omit → type is never editable
+  toClipboard?: (value: V) => string                        // for copy + CSV/TSV export
+  fromClipboard?: (text: string) => V | undefined           // for paste
+}
 
-export function currencyCell<TData>(opts?: {
-  currency?: string   // default "USD"
-  locale?: string     // default "en-US"
-}) {
-  return ({ getValue }: CellContext<TData, number>) =>
-    new Intl.NumberFormat(opts?.locale ?? "en-US", {
-      style: "currency",
-      currency: opts?.currency ?? "USD",
-    }).format(getValue())
+export type FieldEditContext<V> = {
+  value: V
+  setValue: (next: V) => void   // stages the value
+  commit: () => void            // Enter / blur — persists via the table's updateData
+  cancel: () => void            // Esc — reverts
+  focusNext: (dir: "next" | "prev" | "up" | "down") => void
 }
 ```
 
-Consumed directly in any table:
+**Two consumption paths, one implementation:**
 
-```ts
-const columns: ColumnDef<Invoice>[] = [
-  { accessorKey: "amount", header: "Amount", cell: currencyCell({ currency: "USD" }) },
-  { accessorKey: "status", header: "Status", cell: singleSelectCell({ options: STATUS_OPTIONS }) },
-  { accessorKey: "site",   header: "Website", cell: urlCell() },
-]
-```
+- **Standalone (read-only):** each field also exports a plain cell factory that is just
+  its `display` renderer, returning a `ColumnDef["cell"]` — drop-in for any table:
+  ```ts
+  { accessorKey: "amount", header: "Amount", cell: currencyCell({ currency: "USD" }) }
+  ```
+- **Full grid:** `DataTable` consumes the whole `FieldType<V>` (display + edit + icon +
+  clipboard) via the typed column builder below.
 
-**Editable cells** rely on TanStack's standard editable-data convention — the table's
-`meta.updateData(rowIndex, columnId, value)` — rather than any kotsas-specific channel:
+**Editing uses TanStack's standard `meta.updateData` convention** — the edit context's
+`commit()` calls `table.options.meta.updateData(rowId, columnId, value)`. So an editable
+kotsas-ui field works in any table whose author wires that idiomatic meta channel.
 
-```ts
-export type EditableTableMeta = {
-  updateData?: (rowIndex: number, columnId: string, value: unknown) => void
-}
-// inside an editable cell:
-//   const meta = table.options.meta as EditableTableMeta | undefined
-//   meta?.updateData?.(row.index, column.id, next)
-```
+**Release 1 field set (Families 1–4, ~15 types).** Each has a header icon and, where
+marked, an edit renderer:
 
-An editable kotsas-ui cell therefore works in any table whose author wires that
-(already-idiomatic) meta convention. Display-only cells ignore it.
-
-**Release 1 field set (Families 1–4):**
-
-| Family | Types | Editable? | Notes |
+| Family | Types | Editable | Value type |
 |---|---|---|---|
-| Number (Intl) | `numberCell`, `currencyCell`, `percentCell`, `durationCell` | display (R1) | thin wrappers over `Intl.NumberFormat`; duration formats h/m/s |
-| Linked text | `textCell`, `longTextCell`, `urlCell`, `emailCell`, `phoneCell` | display (R1) | url→`<a target=_blank rel=noreferrer>` truncated; email→`mailto:`; phone→`tel:` |
-| Choice | `singleSelectCell`, `multiSelectCell`, `checkboxCell` | **editable** | reuse the existing `MultiSelect` from grouped-data-table as the multi editor; badges for display |
-| Widget | `ratingCell`, `buttonCell`, `dateCell` | rating+date editable; button interactive | rating = star row; button = dev-supplied `onClick(row)`; date display via Intl, edit via shadcn calendar/date picker |
+| Number (Intl) | number, currency, percent, duration | ✓ (numeric input) | `number` |
+| Text | text, longText, url, email, phone | ✓ (text / textarea) | `string` |
+| Choice | singleSelect, multiSelect, checkbox | ✓ (select / MultiSelect / toggle) | `string` / `string[]` / `boolean` |
+| Widget | rating, button, date | rating ✓, date ✓ (calendar), button = action | `number` / `Date`\|`string` |
 
-"Editable (R1)" scope: number/text families render display-first in R1 (inline edit is a
-fast-follow, not a blocker); choice + rating + date ship with inline edit because their
-value is the differentiator. Every factory accepts an optional `editable` opt so the
-edit path can be enabled uniformly later without an API break.
+url/email/phone display as click-through links (`target=_blank`, `mailto:`, `tel:`);
+their edit renderer is a plain text input. `multiSelect` reuses the existing `MultiSelect`
+component. Every editable field respects the per-column/table read-only gate (below): when
+not editable, only `display` is ever rendered.
 
-### Tier 2 — `data-table` (the base shell)
+### Tier 2 — `data-table` (base grid shell)
 
-`DataTable<TData>` is the general-purpose table. It owns the shell features (selection,
-columns control, footer calc, pagination) and a **Layer 1 declarative surface** over the
-Layer-0 field factories.
+`DataTable<TData>` owns the grid spine + shell features and the **type-safe Layer-1
+column builder**.
 
-**Layer 1 — declarative field columns.** Instead of hand-writing `cell:`, a column may
-declare a `field`, which `DataTable` expands to a `ColumnDef` using the same Layer-0
-renderer:
+**Type-safe column builder.** The recommended API (resolves the earlier open ergonomics
+question in favor of type safety): a builder that constrains accessor → data type → field
+type at compile time.
 
 ```ts
-// Recommended shape (final ergonomics settled in the plan):
-type FieldSpec =
-  | { type: "number";   locale?: string; maximumFractionDigits?: number }
-  | { type: "currency"; currency?: string; locale?: string }
-  | { type: "percent";  locale?: string }
-  | { type: "duration"; unit?: "hms" | "ms" }
-  | { type: "text" } | { type: "longText" }
-  | { type: "url" } | { type: "email" } | { type: "phone" }
-  | { type: "singleSelect"; options: SelectOption[] }
-  | { type: "multiSelect";  options: SelectOption[] }
-  | { type: "checkbox" }
-  | { type: "rating"; max?: number }
-  | { type: "button"; label: string; onClick: (row: TData) => void }
-  | { type: "date"; withTime?: boolean; locale?: string }
-
-type DataTableColumn<TData> =
-  | ColumnDef<TData, unknown>                                  // escape hatch: raw def
-  | { id: string; header?: React.ReactNode; accessorKey?: keyof TData
-      field: FieldSpec; enableHiding?: boolean; enablePinning?: boolean }
+const columns = defineColumns<Employee>()([
+  col.text("name",        { header: "Name" }),        // "name" must be a string key
+  col.number("age",       { header: "Age" }),
+  col.email("email"),                                  // must be a string key
+  col.url("website",      { header: "Website" }),
+  col.longText("notes"),
+  col.currency("salary",  { header: "Salary", currency: "USD", editable: false }),
+  col.singleSelect("department", { options: DEPARTMENTS }),
+])
 ```
 
-One implementation, two consumption styles: full-table users get ergonomics; standalone
-users import the Layer-0 factory. The `field` union is the single source of truth that
-also informs formatting used by footer aggregation display.
-
-### Tier 3 — `grouped-data-table` (unchanged in R1)
-
-No changes this release. A later release refactors it to consume `DataTable` as its base;
-the design keeps `DataTable`'s feature props additive so that refactor is non-breaking.
+- `col.number("age")` fails to compile unless `Employee["age"]` is `number`.
+- Per-column `editable?: boolean` overrides the table default (`DataTable editable?: boolean`,
+  default `false`). Read-only is the safe default.
+- `updateData` is typed: `updateData<K extends keyof TData>(rowId: string, key: K, value: TData[K])`.
+- Raw `ColumnDef` remains an escape hatch alongside builder columns.
 
 ---
 
-## Feature: Row selection + select-all
+## The grid interaction spine (the core new primitive)
 
-- Backed by TanStack native `rowSelection` state + a leading checkbox column
-  (`enableRowSelection`). `DataTable` prop `enableRowSelection?: boolean`.
-- **Header select-all** toggles all rows on the **current page** (TanStack
-  `getToggleAllPageRowsSelectedHandler`).
-- **Select-all-matching banner**: when the table is server-paginated (see below) and
-  more rows match than are loaded, a banner appears after page-select — "All N on this
-  page selected · Select all M matching" — which sets a `selectAllMatching` boolean plus
-  the current filter context. It does **not** materialize M row ids in memory (the
-  standard "select across pages" pattern).
-- Selection integrates with footer calc (below): when a selection is active, footer
-  cells show the **selection-scoped** value instead of the all-rows value.
+TanStack is headless and provides none of this; it is the foundation every field type and
+shell feature builds on, so it lands first.
 
-## Feature: Columns control (hide + freeze)
+- **Cell focus model** — a single "active cell" (`{rowId, columnId}`) in table state, with
+  a visible focus ring. Click focuses; click-again (or Enter) enters edit mode.
+- **Keyboard navigation** — Arrow keys move the active cell; Tab / Shift-Tab move
+  horizontally and wrap; Enter commits an edit and moves down; Esc cancels; typing on a
+  focused editable cell enters edit mode with the character. Home/End, PageUp/Down optional.
+- **Edit lifecycle** — display → (enter) edit → commit(persist via `updateData`) | cancel.
+  The `FieldEditContext` above is the contract each field's `edit` renderer implements.
+- **Read-only gate** — when the table or column is not editable, cells are focusable and
+  copyable but never enter edit mode.
 
-A single "Columns" menu (popover) listing every hideable/pinnable column with actions:
-show/hide toggle, pin-left, pin-right, unpin.
+This spine is a small headless hook (`use-grid-navigation.ts`) plus focus/keydown wiring
+in the cell/row components — independently testable with fired key events.
 
-- **Hide** — two-way `columnVisibility` state (`onColumnVisibilityChange` wired). Note:
-  `grouped-data-table` currently derives visibility one-way from grouping; `DataTable`'s
-  visibility is user-driven and must merge cleanly with any derived rules.
-- **Freeze/pin** — TanStack native `columnPinning` state; rendering applies sticky CSS
-  (`position: sticky`, left/right offsets computed from pinned column widths) so pinned
-  columns stay fixed during horizontal scroll. Pinned column shadows indicate the frozen
-  edge. This is the fiddliest piece of R1 (sticky offset math + z-index) and warrants
-  focused tests.
+## Editing, type safety & data ownership
 
-Dev opt-in per column via `enableHiding` / `enablePinning` (default: allowed for
-non-essential columns; the selection checkbox column and a pinned group column are not
-user-hideable).
+- The library **never owns the data**; it renders `data` and reports intended mutations
+  through `updateData`. The consumer applies them (optimistic local state, server write,
+  whatever) — the same boundary as the AI/aggregate callbacks.
+- `editable` resolves table-default → column-override. A fully read-only grid passes
+  nothing and gets focus/keyboard/copy/sort/select but no edit affordances.
+- Type safety is enforced at the builder boundary (accessor/value/field alignment) and at
+  `updateData` (typed value per column), giving compile-time guarantees end to end.
 
-## Feature: Footer calc + selection summary (Option C)
+## Undo / redo + notifications (sonner)
 
-Airtable-real behavior: a persistent per-column footer that switches to selection scope
-when rows are selected. **Per-column opt-in**, mirroring the declare-vs-state pattern.
+- **Edit history stack** at the `DataTable` level. Every mutation (single edit, paste,
+  bulk clear) pushes an inverse op `{ rowId, columnId, prev, next }` (or a batch).
+- **Cmd/Ctrl+Z undo, Cmd/Ctrl+Shift+Z redo.** Undo re-issues `updateData` with the prior
+  value(s) — so it works entirely through the existing mutation contract; no data ownership.
+- **sonner toasts** (`sonner` added as a dependency; shadcn's standard toast) for:
+  undo/redo ("Change undone" with a Redo action button), bulk paste ("Pasted 12 cells"),
+  bulk clear, and export/copy confirmations. A `<Toaster />` is documented as a one-time
+  app-root add; the components call `toast(...)`.
+- Undo scope is **data edits only** (not view state like sort/filter/column changes),
+  matching Airtable/Sheets behavior.
 
-**Developer declares** which columns may calculate and with which methods:
+## Copy / paste / export
 
-```ts
-type AggregationMethod = "sum" | "avg" | "min" | "max" | "count"
+- **Copy** — copy the active cell or the selected rows/range to the clipboard as TSV
+  (Excel/Sheets-pasteable) via each field's `toClipboard`. Read-only tables still copy.
+- **Paste** — in editable mode, rectangular TSV paste starting at the active cell, mapped
+  through `fromClipboard`, committed as one undoable batch (one toast). Range paste with
+  formula-fill is out of scope for R1.
+- **Export** — a toolbar action exporting the current view to **CSV** (respects column
+  visibility, sort, and filters; optionally scoped to the selection). `exportCsv(rows,
+  columns)` is a pure, tested util. JSON export is a trivial add flagged optional.
 
-type CalculableColumn = {
-  columnId: string
-  methods?: AggregationMethod[]   // allowed methods; default: all numeric methods
-  default?: AggregationMethod     // optional preselected method (else off)
-}
+## Columns control — sort, hide, freeze, resize
 
-// DataTable prop:
-calculableColumns?: CalculableColumn[]
+A per-column header menu (caret in the screenshot) plus a "Columns" popover:
+
+- **Sort** — click header or menu → asc/desc/none, TanStack `sorting` state; multi-sort
+  with Shift optional. (Glaring omission in rev. 1; now core.)
+- **Hide** — two-way `columnVisibility` (`onColumnVisibilityChange` wired), merged cleanly
+  with any grouping-derived rules.
+- **Freeze/pin** — TanStack `columnPinning`; sticky CSS with computed left/right offsets
+  and an edge shadow. The fiddliest piece; focused tests on offset math + z-index.
+- **Resize** — TanStack `columnSizing`; drag the header edge. Persisted in table state.
+
+Per-column opt-outs: `enableSorting`, `enableHiding`, `enablePinning`, `enableResizing`.
+
+## Row-number gutter + selection
+
+- **Excel-style gutter** — a leading gutter column showing the 1-based row number within
+  the current sorted/filtered view (continuous across pages via the pagination offset).
+- **Hover-to-checkbox** — on row hover (or when the row is selected), the number swaps to
+  the selection checkbox; otherwise the number shows. Matches the reference screenshot.
+- **Stable identity** — `getRowId` is required for selection to survive pagination, sort,
+  and refetch; the builder defaults it to a configurable `id` key and documents it. This
+  is the linchpin for select-all-matching and undo targeting.
+
+**Tri-state select-all** (header gutter checkbox):
+
+```
+none ──click──▶ page  (header shows "–" when more rows exist beyond the page/filter)
+page ──click──▶ all-matching  (every row in the dataset, or the filtered subset)
+all-matching ──click──▶ none
 ```
 
-**User controls** which are on and with which method (separate live state, off by default):
+- When the whole result fits on one page, it collapses to a normal two-state checkbox.
+- `all-matching` is a **logical selection** (a predicate + filter context), not a
+  materialization of every id — the standard "select across pages" approach. Bulk actions
+  and aggregations over `all-matching` use the client rows when fully loaded, else the
+  server callbacks below.
+
+## Footer calc + selection summary (Option C, per-column opt-in)
+
+Persistent per-column footer that switches to selection scope when rows are selected.
+
+- **Dev declares** `calculableColumns: { columnId, methods?, default? }[]`
+  (`AggregationMethod = "sum" | "avg" | "min" | "max" | "count"`).
+- **User controls** live `footerAggregations: Record<columnId, AggregationMethod | null>`
+  (off by default; click a footer cell → pick a method).
+- **Scope** — no selection → all visible (filtered) rows; selection active → selected rows
+  (including `all-matching`). Display reuses the column's field formatter.
+- `aggregate(method, values) => number` is a pure, independently tested module shared by
+  both scopes and the server path.
+
+## Hybrid client/server aggregation
+
+The library computes what it can from memory and delegates the rest; it never fetches.
 
 ```ts
-type FooterAggregationState = Record<string /*columnId*/, AggregationMethod | null>
-// DataTable props: footerAggregations?, onFooterAggregationsChange?
-```
-
-- Footer cell renders empty until the user clicks it and picks a method (Airtable-style).
-- Scope resolution: **no selection** → aggregate over all **visible (filtered)** rows;
-  **selection active** → aggregate over the **selected** rows. Same primitive, different
-  row-set.
-- Display formatting reuses the column's `field` formatter (a currency column's sum
-  renders as currency).
-- The aggregation engine is a small pure module: `aggregate(method, values) => number`,
-  independently testable, shared by both scopes and by the server path below.
-
-## Feature: Hybrid client/server aggregation
-
-The library computes what it can from memory, detects when it cannot, and delegates the
-rest to a developer callback. **The library never fetches.**
-
-**Server-pagination signal.** `DataTable` accepts:
-
-```ts
-manualPagination?: boolean        // dev drives pagination server-side
-totalRowCount?: number            // total rows matching current filters, server-known
+manualPagination?: boolean
+totalRowCount?: number        // total rows matching current filters (server-known)
 computeAggregate?: (args: {
   columnId: string
   method: AggregationMethod
   scope: "all-matching" | "selection-all-matching"
-  filters?: unknown               // current filter context, opaque to the library
+  filters?: unknown
 }) => Promise<number>
 ```
 
-**Resolution logic:**
-
-- If all matching rows are loaded (`!manualPagination` or
-  `totalRowCount <= loadedRowCount`) → compute **client-side**, instantly, as above.
-- If `selectAllMatching` is active (or footer scope is all-matching) **and**
-  `totalRowCount > loadedRowCount` → the value cannot be computed from memory. The footer
-  cell shows a **Calculate** trigger instead of a number.
-  - If `computeAggregate` is provided → clicking runs it; states below.
-  - If not provided → **graceful fallback**: aggregate the loaded/selected rows only,
-    with a subtle "(loaded rows)" qualifier so the number is never silently wrong.
-
-**Aggregate cell state machine** (also reused for Formula/AI cells in R2):
-
-```
-idle → loading → value(server-computed)
-                     ↘ stale (filters/selection changed → offer recompute)
-                     ↘ error (show message + retry)
-```
-
-This keeps the async/stateful cell shape in the architecture from day one, so R2's
-Formula and AI fields slot in without reworking the cell contract.
+- All matching rows loaded (`!manualPagination` or `totalRowCount <= loadedRowCount`) →
+  compute client-side, instant.
+- `all-matching` scope **and** `totalRowCount > loadedRowCount` → the value isn't in
+  memory → footer cell shows a **Calculate** trigger:
+  - `computeAggregate` provided → run it (state machine below).
+  - not provided → **graceful fallback** to loaded rows only, with a subtle "(loaded rows)"
+    qualifier so the number is never silently wrong.
+- **Aggregate cell state machine** (reused by R2 Formula/AI cells):
+  `idle → loading → value(server) → stale(inputs changed) | error(retry)`.
 
 ---
 
 ## Component / unit breakdown
 
-New units, each with one responsibility and a well-defined interface:
+**`table-fields`**
+- `types.ts` — `FieldType<V>`, `FieldEditContext<V>`, `SelectOption`, `EditableTableMeta`.
+- `number-fields.tsx`, `text-fields.tsx`, `choice-fields.tsx`, `widget-fields.tsx` — the
+  field types (display + edit + icon + clipboard) and their standalone cell factories.
+- `format.ts` — pure `Intl` formatters shared by number fields and footer display.
+- `icons.ts` — header type icons.
 
-**`table-fields` package**
-- `number-cells.tsx` — `numberCell`, `currencyCell`, `percentCell`, `durationCell`.
-- `text-cells.tsx` — `textCell`, `longTextCell`, `urlCell`, `emailCell`, `phoneCell`.
-- `choice-cells.tsx` — `singleSelectCell`, `multiSelectCell`, `checkboxCell` (editable).
-- `widget-cells.tsx` — `ratingCell`, `buttonCell`, `dateCell`.
-- `types.ts` — `SelectOption`, `EditableTableMeta`, shared cell option types.
-- `format.ts` — pure `Intl` formatter helpers shared by number cells and footer display.
-
-**`data-table` package**
-- `data-table.tsx` — the `DataTable<TData>` shell (composition root).
-- `use-data-table.ts` — headless hook wiring TanStack state (selection, visibility,
-  pinning, pagination) + footer aggregation state.
-- `field-columns.ts` — Layer-1 `FieldSpec` → `ColumnDef` expansion (delegates to Layer-0).
-- `columns-menu.tsx` — hide/freeze popover.
-- `selection-column.tsx` — leading checkbox column + select-all-matching banner.
-- `footer-aggregation.tsx` — footer cells, method picker, scope resolution, server trigger.
-- `aggregate.ts` — pure `aggregate(method, values)` engine + `AggregateState` type.
-- `primitives.tsx` / `primitives.radix.tsx` — base-ui/Radix shim (as established).
+**`data-table`**
+- `data-table.tsx` — `DataTable<TData>` composition root.
+- `use-data-table.ts` — headless hook: TanStack state (selection, sorting, visibility,
+  pinning, sizing, pagination) + active-cell + footer-aggregation + undo/redo stack.
+- `use-grid-navigation.ts` — focus model + keyboard navigation + edit lifecycle.
+- `define-columns.ts` — type-safe builder: `defineColumns` + `col.*` → `ColumnDef`.
+- `columns-menu.tsx`, `column-header.tsx` — sort/hide/pin/resize UI + header icon.
+- `row-gutter.tsx` — row numbers, hover-to-checkbox, tri-state select-all, banner.
+- `footer-aggregation.tsx` — footer cells, method picker, scope + server trigger.
+- `clipboard.ts` — copy/paste TSV mapping; `export-csv.ts` — CSV export util.
+- `undo.ts` — history stack + inverse ops + sonner integration.
+- `aggregate.ts` — pure `aggregate(method, values)` + `AggregateState`.
+- `primitives.tsx` / `primitives.radix.tsx` — base-ui/Radix shim.
 - `types.ts`, `index.ts` — public surface.
 
 ## Testing strategy
 
-- **Pure logic (unit):** `aggregate()` (each method, empty set, non-numeric guards),
-  `FieldSpec → ColumnDef` expansion, formatter helpers, sticky-offset math, select-all
-  scope resolution, server-vs-client decision predicate. Vitest, no DOM.
-- **Cell renderers (component):** each Layer-0 cell renders expected output for a given
-  value; editable cells call `meta.updateData` with the right args; url/email/phone
-  produce correct `href`s. Testing Library + jsdom (portal-less assertions, per the
-  repo's base-ui jsdom constraints).
-- **Shell (component):** columns menu toggles visibility/pinning; footer picker sets
-  method; selection switches footer scope; `computeAggregate` is called with the right
-  args and its loading/error/stale states render; graceful fallback when absent.
-- **Variant parity:** extend the existing parity test to any new `*.radix.tsx` shim.
-- **Registry install:** each new tier installs from its built JSON into a scratch project
-  and typechecks (base-ui + Radix), same as the shipped dual-base verification.
+- **Pure logic:** `aggregate()`, CSV export, TSV copy/paste mapping, undo inverse-op
+  correctness, tri-state select-all transitions, server-vs-client decision predicate,
+  sticky-offset math, `defineColumns` type-level tests (tsd / `expect-type`).
+- **Field renderers:** each field displays correctly; edit renderers stage/commit/cancel
+  and call `updateData` with typed values; url/email/phone hrefs; clipboard round-trips.
+- **Grid spine:** fired key events move the active cell, enter/commit/cancel edit, respect
+  the read-only gate.
+- **Shell:** sort/hide/pin/resize; row-number↔checkbox hover swap; tri-state select-all +
+  banner; footer scope switch on selection; `computeAggregate` args + loading/error/stale
+  + graceful fallback; undo/redo + toast calls (mock sonner).
+- **Variant parity:** extend the parity test to new `*.radix.tsx` shims.
+- **Registry install:** each tier installs from built JSON into a scratch project and
+  typechecks (base-ui + Radix), per the shipped dual-base verification.
 
-## Distribution
+## Distribution & dependencies
 
-Three registry items (`table-fields`, `data-table`, and their `-radix` variants),
-built via `pnpm registry:build`, self-hosted at `ui.kotsas.com` and GitHub raw, with the
-`@kotsas-ui` namespace. `data-table` lists `table-fields` in `registryDependencies`;
-both keep the base-ui/Radix twin + parity-test discipline.
+- Registry items: `table-fields`, `data-table` (+ `-radix` variants), built via
+  `pnpm registry:build`, self-hosted at `ui.kotsas.com` + GitHub raw, `@kotsas-ui`
+  namespace. `data-table` lists `table-fields` in `registryDependencies`.
+- New npm dependency: **`sonner`** (toasts) on `data-table`. `data-table` also declares the
+  shadcn `sonner`/`toast` registry item so `<Toaster />` is available; docs show the
+  one-time app-root setup. No other new runtime deps (clipboard via `navigator.clipboard`,
+  CSV hand-rolled).
+
+## Suggested build order (likely two implementation plans)
+
+Given the size, plan this as two sequential cycles:
+
+1. **`table-fields`** — the `FieldType` contract + all 15 fields (display + edit +
+   clipboard + icons) + formatters. No shell dependency; independently shippable and the
+   standalone-adoption unlock.
+2. **`data-table`** — grid spine first (focus/keyboard/edit), then the shell features
+   (selection + gutter + tri-state, sort/hide/pin/resize, footer calc + hybrid
+   aggregation, undo/redo + sonner, copy/paste/export), then the typed `defineColumns`
+   builder tying it together.
 
 ## Open questions (settle during planning, not blockers)
 
-1. **Layer-1 column ergonomics** — `field: FieldSpec` object (above) vs. builder helpers
-   (`field.currency({...})`). Both expand to the same Layer-0 renderer; pick the one that
-   reads best against the existing `groupColumn`/`filterableColumns` style.
-2. **Inline-edit depth in R1** — confirmed editable: choice, rating, date. Open: whether
-   number/text inline edit lands in R1 or the immediate follow-up.
-3. **Duration formatting** — default unit display (h/m/s vs. ms) and whether to accept a
-   format token string.
-4. **Pinned + grouped interaction** — deferred with the grouped-table refactor, but note
-   the pinning API must not assume a flat table.
+1. **Multi-sort** — ship Shift-click multi-column sort in R1 or single-sort only?
+2. **Paste extent** — confirm rectangular value paste only for R1 (no formula-fill), and
+   whether paste may create rows or only fill existing ones.
+3. **Export formats** — CSV confirmed; include JSON in R1 or defer?
+4. **Duration formatting** — default unit display (h/m/s vs ms) and optional format token.
+5. **Pinned/grouped interaction** — deferred with the grouped-table refactor; the pinning
+   and gutter APIs must not assume a flat-only table.
