@@ -9,7 +9,7 @@ describe("table-fields barrel", () => {
       "singleSelectField", "multiSelectField", "checkboxField",
       "ratingField", "buttonField", "dateField",
       "currencyCell", "urlCell", "singleSelectCell", "ratingCell",
-      "formatCurrency", "FIELD_ICONS",
+      "formatCurrency", "FIELD_ICONS", "ChipCell",
     ]) {
       expect(fields).toHaveProperty(name)
     }

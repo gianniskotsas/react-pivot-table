@@ -11,6 +11,7 @@ export {
   formatDuration,
 } from "./format"
 export { FIELD_ICONS } from "./icons"
+export { ChipCell, type ChipCellProps } from "./chip"
 export {
   numberField, currencyField, percentField, durationField,
   numberCell, currencyCell, percentCell, durationCell,

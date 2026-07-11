@@ -3,30 +3,13 @@ import type { CellContext } from "@tanstack/react-table"
 import { ExternalLink } from "lucide-react"
 import parsePhoneNumber from "libphonenumber-js"
 
-import { cn } from "@/lib/utils"
+import { ChipCell } from "./chip"
 import { FIELD_ICONS } from "./icons"
 import type { FieldType } from "./types"
 
 const identityClipboard = {
   toClipboard: (v: string) => v ?? "",
   fromClipboard: (t: string) => t,
-}
-
-const linkClass =
-  "text-primary underline-offset-4 hover:underline truncate inline-block max-w-full align-bottom"
-
-function LinkCell({ href, text }: { href: string; text: string }) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noreferrer"
-      className={linkClass}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {text}
-    </a>
-  )
 }
 
 /**
@@ -91,16 +74,15 @@ export function urlField(): FieldType<string> {
         return <span className="truncate inline-block max-w-full align-bottom">{v}</span>
       }
       return (
-        <a
+        <ChipCell
           href={v}
           target="_blank"
-          rel="noreferrer"
-          className={cn(linkClass, "inline-flex items-center gap-1")}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <span className="truncate">{hostname(v)}</span>
-          <ExternalLink className="size-3 shrink-0 opacity-60" aria-hidden="true" />
-        </a>
+          label={hostname(v)}
+          copyValue={v}
+          trailing={
+            <ExternalLink className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+          }
+        />
       )
     },
     ...identityClipboard,
@@ -113,7 +95,7 @@ export function emailField(): FieldType<string> {
     icon: FIELD_ICONS.email,
     display: (ctx) => {
       const v = ctx.getValue()
-      return v ? <LinkCell href={`mailto:${v}`} text={v} /> : null
+      return v ? <ChipCell href={`mailto:${v}`} label={v} copyValue={v} /> : null
     },
     ...identityClipboard,
   }
@@ -129,18 +111,16 @@ export function phoneField(): FieldType<string> {
       const parsed = parsePhoneNumber(v)
       if (!parsed) {
         // Unparseable: fall back to a raw tel: link so nothing is lost.
-        return <LinkCell href={`tel:${v}`} text={v} />
+        return <ChipCell href={`tel:${v}`} label={v} copyValue={v} />
       }
       const flag = parsed.country ? flagEmoji(parsed.country) : null
       return (
-        <a
+        <ChipCell
           href={parsed.getURI()}
-          className={cn(linkClass, "inline-flex items-center gap-1.5")}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {flag ? <span aria-hidden="true">{flag}</span> : null}
-          <span className="truncate">{parsed.formatInternational()}</span>
-        </a>
+          label={parsed.formatInternational()}
+          copyValue={parsed.number ?? parsed.formatInternational()}
+          leading={flag ? <span aria-hidden="true">{flag}</span> : null}
+        />
       )
     },
     ...identityClipboard,
