@@ -1,7 +1,9 @@
 "use client"
 
-import { flexRender, type Column, type ColumnDef } from "@tanstack/react-table"
+import { flexRender, type Column, type ColumnDef, type Table as ReactTable } from "@tanstack/react-table"
+import { Download } from "lucide-react"
 import type * as React from "react"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -17,7 +19,9 @@ import { cn } from "@/lib/utils"
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
 import { DataTableRuntimeContext } from "./data-table-runtime-context"
+import { downloadCsv, exportCsv } from "./export-csv"
 import { DataTableFooter } from "./footer-aggregation"
+import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { useDataTable } from "./use-data-table"
 import { useFooterAggregation } from "./use-footer-aggregation"
 import type { CalculableColumn, ComputeAggregateArgs, DataTableColumnMeta } from "./types"
@@ -77,6 +81,41 @@ function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
   }
 }
 
+// Exports the current sorted/filtered/visible view: visible leaf columns
+// (minus the structural row-gutter column, which has no DataTableColumnMeta
+// and nothing meaningful to export) run through the sorted row model, so the
+// CSV matches what's on screen rather than the original unsorted `data`.
+function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
+  function handleExport() {
+    const columns = table
+      .getVisibleLeafColumns()
+      .filter((column) => column.id !== ROW_GUTTER_COLUMN_ID)
+      .map((column) => {
+        const meta = column.columnDef.meta as DataTableColumnMeta | undefined
+        return {
+          id: column.id,
+          label: meta?.label ?? column.id,
+          toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")),
+        }
+      })
+    const rows = table.getSortedRowModel().rows.map((row) => {
+      const values: Record<string, unknown> = {}
+      for (const column of columns) values[column.id] = row.getValue(column.id)
+      return values
+    })
+    const csv = exportCsv(rows, columns)
+    downloadCsv("export.csv", csv)
+    toast(`Exported ${rows.length} row${rows.length === 1 ? "" : "s"} to CSV`)
+  }
+
+  return (
+    <Button type="button" variant="outline" size="sm" onClick={handleExport} aria-label="Export CSV">
+      <Download className="size-4" aria-hidden="true" />
+      Export CSV
+    </Button>
+  )
+}
+
 export function DataTable<TData>(props: DataTableProps<TData>) {
   const { table, runtime } = useDataTable(props)
   const enablePagination = props.enablePagination ?? true
@@ -95,6 +134,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <ColumnsMenu table={table} />
+          <ExportCsvButton table={table} />
         </div>
 
         <div className="rounded-md border" onKeyDown={runtime.handleKeyDown}>

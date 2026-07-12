@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DataTable } from "./data-table"
 import { defineColumns } from "./define-columns"
+import * as ExportCsvModule from "./export-csv"
 
 type Row = { id: string; name: string; age: number }
 
@@ -261,5 +262,58 @@ describe("DataTable — footer calc", () => {
   it("renders no footer when calculableColumns is not set", () => {
     const { container } = render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
     expect(container.querySelector("tfoot")).toBeNull()
+  })
+})
+
+describe("DataTable — export CSV", () => {
+  it("renders an Export CSV button that downloads the current (sorted/filtered/visible) view", () => {
+    // downloadCsv is a thin DOM wrapper (Blob + anchor click) with no
+    // jsdom-observable side effect worth asserting on directly — spy on the
+    // live module binding instead of inspecting the DOM download. A plain
+    // `vi.doMock("./export-csv", ...)` can't work here: this file's static
+    // `import { DataTable } from "./data-table"` at the top is hoisted and
+    // resolved (pulling in data-table.tsx's own `./export-csv` import) long
+    // before any vi.doMock call inside a test body would run, so the mock
+    // would never apply. Importing the module namespace object
+    // (`import * as ExportCsvModule`) and spying on it instead works because
+    // Vitest's ESM transform routes both this test's and data-table.tsx's
+    // `downloadCsv` references through the same mutable module object.
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    expect(downloadSpy).toHaveBeenCalled()
+    const [filename, csv] = downloadSpy.mock.calls[0]
+    expect(filename).toMatch(/\.csv$/)
+    expect(csv).toContain("Name,Age")
+    expect(csv).toContain("Bailey")
+    expect(csv).toContain("Ada")
+    downloadSpy.mockRestore()
+  })
+
+  it("excludes a hidden column from the exported CSV", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    fireEvent.click(screen.getByRole("button", { name: /columns/i }))
+    fireEvent.click(screen.getByRole("checkbox", { name: "Age" }))
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    expect(downloadSpy).toHaveBeenCalled()
+    const [, csv] = downloadSpy.mock.calls[0]
+    expect(csv.split("\r\n")[0]).toBe("Name")
+    expect(csv).not.toContain("Age")
+    downloadSpy.mockRestore()
+  })
+
+  it("excludes the row-gutter (selection) column from the exported CSV when enableRowSelection is on", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
+    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    expect(downloadSpy).toHaveBeenCalled()
+    const [, csv] = downloadSpy.mock.calls[0]
+    // Exact-equality (not .toContain) so a regression in the
+    // ROW_GUTTER_COLUMN_ID filter — which would fall back to the raw id
+    // "__row-gutter__" as an extra header column via meta?.label ?? column.id
+    // — is actually caught, not silently accepted by a looser substring check.
+    expect(csv.split("\r\n")[0]).toBe("Name,Age")
+    downloadSpy.mockRestore()
   })
 })
