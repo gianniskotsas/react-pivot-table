@@ -149,6 +149,22 @@ export function useDataTable<TData>({
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
+  // If the header's select-all cycle has advanced to "all matching"
+  // (isAllMatchingSelected), a `data` change that reveals rows not seen
+  // before — a new server page loading, a filter narrowing/widening under
+  // manualPagination — must keep those newly-visible rows selected too.
+  // setAllMatchingSelected's own contract (types.ts) is that this flag means
+  // "everything matching is selected, including rows not yet loaded"; left
+  // unaddressed, the header would keep asserting that while the freshly-
+  // loaded rows' own checkboxes render unselected (rowSelection is keyed by
+  // id, and the new rows' ids were never in it) — a directly visible,
+  // self-contradictory state. This mirrors setAllMatchingSelected's own
+  // "turning matching ON also selects every loaded row" behavior, reapplied
+  // whenever the loaded set itself changes while matching is already on.
+  React.useEffect(() => {
+    if (isAllMatchingSelected) table.toggleAllRowsSelected(true)
+  }, [rowIds, isAllMatchingSelected, table])
+
   const visibleColumns = table.getVisibleLeafColumns()
   const columnIds = React.useMemo(
     () => visibleColumns.filter((c) => c.id !== ROW_GUTTER_COLUMN_ID).map((c) => c.id),

@@ -154,8 +154,34 @@ describe("buildRowGutterColumn", () => {
         {flexRender(column.cell, ctx)}
       </DataTableRuntimeContext.Provider>,
     )
-    fireEvent.click(screen.getByRole("checkbox"), { shiftKey: true })
+    // shiftKey is captured on pointerdown (see RowGutterCell's comment: base-ui's
+    // onCheckedChange carries the native event, but Radix's doesn't at all — a
+    // shared pointerdown/keydown listener that works identically on both builds
+    // is used instead), so a real interaction fires pointerdown before click.
+    const checkbox = screen.getByRole("checkbox")
+    fireEvent.pointerDown(checkbox, { shiftKey: true })
+    fireEvent.click(checkbox)
     expect(toggleRowSelected).toHaveBeenCalledWith("r4", true, true)
+  })
+
+  it("body cell checkbox click without a held shift key routes shiftKey=false through to toggleRowSelected", () => {
+    const column = buildRowGutterColumn<{ id: string }>()
+    const row = mockRow({ id: "r1", index: 1, selected: false })
+    const table = mockTable({ rows: [{}, { ...row }] })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = { table, row, column } as any
+    const toggleRowSelected = vi.fn()
+    const runtime = stubRuntime({ toggleRowSelected })
+
+    render(
+      <DataTableRuntimeContext.Provider value={runtime}>
+        {flexRender(column.cell, ctx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    const checkbox = screen.getByRole("checkbox")
+    fireEvent.pointerDown(checkbox)
+    fireEvent.click(checkbox)
+    expect(toggleRowSelected).toHaveBeenCalledWith("r1", true, false)
   })
 
   it("header click cycles none -> page -> all-loaded when there's nothing beyond what's loaded", () => {

@@ -289,6 +289,65 @@ describe("useDataTable — row selection", () => {
     expect(result.current.table.getIsAllRowsSelected()).toBe(true)
   })
 
+  // Regression test for a real bug caught in a final-branch code review:
+  // isAllMatchingSelected's own contract (types.ts) is "everything matching
+  // is selected, including rows not yet loaded" — but nothing previously
+  // re-applied that to rows that load in AFTER the flag was set (e.g. a new
+  // server page arriving under manualPagination). The header would keep
+  // asserting "all matching selected" while the newly-loaded rows' own
+  // checkboxes rendered unselected, a directly visible, self-contradictory
+  // state.
+  it("setAllMatchingSelected(true) also selects rows that load in afterward, keeping the header's claim consistent", () => {
+    const col = defineColumns<Row>()
+    const { result, rerender } = renderHook(
+      (props: { data: Row[] }) =>
+        useDataTable({
+          data: props.data,
+          columns: [col.text("name")],
+          getRowId: (row) => row.id,
+          enableRowSelection: true,
+          manualPagination: true,
+          totalRowCount: 500,
+        }),
+      { initialProps: { data: DATA } },
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+
+    // Simulate a new server page arriving: entirely new row ids.
+    const nextPage: Row[] = [
+      { id: "3", name: "Charlie", age: 25 },
+      { id: "4", name: "Dana", age: 40 },
+    ]
+    rerender({ data: nextPage })
+
+    expect(result.current.runtime.isAllMatchingSelected).toBe(true)
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([true, true])
+  })
+
+  it("does not force-select newly-loaded rows when isAllMatchingSelected is false", () => {
+    const col = defineColumns<Row>()
+    const { result, rerender } = renderHook(
+      (props: { data: Row[] }) =>
+        useDataTable({
+          data: props.data,
+          columns: [col.text("name")],
+          getRowId: (row) => row.id,
+          enableRowSelection: true,
+          manualPagination: true,
+          totalRowCount: 500,
+        }),
+      { initialProps: { data: DATA } },
+    )
+    const nextPage: Row[] = [
+      { id: "3", name: "Charlie", age: 25 },
+      { id: "4", name: "Dana", age: 40 },
+    ]
+    rerender({ data: nextPage })
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([false, false])
+  })
+
   it("toggleRowSelected without shiftKey toggles just the one row, by id", () => {
     const col = defineColumns<Row>()
     const { result } = renderHook(() =>

@@ -1,5 +1,14 @@
 "use client"
 
+// Radix build of the row-gutter shim. Keep the EXPORTED API identical to its
+// base-ui twin, row-gutter.tsx — only SelectAllHeader's checked/indeterminate
+// wiring differs (Radix expresses the mixed state as `checked="indeterminate"`
+// on the same boolean|"indeterminate" prop; base-ui exposes it as a separate
+// `indeterminate` boolean prop alongside `checked`). This file is
+// distribution-only: it is excluded from this repo's typecheck (tsconfig
+// `**/*.radix.tsx`) and is never imported here — it is validated against real
+// Radix primitives in a consumer project.
+
 import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table"
 import { Minus } from "lucide-react"
 import * as React from "react"
@@ -57,8 +66,7 @@ function SelectAllHeader<TData>({ table }: HeaderContext<TData, unknown>) {
   return (
     <div className="relative inline-flex items-center justify-center">
       <Checkbox
-        checked={checked}
-        indeterminate={indeterminate}
+        checked={checked ? true : indeterminate ? "indeterminate" : false}
         onCheckedChange={handleClick}
         aria-label={ariaLabel}
         className={indeterminate ? "[&_svg]:opacity-0" : undefined}
@@ -153,14 +161,7 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   )
 }
 
-/**
- * Builds the leading gutter column: row numbers that swap to a selection
- * checkbox on hover (or when the row is selected), plus a tri-state
- * select-all checkbox in the header. Prepended to the user's columns by
- * useDataTable (Task 3) when `enableRowSelection` is true — not part of the
- * `defineColumns` builder, since it's a structural, table-owned column with
- * no TData accessor.
- */
+/** Radix build of the row-gutter shim — see row-gutter.tsx for the base-ui build. */
 export function buildRowGutterColumn<TData>(): ColumnDef<TData, unknown> {
   return {
     id: ROW_GUTTER_COLUMN_ID,
