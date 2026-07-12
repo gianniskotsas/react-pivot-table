@@ -28,13 +28,16 @@ export type FooterAggregationResult = {
   stateFor: (columnId: string) => AggregateCellState | undefined
   /** True when the footer is summarizing a selection rather than all visible rows. */
   scopeIsSelection: boolean
-  /** Re-requests a server value for a column currently showing a "Calculate" trigger (idle) or a stale value. No-op until Task 5 wires computeAggregate. */
+  /** Re-requests a server value for a column currently showing a "Calculate" trigger (idle) or a stale value. */
   calculate: (columnId: string) => void
 }
 
 export function useFooterAggregation<TData>({
   table,
   calculableColumns = [],
+  computeAggregate,
+  manualPagination = false,
+  totalRowCount,
   isAllMatchingSelected,
 }: UseFooterAggregationOptions<TData>): FooterAggregationResult {
   const columnConfig = React.useMemo(() => {
@@ -57,19 +60,90 @@ export function useFooterAggregation<TData>({
   const scopeIsSelection = isAllMatchingSelected || selectedRows.length > 0
   const scopeRows = scopeIsSelection ? selectedRows : table.getSortedRowModel().rows
 
+  const loadedRowCount = table.getSortedRowModel().rows.length
+  // Only the all-matching selection can ever exceed what's loaded — a
+  // hand-picked selection of specific rows is, by definition, a selection of
+  // rows the user could see (and therefore rows already loaded).
+  const scopeExceedsLoaded =
+    manualPagination &&
+    totalRowCount !== undefined &&
+    (scopeIsSelection ? isAllMatchingSelected : totalRowCount > loadedRowCount)
+
+  const [serverStates, setServerStates] = React.useState<Record<string, AggregateCellState>>({})
+
+  // If the user changes method/scope and re-triggers calculate() before an
+  // earlier in-flight request for the same column has resolved, the two
+  // promises race: whichever settles last would otherwise win, even if it's
+  // the stale one. Each calculate() call bumps a per-column request id, and
+  // its .then/.catch only commits state if that id is still the latest one
+  // recorded for the column when the promise settles — otherwise a newer
+  // request has already superseded it and the result is silently dropped.
+  const requestIdRef = React.useRef<Record<string, number>>({})
+
+  const calculate = React.useCallback(
+    (columnId: string) => {
+      const method = methods[columnId]
+      if (!method || !computeAggregate) return
+      const requestId = (requestIdRef.current[columnId] ?? 0) + 1
+      requestIdRef.current[columnId] = requestId
+      setServerStates((prev) => ({ ...prev, [columnId]: { status: "loading" } }))
+      computeAggregate({
+        columnId,
+        method,
+        scope: scopeIsSelection ? "selection-all-matching" : "all-matching",
+      })
+        .then((value) => {
+          if (requestIdRef.current[columnId] !== requestId) return // superseded by a newer request
+          setServerStates((prev) => ({ ...prev, [columnId]: { status: "value", value } }))
+        })
+        .catch((err: unknown) => {
+          if (requestIdRef.current[columnId] !== requestId) return // superseded by a newer request
+          const message = err instanceof Error ? err.message : "Failed to calculate"
+          setServerStates((prev) => ({ ...prev, [columnId]: { status: "error", message } }))
+        })
+    },
+    [methods, computeAggregate, scopeIsSelection],
+  )
+
+  // A resolved server value goes stale when its inputs (method or scope)
+  // change since it was last requested — re-derive an identity key per
+  // column each render and compare against what was last seen.
+  const requestKeyRef = React.useRef<Record<string, string>>({})
+  React.useEffect(() => {
+    for (const columnId of columnConfig.keys()) {
+      const method = methods[columnId]
+      const key = `${method ?? ""}:${scopeIsSelection ? "selection" : "all"}`
+      const prevKey = requestKeyRef.current[columnId]
+      if (prevKey !== undefined && prevKey !== key) {
+        setServerStates((prev) => {
+          const existing = prev[columnId]
+          if (existing?.status === "value") {
+            return { ...prev, [columnId]: { status: "stale", value: existing.value } }
+          }
+          return prev
+        })
+      }
+      requestKeyRef.current[columnId] = key
+    }
+  }, [methods, scopeIsSelection, columnConfig])
+
   const stateFor = React.useCallback(
     (columnId: string): AggregateCellState | undefined => {
       const method = methods[columnId]
       if (!columnConfig.has(columnId) || !method) return undefined
-      const values = scopeRows.map((row) => row.getValue(columnId) as number | null | undefined)
-      return { status: "value", value: aggregate(method, values) }
-    },
-    [methods, columnConfig, scopeRows],
-  )
 
-  const calculate = React.useCallback((_columnId: string) => {
-    // No-op until Task 5 adds the hybrid client/server state machine.
-  }, [])
+      if (scopeExceedsLoaded && computeAggregate) {
+        return serverStates[columnId] ?? { status: "idle" }
+      }
+
+      const values = scopeRows.map((row) => row.getValue(columnId) as number | null | undefined)
+      const value = aggregate(method, values)
+      return scopeExceedsLoaded
+        ? { status: "value", value, partial: true }
+        : { status: "value", value }
+    },
+    [methods, columnConfig, scopeExceedsLoaded, computeAggregate, serverStates, scopeRows],
+  )
 
   return { methods, setMethod, stateFor, scopeIsSelection, calculate }
 }
