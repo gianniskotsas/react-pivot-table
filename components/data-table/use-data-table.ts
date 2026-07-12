@@ -18,6 +18,7 @@ import {
 
 import { useGridNavigation } from "./use-grid-navigation"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
+import { createUndoStack, type CellEdit } from "./undo"
 import type { DataTableColumnMeta, DataTableRuntime } from "./types"
 
 export type UseDataTableOptions<TData> = {
@@ -146,6 +147,75 @@ export function useDataTable<TData>({
     [table],
   )
 
+  // Plain history stack in a ref (not React state) — its own internal
+  // past/future arrays are mutated directly by push/undo/redo, so a ref
+  // avoids re-render-triggered staleness entirely. canUndo/canRedo ARE
+  // separate React state, re-synced after every stack mutation, purely so
+  // consumers (and this file's own composed handleKeyDown) can read them
+  // reactively without polling the stack's own canUndo()/canRedo() methods
+  // on every render.
+  const undoStackRef = React.useRef(createUndoStack())
+  const [canUndo, setCanUndo] = React.useState(false)
+  const [canRedo, setCanRedo] = React.useState(false)
+  const syncUndoState = React.useCallback(() => {
+    setCanUndo(undoStackRef.current.canUndo())
+    setCanRedo(undoStackRef.current.canRedo())
+  }, [])
+
+  // Applies a batch of cell writes as ONE undo step (a paste or bulk-clear,
+  // added in a later task), vs. `updateData` below which is always a
+  // one-cell batch. Reads each cell's CURRENT value via table.getRow BEFORE
+  // calling onUpdateData for any of them, so undo restores every cell to
+  // what it held right before this batch, not to some value produced by an
+  // earlier cell in the same batch. Two ops in one batch can target the same
+  // cell (e.g. a degenerate paste) — `prev` keeps the FIRST occurrence's
+  // captured value (matching "undo restores pre-batch state"), but `next` is
+  // updated to each LATER duplicate's value as it's seen, so it tracks
+  // whatever ends up ACTUALLY applied (every op below still calls
+  // onUpdateData, un-deduped) rather than freezing on the first one — undo
+  // then redo on such a batch reproduces the real end state, not an
+  // intermediate one only the first duplicate ever held.
+  const commitBatch = React.useCallback(
+    (ops: { rowId: string; columnId: string; value: unknown }[]) => {
+      if (ops.length === 0) return
+      const indexByKey = new Map<string, number>()
+      const batch: CellEdit[] = []
+      for (const op of ops) {
+        const key = `${op.rowId}:${op.columnId}`
+        const existingIndex = indexByKey.get(key)
+        if (existingIndex !== undefined) {
+          batch[existingIndex].next = op.value
+          continue
+        }
+        indexByKey.set(key, batch.length)
+        batch.push({
+          rowId: op.rowId,
+          columnId: op.columnId,
+          prev: table.getRow(op.rowId)?.getValue(op.columnId),
+          next: op.value,
+        })
+      }
+      undoStackRef.current.push(batch)
+      syncUndoState()
+      for (const op of ops) onUpdateData?.(op.rowId, op.columnId, op.value)
+    },
+    [onUpdateData, table, syncUndoState],
+  )
+
+  const undo = React.useCallback(() => {
+    const batch = undoStackRef.current.undo()
+    if (!batch) return
+    syncUndoState()
+    for (const edit of batch) onUpdateData?.(edit.rowId, edit.columnId, edit.prev)
+  }, [onUpdateData, syncUndoState])
+
+  const redo = React.useCallback(() => {
+    const batch = undoStackRef.current.redo()
+    if (!batch) return
+    syncUndoState()
+    for (const edit of batch) onUpdateData?.(edit.rowId, edit.columnId, edit.next)
+  }, [onUpdateData, syncUndoState])
+
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
@@ -262,9 +332,30 @@ export function useDataTable<TData>({
 
   const updateData = React.useCallback(
     (rowId: string, columnId: string, value: unknown) => {
-      onUpdateData?.(rowId, columnId, value)
+      commitBatch([{ rowId, columnId, value }])
     },
-    [onUpdateData],
+    [commitBatch],
+  )
+
+  // Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z first; everything else falls through to
+  // grid navigation's own handler unchanged. Deliberately layered here
+  // rather than inside use-grid-navigation.ts — that hook's own module doc
+  // comment scopes it to "pure grid navigation... no undo/clipboard
+  // concerns" (Plan 2), and undo genuinely needs this file's table/onUpdateData
+  // access that hook doesn't have. Later tasks in this plan extend this same
+  // function with Cmd/Ctrl+C/V and Delete/Backspace.
+  const handleKeyDown = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault()
+        if (e.shiftKey) redo()
+        else undo()
+        return
+      }
+      nav.handleKeyDown(e)
+    },
+    [nav, undo, redo],
   )
 
   const runtime: DataTableRuntime = {
@@ -276,6 +367,11 @@ export function useDataTable<TData>({
     isAllMatchingSelected,
     setAllMatchingSelected,
     toggleRowSelected,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    handleKeyDown,
   }
 
   return { table, runtime }

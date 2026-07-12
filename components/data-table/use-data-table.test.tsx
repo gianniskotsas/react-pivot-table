@@ -443,3 +443,118 @@ describe("useDataTable — row selection", () => {
     expect(selectedIds.sort()).toEqual(["a", "b", "d"])
   })
 })
+
+describe("useDataTable — undo/redo", () => {
+  it("updateData pushes an undo batch capturing the cell's prior value", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    expect(result.current.runtime.canUndo).toBe(false)
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    expect(result.current.runtime.canUndo).toBe(true)
+  })
+
+  it("undo() re-issues onUpdateData with the prior value and enables redo", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    onUpdateData.mockClear()
+    act(() => result.current.runtime.undo())
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Bailey") // DATA's original value
+    expect(result.current.runtime.canUndo).toBe(false)
+    expect(result.current.runtime.canRedo).toBe(true)
+  })
+
+  it("redo() re-issues onUpdateData with the new value", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    act(() => result.current.runtime.undo())
+    onUpdateData.mockClear()
+    act(() => result.current.runtime.redo())
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
+    expect(result.current.runtime.canRedo).toBe(false)
+  })
+
+  it("undo() with nothing to undo does not call onUpdateData", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.undo())
+    expect(onUpdateData).not.toHaveBeenCalled()
+  })
+
+  it("Ctrl+Z triggers undo via handleKeyDown", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    onUpdateData.mockClear()
+    const preventDefault = vi.fn()
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "z",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(preventDefault).toHaveBeenCalled()
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Bailey")
+  })
+
+  it("Ctrl+Shift+Z triggers redo via handleKeyDown", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    act(() => result.current.runtime.undo())
+    onUpdateData.mockClear()
+    const preventDefault = vi.fn()
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Z",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: true,
+        preventDefault,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
+  })
+
+  it("a non-undo/redo key still falls through to grid navigation (arrow keys still move the active cell)", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "ArrowDown",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(result.current.runtime.activeCell).toEqual({ rowId: "2", columnId: "name" })
+  })
+})
