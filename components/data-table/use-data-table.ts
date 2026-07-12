@@ -10,12 +10,14 @@ import {
   type ColumnPinningState,
   type ColumnSizingState,
   type PaginationState,
+  type RowSelectionState,
   type SortingState,
   type Table,
   type VisibilityState,
 } from "@tanstack/react-table"
 
 import { useGridNavigation } from "./use-grid-navigation"
+import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import type { DataTableColumnMeta, DataTableRuntime } from "./types"
 
 export type UseDataTableOptions<TData> = {
@@ -25,6 +27,12 @@ export type UseDataTableOptions<TData> = {
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
   enablePagination?: boolean
+  /** Prepends the row-number/selection gutter column. Defaults to false. */
+  enableRowSelection?: boolean
+  /** True when pagination is server-driven — loaded rows aren't necessarily all rows. Defaults to false. */
+  manualPagination?: boolean
+  /** Total row count across all pages/filters when manualPagination is true. */
+  totalRowCount?: number
 }
 
 export type UseDataTableResult<TData> = {
@@ -39,6 +47,9 @@ export function useDataTable<TData>({
   editable = false,
   onUpdateData,
   enablePagination = true,
+  enableRowSelection = false,
+  manualPagination = false,
+  totalRowCount,
 }: UseDataTableOptions<TData>): UseDataTableResult<TData> {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -48,26 +59,36 @@ export function useDataTable<TData>({
     pageIndex: 0,
     pageSize: 50,
   })
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const [isAllMatchingSelected, setIsAllMatchingSelectedState] = React.useState(false)
+
+  const resolvedColumns = React.useMemo(
+    () => (enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns),
+    [enableRowSelection, columns],
+  )
 
   // React Compiler reports "Use of incompatible library" here: useReactTable
   // returns identity-stable functions it cannot safely memoize, so it skips
   // compiling this component. Expected with TanStack Table, harmless.
   const table = useReactTable<TData>({
     data,
-    columns,
+    columns: resolvedColumns,
     getRowId: getRowId ?? ((row, index) => String(index)),
     state: {
       sorting,
       columnVisibility,
       columnPinning,
       columnSizing,
+      rowSelection,
       ...(enablePagination ? { pagination } : {}),
     },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnPinningChange: setColumnPinning,
     onColumnSizingChange: setColumnSizing,
+    onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
+    enableRowSelection,
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -75,11 +96,27 @@ export function useDataTable<TData>({
     autoResetPageIndex: false,
   })
 
+  // Deliberately asymmetric: turning matching ON also selects every loaded
+  // row (so visible checkboxes agree with "everything"); turning it OFF does
+  // NOT deselect — see DataTableRuntime.setAllMatchingSelected's doc comment
+  // (types.ts) for why: the caller (row-gutter's header click-cycle) may be
+  // narrowing from "all-matching" back to "all loaded" rather than to "none".
+  const setAllMatchingSelected = React.useCallback(
+    (matching: boolean) => {
+      setIsAllMatchingSelectedState(matching)
+      if (matching) table.toggleAllRowsSelected(true)
+    },
+    [table],
+  )
+
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
   const visibleColumns = table.getVisibleLeafColumns()
-  const columnIds = React.useMemo(() => visibleColumns.map((c) => c.id), [visibleColumns])
+  const columnIds = React.useMemo(
+    () => visibleColumns.filter((c) => c.id !== ROW_GUTTER_COLUMN_ID).map((c) => c.id),
+    [visibleColumns],
+  )
 
   const isColumnEditable = React.useCallback(
     (columnId: string) => {
@@ -177,20 +214,14 @@ export function useDataTable<TData>({
     [onUpdateData],
   )
 
-  // manualPagination/totalRowCount/isAllMatchingSelected/setAllMatchingSelected
-  // are stubbed off here; useDataTable doesn't yet expose row-selection or
-  // manual-pagination options. Real wiring lands in a later task (per the
-  // plan's Task 3, which adds enableRowSelection/manualPagination/
-  // totalRowCount options and TanStack rowSelection state) — these defaults
-  // exist only so DataTableRuntime's now-required fields type-check.
   const runtime: DataTableRuntime = {
     ...nav,
     isColumnEditable,
     updateData,
-    manualPagination: false,
-    totalRowCount: undefined,
-    isAllMatchingSelected: false,
-    setAllMatchingSelected: () => {},
+    manualPagination,
+    totalRowCount,
+    isAllMatchingSelected,
+    setAllMatchingSelected,
   }
 
   return { table, runtime }

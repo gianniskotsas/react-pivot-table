@@ -27,6 +27,9 @@ export type DataTableProps<TData> = {
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
   enablePagination?: boolean
+  enableRowSelection?: boolean
+  manualPagination?: boolean
+  totalRowCount?: number
 }
 
 type PinnedCellStyle = { style: React.CSSProperties; className?: string }
@@ -95,11 +98,19 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                         style={{ width: header.getSize(), ...pinned.style }}
                         className={cn("overflow-hidden text-ellipsis", pinned.className)}
                       >
-                        {header.isPlaceholder ? null : (
-                          <ColumnHeader
-                            column={header.column}
-                            label={meta?.label ?? header.column.id}
-                          />
+                        {header.isPlaceholder ? null : meta ? (
+                          <ColumnHeader column={header.column} label={meta.label} />
+                        ) : (
+                          // Structural columns (e.g. the row-gutter column)
+                          // aren't built by defineColumns, so they carry no
+                          // DataTableColumnMeta — flexRender their own
+                          // columnDef.header instead of routing through
+                          // ColumnHeader's label-only rendering, which would
+                          // otherwise print the column id as plain text
+                          // rather than invoking the column's header
+                          // component (e.g. row-gutter's tri-state
+                          // select-all checkbox).
+                          flexRender(header.column.columnDef.header, header.getContext())
                         )}
                       </TableHead>
                     )

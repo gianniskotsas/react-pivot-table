@@ -206,3 +206,86 @@ describe("useDataTable", () => {
     expect(result.current.runtime.activeCell).toEqual({ rowId: "1", columnId: "name" })
   })
 })
+
+describe("useDataTable — row selection", () => {
+  it("enableRowSelection prepends the gutter column and it's excluded from keyboard-navigable columns", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+      }),
+    )
+    expect(result.current.table.getAllLeafColumns().map((c) => c.id)).toEqual([
+      "__row-gutter__",
+      "name",
+    ])
+    // Arrow-right from the (only) real column should be a no-op — the
+    // gutter column must not be a stop in keyboard navigation.
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    act(() => result.current.runtime.moveActive("next"))
+    expect(result.current.runtime.activeCell?.columnId).not.toBe("__row-gutter__")
+  })
+
+  it("without enableRowSelection, no gutter column is added", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (row) => row.id }),
+    )
+    expect(result.current.table.getAllLeafColumns().map((c) => c.id)).toEqual(["name"])
+  })
+
+  it("runtime exposes manualPagination and totalRowCount as passed", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        manualPagination: true,
+        totalRowCount: 500,
+      }),
+    )
+    expect(result.current.runtime.manualPagination).toBe(true)
+    expect(result.current.runtime.totalRowCount).toBe(500)
+  })
+
+  it("setAllMatchingSelected(true) sets the flag and selects every loaded row", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+        manualPagination: true,
+        totalRowCount: 500,
+      }),
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    expect(result.current.runtime.isAllMatchingSelected).toBe(true)
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+  })
+
+  it("setAllMatchingSelected(false) clears the flag without forcing deselection", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+      }),
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    act(() => result.current.runtime.setAllMatchingSelected(false))
+    expect(result.current.runtime.isAllMatchingSelected).toBe(false)
+    // Rows stay selected — the row-gutter's own header click handler is the
+    // one that decides whether clearing all-matching should also clear
+    // every row (see row-gutter.test.tsx's "clears everything" case, which
+    // exercises both calls together through the header's own click logic).
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+  })
+})

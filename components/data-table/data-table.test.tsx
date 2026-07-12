@@ -135,3 +135,22 @@ describe("DataTable", () => {
     expect(screen.queryByRole("navigation", { name: "Table pagination" })).toBeNull()
   })
 })
+
+describe("DataTable — row selection", () => {
+  it("renders the gutter column and its checkboxes when enableRowSelection is true", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
+    // Header select-all checkbox is always visible; per-row checkboxes only
+    // reveal on hover or once a row is selected (row-gutter.tsx's deliberate
+    // hover-reveal design — see row-gutter.test.tsx's "shows the row number
+    // by default, and a checkbox on hover"). Selecting all rows via the
+    // header checkbox exercises the full column: header + one per row.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1)
+    fireEvent.click(screen.getAllByRole("checkbox")[0])
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1 + DATA.length)
+  })
+
+  it("does not render the gutter column by default", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    expect(screen.queryByRole("checkbox")).toBeNull()
+  })
+})
