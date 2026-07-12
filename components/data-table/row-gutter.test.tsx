@@ -24,6 +24,10 @@ function stubRuntime(overrides: Partial<DataTableRuntime> = {}): DataTableRuntim
     isAllMatchingSelected: false,
     setAllMatchingSelected: vi.fn(),
     toggleRowSelected: vi.fn(),
+    undo: vi.fn(),
+    redo: vi.fn(),
+    canUndo: false,
+    canRedo: false,
     ...overrides,
   }
 }

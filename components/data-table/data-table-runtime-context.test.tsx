@@ -22,6 +22,10 @@ const STUB_RUNTIME: DataTableRuntime = {
   isAllMatchingSelected: false,
   setAllMatchingSelected: () => {},
   toggleRowSelected: () => {},
+  undo: () => {},
+  redo: () => {},
+  canUndo: false,
+  canRedo: false,
 }
 
 function Probe() {

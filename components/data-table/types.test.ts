@@ -33,6 +33,10 @@ describe("data-table core types", () => {
       isAllMatchingSelected: false,
       setAllMatchingSelected: () => {},
       toggleRowSelected: () => {},
+      undo: () => {},
+      redo: () => {},
+      canUndo: false,
+      canRedo: false,
     }
     expect(runtime.activeCell).toEqual(pos)
   })

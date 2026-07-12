@@ -12,6 +12,10 @@ export type DataTableColumnMeta = {
   editable?: boolean
   /** Plain-text label for UI that can't render the header function (e.g. the columns menu). */
   label: string
+  /** Serializes a cell's value to clipboard/CSV text — populated from the column's FieldType.toClipboard by defineColumns. Falls back to String(value ?? "") when absent (raw ColumnDef escape-hatch columns). */
+  toClipboard?: (value: unknown) => string
+  /** Parses clipboard text back to a value; undefined means "couldn't parse, leave the cell alone" (paste skips it) — populated from FieldType.fromClipboard. Absent entirely (not just returning undefined) means the column can never be pasted into, e.g. a raw ColumnDef escape-hatch column with no clipboard support. */
+  fromClipboard?: (text: string) => unknown
 }
 
 /** Supported footer/selection-summary aggregation methods. */
@@ -116,4 +120,12 @@ export type DataTableRuntime = {
    * wrong row (or nothing) once sorting/filtering has reordered the table.
    */
   toggleRowSelected: (rowId: string, checked: boolean, shiftKey: boolean) => void
+  /** Re-issues updateData with the most recent edit's PRIOR value(s) — a no-op if there's nothing to undo. Also used internally to undo a paste or bulk-clear batch as one step. */
+  undo: () => void
+  /** Re-applies the most recently undone edit's NEW value(s) — a no-op if there's nothing to redo. */
+  redo: () => void
+  /** Whether `undo()` currently does anything — for a consumer building custom undo UI; the shipped grid itself only exposes undo/redo via Cmd/Ctrl+Z keyboard shortcuts. */
+  canUndo: boolean
+  /** Whether `redo()` currently does anything. */
+  canRedo: boolean
 }

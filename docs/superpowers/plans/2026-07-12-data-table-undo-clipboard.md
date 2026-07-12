@@ -332,6 +332,8 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 (The real `use-data-table.ts` typecheck failure is expected to persist until Task 3 — this commit intentionally leaves the tree in a temporarily-broken-typecheck state for one task, exactly like Plan 3 Task 1 did for `DataTableRuntime`'s selection fields.)
 
+**No deviations** — implementer matched the plan's given code verbatim; `types.ts`'s pre-existing shape and all 4 stub-target files' anchor lines matched exactly. Spec review traced `createUndoStack`'s push/undo/redo/eviction/branching-discard logic line-by-line against the actual code (not just running the tests) and independently confirmed the deferred `use-data-table.ts` typecheck failure is the ONLY one anywhere in the repo. Code-quality review found two real, small test-coverage gaps in `undo.test.ts` — the empty-batch-push test didn't verify it preserves an EXISTING redo stack (only that it doesn't create one from nothing), and no test exercised a multi-edit batch (the whole reason `UndoBatch` is an array, needed by Tasks 8/9's paste/bulk-clear) — both fixed directly with the exact tests the reviewer proposed. Full `undo.test.ts`: 10/10. Commit `d30f9ff` (amended).
+
 ---
 
 ## Task 2: Wire clipboard serializers into `defineColumns`
