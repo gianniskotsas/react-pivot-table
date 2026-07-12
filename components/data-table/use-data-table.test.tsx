@@ -720,3 +720,238 @@ describe("useDataTable — copy", () => {
     mockWriteText.mockResolvedValue(undefined) // restore the default for later tests
   })
 })
+
+describe("useDataTable — paste + bulk-clear", () => {
+  it("Ctrl+V pastes a TSV block starting at the active cell, committing one undo batch", async () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("Baily\t45\nAdah\t31")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
+    expect(onUpdateData).toHaveBeenCalledWith("1", "age", 45)
+    expect(onUpdateData).toHaveBeenCalledWith("2", "name", "Adah")
+    expect(onUpdateData).toHaveBeenCalledWith("2", "age", 31)
+    // One undo step for the whole paste, not four.
+    expect(result.current.runtime.canUndo).toBe(true)
+    onUpdateData.mockClear()
+    act(() => result.current.runtime.undo())
+    expect(onUpdateData).toHaveBeenCalledTimes(4)
+    expect(result.current.runtime.canUndo).toBe(false)
+  })
+
+  it("a paste that skips a non-editable column still applies to the editable ones", async () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name", { editable: false }), col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("Baily\t45")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).not.toHaveBeenCalledWith("1", "name", "Baily")
+    expect(onUpdateData).toHaveBeenCalledWith("1", "age", 45)
+  })
+
+  it("a paste block extending past the last row reports the extra rows via onCreateRows", async () => {
+    const onCreateRows = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA, // 2 rows
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onCreateRows,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce(
+      "Baily\t45\nAdah\t31\nChris\t22",
+    )
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onCreateRows).toHaveBeenCalledWith([{ name: "Chris", age: 22 }])
+  })
+
+  it("Delete with a selected active cell clears it to undefined as one undo step", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Delete",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", undefined)
+  })
+
+  it("Backspace with selected rows clears every editable column in every selected row", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age", { editable: false })],
+        getRowId: (r) => r.id,
+        editable: true,
+        enableRowSelection: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false))
+    act(() => result.current.runtime.toggleRowSelected("2", true, true))
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Backspace",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", undefined)
+    expect(onUpdateData).toHaveBeenCalledWith("2", "name", undefined)
+    expect(onUpdateData).not.toHaveBeenCalledWith("1", "age", undefined) // age isn't editable
+  })
+
+  it("Delete/Backspace while editing a cell does not trigger bulk-clear (normal text editing keeps working)", () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.beginEdit({ rowId: "1", columnId: "name" }))
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Backspace",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).not.toHaveBeenCalled()
+  })
+
+  it("a paste that entirely fails to parse commits nothing and shows no toast", async () => {
+    const onUpdateData = vi.fn()
+    const mockToast = vi.mocked(toast)
+    mockToast.mockClear()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "age" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("not a number")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).not.toHaveBeenCalled()
+    expect(mockToast).not.toHaveBeenCalled()
+  })
+
+  it("Delete/Backspace with neither a selection nor an active cell is a no-op (no toast, no commit)", () => {
+    const onUpdateData = vi.fn()
+    const mockToast = vi.mocked(toast)
+    mockToast.mockClear()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Delete",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).not.toHaveBeenCalled()
+    expect(mockToast).not.toHaveBeenCalled()
+  })
+})

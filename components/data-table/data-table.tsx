@@ -28,6 +28,7 @@ export type DataTableProps<TData> = {
   getRowId?: (row: TData, index: number) => string
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
+  onCreateRows?: (partialRows: Partial<TData>[]) => void
   enablePagination?: boolean
   enableRowSelection?: boolean
   manualPagination?: boolean

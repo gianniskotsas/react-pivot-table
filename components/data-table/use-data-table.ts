@@ -20,7 +20,7 @@ import { toast } from "sonner"
 import { useGridNavigation } from "./use-grid-navigation"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
-import { gridToTsv } from "./clipboard"
+import { gridToTsv, parseTsv, planPaste } from "./clipboard"
 import type { DataTableColumnMeta, DataTableRuntime } from "./types"
 
 export type UseDataTableOptions<TData> = {
@@ -29,6 +29,8 @@ export type UseDataTableOptions<TData> = {
   getRowId?: (row: TData, index: number) => string
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
+  /** Reports rows a paste block extends past the last existing row — the library never appends to `data` itself, matching onUpdateData's own contract. */
+  onCreateRows?: (partialRows: Partial<TData>[]) => void
   enablePagination?: boolean
   /** Prepends the row-number/selection gutter column. Defaults to false. */
   enableRowSelection?: boolean
@@ -49,6 +51,7 @@ export function useDataTable<TData>({
   getRowId,
   editable = false,
   onUpdateData,
+  onCreateRows,
   enablePagination = true,
   enableRowSelection = false,
   manualPagination = false,
@@ -305,6 +308,72 @@ export function useDataTable<TData>({
     }
   }, [table, columnIds, nav.activeCell])
 
+  const paste = React.useCallback(async () => {
+    const active = nav.activeCell
+    if (!active) return
+    // Same rejection risk as copy's writeText — readText can reject
+    // (permission denied, unfocused document, etc.) and this is invoked as
+    // `void paste()` in handleKeyDown, so an uncaught rejection here would
+    // otherwise be a silent no-op with an unhandled-rejection console
+    // warning instead of user-visible feedback.
+    let text: string
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      toast.error("Couldn't read from clipboard")
+      return
+    }
+    if (!text) return
+
+    const startRowIndex = rowIds.indexOf(active.rowId)
+    const startColIndex = columnIds.indexOf(active.columnId)
+    if (startRowIndex === -1 || startColIndex === -1) return
+
+    const cols = columnIds.map((id) => {
+      const meta = table.getColumn(id)?.columnDef.meta as DataTableColumnMeta | undefined
+      return {
+        id,
+        toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")),
+        // Gated through the SAME per-column editability check inline editing
+        // uses — a column can have a working fromClipboard (every field
+        // does) but still be non-editable, in which case paste must skip it
+        // exactly like it would for a manual edit attempt.
+        fromClipboard: isColumnEditable(id) ? meta?.fromClipboard : undefined,
+      }
+    })
+
+    const plan = planPaste<TData>(parseTsv(text), startRowIndex, startColIndex, rowIds, cols)
+    if (plan.updates.length > 0) commitBatch(plan.updates)
+    if (plan.newRows.length > 0) onCreateRows?.(plan.newRows)
+
+    const cellCount =
+      plan.updates.length + plan.newRows.reduce((n, row) => n + Object.keys(row).length, 0)
+    if (cellCount > 0) toast(`Pasted ${cellCount} cell${cellCount === 1 ? "" : "s"}`)
+  }, [nav.activeCell, rowIds, columnIds, table, isColumnEditable, commitBatch, onCreateRows])
+
+  // Clears every editable column of every selected row, or (when nothing is
+  // selected) just the active cell if it's editable — same selection-wins
+  // tie-break as `copy` above: a row selection always takes priority over
+  // the active cell, even when the active cell sits outside the selection,
+  // matching Excel/Sheets' Delete-key behavior.
+  const clearSelectedOrActiveCells = React.useCallback(() => {
+    const selectedRows = table.getSelectedRowModel().rows
+    const editableColumnIds = columnIds.filter((id) => isColumnEditable(id))
+    let ops: { rowId: string; columnId: string; value: unknown }[] = []
+
+    if (selectedRows.length > 0) {
+      ops = selectedRows.flatMap((row) =>
+        editableColumnIds.map((columnId) => ({ rowId: row.id, columnId, value: undefined })),
+      )
+    } else if (nav.activeCell && isColumnEditable(nav.activeCell.columnId)) {
+      ops = [{ rowId: nav.activeCell.rowId, columnId: nav.activeCell.columnId, value: undefined }]
+    }
+
+    if (ops.length === 0) return
+    commitBatch(ops)
+    toast(`Cleared ${ops.length} cell${ops.length === 1 ? "" : "s"}`)
+  }, [table, columnIds, isColumnEditable, nav.activeCell, commitBatch])
+
   // Revalidate activeCell when rowIds/columnIds change out from under it.
   //
   // use-grid-navigation.ts's module doc comment and the orphaned-id guard
@@ -389,18 +458,19 @@ export function useDataTable<TData>({
     [commitBatch],
   )
 
-  // Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z and Cmd/Ctrl+C first; everything else falls
-  // through to grid navigation's own handler unchanged. Deliberately layered
-  // here rather than inside use-grid-navigation.ts — that hook's own module
-  // doc comment scopes it to "pure grid navigation... no undo/clipboard
-  // concerns" (Plan 2), and undo/copy genuinely need this file's
-  // table/onUpdateData access that hook doesn't have. Later tasks in this
-  // plan extend this same function with Cmd/Ctrl+V and Delete/Backspace.
+  // Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z, Cmd/Ctrl+C, Cmd/Ctrl+V, and
+  // Delete/Backspace first; everything else falls through to grid
+  // navigation's own handler unchanged. Deliberately layered here rather
+  // than inside use-grid-navigation.ts — that hook's own module doc comment
+  // scopes it to "pure grid navigation... no undo/clipboard concerns"
+  // (Plan 2), and undo/copy/paste/clear genuinely need this file's
+  // table/onUpdateData access that hook doesn't have.
   //
-  // The `!nav.editingCell` guard on copy matters: while actively typing in a
-  // text field mid-edit, Ctrl+C should copy the SELECTED TEXT inside that
-  // input via the browser's own native behavior, not the grid's cell-copy —
-  // intercepting it here would break normal text copy while editing.
+  // The `!nav.editingCell` guard on copy/paste/Delete/Backspace matters:
+  // while actively typing in a text field mid-edit, these keys should act on
+  // the SELECTED TEXT inside that input via the browser's own native
+  // behavior (copy/paste/delete-a-character), not the grid's cell-level
+  // versions — intercepting them here would break normal text editing.
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
@@ -415,9 +485,19 @@ export function useDataTable<TData>({
         void copy()
         return
       }
+      if (mod && e.key.toLowerCase() === "v" && !nav.editingCell) {
+        e.preventDefault()
+        void paste()
+        return
+      }
+      if ((e.key === "Delete" || e.key === "Backspace") && !nav.editingCell) {
+        e.preventDefault()
+        clearSelectedOrActiveCells()
+        return
+      }
       nav.handleKeyDown(e)
     },
-    [nav, undo, redo, copy],
+    [nav, undo, redo, copy, paste, clearSelectedOrActiveCells],
   )
 
   const runtime: DataTableRuntime = {

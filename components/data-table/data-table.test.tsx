@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { DataTable } from "./data-table"
@@ -200,6 +200,44 @@ describe("DataTable — row selection", () => {
     expect(rowsInDisplayOrder.map((r) => r.querySelector('[role="checkbox"]')?.getAttribute("aria-checked"))).toEqual(
       ["true", "true", "false"],
     )
+  })
+})
+
+describe("DataTable — paste creates rows", () => {
+  it("passes onCreateRows through to useDataTable so a paste extending past the last row is reported", async () => {
+    // DATA has 2 rows, so the paste block must span 3 lines starting at row
+    // 0 for the third line ("Chris") to land past the last existing row and
+    // count as an overflow row rather than an update to an existing one.
+    Object.defineProperty(navigator, "clipboard", {
+      value: {
+        writeText: vi.fn(),
+        readText: vi.fn().mockResolvedValue("Bailey\t44\nAda\t30\nChris\t22"),
+      },
+      configurable: true,
+      writable: true,
+    })
+    const onCreateRows = vi.fn()
+    const { container } = render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        editable
+        onCreateRows={onCreateRows}
+      />,
+    )
+    const firstCell = container.querySelector("tbody tr td div[tabindex]") as HTMLElement
+    act(() => {
+      firstCell.focus()
+      fireEvent.focus(firstCell)
+    })
+    await act(async () =>
+      fireEvent.keyDown(container.querySelector(".rounded-md.border")!, {
+        key: "v",
+        ctrlKey: true,
+      }),
+    )
+    expect(onCreateRows).toHaveBeenCalledWith([{ name: "Chris", age: 22 }])
   })
 })
 
