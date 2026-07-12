@@ -12,7 +12,10 @@ import { tasks as initialTasks, type Task } from "./data"
  * level, three columns (`priority`, `hoursLogged`, `dueDate`) override it to
  * `editable: false` via `defineColumns`'s per-column `editable` option, and
  * `onUpdateData` mutates local state (not just console.log) so committed
- * edits are visibly reflected in the grid.
+ * edits are visibly reflected in the grid. `enableRowSelection` turns on the
+ * row-number/checkbox gutter and tri-state select-all; `calculableColumns`
+ * exercises the footer's method picker and client-side aggregation over
+ * `hoursLogged`/`budget`.
  */
 export function DataTableDemoClient() {
   const [data, setData] = React.useState<Task[]>(initialTasks)
@@ -33,6 +36,11 @@ export function DataTableDemoClient() {
       getRowId={(row) => row.id}
       editable
       onUpdateData={handleUpdateData}
+      enableRowSelection
+      calculableColumns={[
+        { columnId: "hoursLogged", default: "sum" },
+        { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
+      ]}
     />
   )
 }
