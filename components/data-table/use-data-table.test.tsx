@@ -1,7 +1,15 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
-vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn() }) }))
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
+}))
+
+Object.defineProperty(navigator, "clipboard", {
+  value: { writeText: vi.fn().mockResolvedValue(undefined), readText: vi.fn().mockResolvedValue("") },
+  configurable: true,
+  writable: true,
+})
 
 import { toast } from "sonner"
 
@@ -621,5 +629,94 @@ describe("useDataTable — undo/redo", () => {
     mockToast.mockClear()
     act(() => result.current.runtime.undo())
     expect(mockToast).not.toHaveBeenCalled()
+  })
+})
+
+describe("useDataTable — copy", () => {
+  it("Ctrl+C with an active cell and no row selection copies just that cell's value", async () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "c",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Bailey")
+  })
+
+  it("Ctrl+C with rows selected copies every visible column of every selected row as TSV", async () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (r) => r.id,
+        enableRowSelection: true,
+      }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false))
+    act(() => result.current.runtime.toggleRowSelected("2", true, true))
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "c",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("Bailey\t44\nAda\t30")
+  })
+
+  it("Ctrl+C with no active cell and no selection does nothing", async () => {
+    const mockWriteText = vi.mocked(navigator.clipboard.writeText)
+    mockWriteText.mockClear()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "c",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(mockWriteText).not.toHaveBeenCalled()
+  })
+
+  it("shows an error toast (not an unhandled rejection) when navigator.clipboard.writeText rejects", async () => {
+    const mockWriteText = vi.mocked(navigator.clipboard.writeText)
+    mockWriteText.mockRejectedValueOnce(new Error("denied"))
+    const mockToast = vi.mocked(toast)
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "c",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(mockToast.error).toHaveBeenCalledWith("Couldn't copy to clipboard")
+    mockWriteText.mockResolvedValue(undefined) // restore the default for later tests
   })
 })

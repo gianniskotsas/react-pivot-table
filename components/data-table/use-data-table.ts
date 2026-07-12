@@ -20,6 +20,7 @@ import { toast } from "sonner"
 import { useGridNavigation } from "./use-grid-navigation"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
+import { gridToTsv } from "./clipboard"
 import type { DataTableColumnMeta, DataTableRuntime } from "./types"
 
 export type UseDataTableOptions<TData> = {
@@ -266,6 +267,44 @@ export function useDataTable<TData>({
 
   const nav = useGridNavigation({ rowIds, columnIds, isColumnEditable })
 
+  // Copies either the active cell's value alone, or (when rows are
+  // selected) every visible column of every selected row as TSV — mirrors
+  // Excel/Sheets: a row selection takes priority over a single active cell.
+  const copy = React.useCallback(async () => {
+    const selectedRows = table.getSelectedRowModel().rows
+    const clipboardColumns = (ids: string[]) =>
+      ids.map((id) => {
+        const meta = table.getColumn(id)?.columnDef.meta as DataTableColumnMeta | undefined
+        return { id, toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")) }
+      })
+
+    let grid: unknown[][]
+    let cols: ReturnType<typeof clipboardColumns>
+
+    if (selectedRows.length > 0) {
+      grid = selectedRows.map((row) => columnIds.map((id) => row.getValue(id)))
+      cols = clipboardColumns(columnIds)
+    } else {
+      const active = nav.activeCell
+      if (!active) return
+      const row = table.getRow(active.rowId)
+      grid = [[row.getValue(active.columnId)]]
+      cols = clipboardColumns([active.columnId])
+    }
+
+    // navigator.clipboard.writeText's promise can reject (permission denied,
+    // an unfocused document, an insecure context, a cross-origin iframe —
+    // all real occurrences, especially in Safari/Firefox), and this is
+    // invoked as `void copy()` in handleKeyDown below, so an unhandled
+    // rejection here would otherwise surface as a console warning with zero
+    // user-visible feedback that Ctrl+C silently did nothing.
+    try {
+      await navigator.clipboard.writeText(gridToTsv(grid, cols))
+    } catch {
+      toast.error("Couldn't copy to clipboard")
+    }
+  }, [table, columnIds, nav.activeCell])
+
   // Revalidate activeCell when rowIds/columnIds change out from under it.
   //
   // use-grid-navigation.ts's module doc comment and the orphaned-id guard
@@ -350,13 +389,18 @@ export function useDataTable<TData>({
     [commitBatch],
   )
 
-  // Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z first; everything else falls through to
-  // grid navigation's own handler unchanged. Deliberately layered here
-  // rather than inside use-grid-navigation.ts — that hook's own module doc
-  // comment scopes it to "pure grid navigation... no undo/clipboard
-  // concerns" (Plan 2), and undo genuinely needs this file's table/onUpdateData
-  // access that hook doesn't have. Later tasks in this plan extend this same
-  // function with Cmd/Ctrl+C/V and Delete/Backspace.
+  // Cmd/Ctrl+Z / Cmd/Ctrl+Shift+Z and Cmd/Ctrl+C first; everything else falls
+  // through to grid navigation's own handler unchanged. Deliberately layered
+  // here rather than inside use-grid-navigation.ts — that hook's own module
+  // doc comment scopes it to "pure grid navigation... no undo/clipboard
+  // concerns" (Plan 2), and undo/copy genuinely need this file's
+  // table/onUpdateData access that hook doesn't have. Later tasks in this
+  // plan extend this same function with Cmd/Ctrl+V and Delete/Backspace.
+  //
+  // The `!nav.editingCell` guard on copy matters: while actively typing in a
+  // text field mid-edit, Ctrl+C should copy the SELECTED TEXT inside that
+  // input via the browser's own native behavior, not the grid's cell-copy —
+  // intercepting it here would break normal text copy while editing.
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
@@ -366,9 +410,14 @@ export function useDataTable<TData>({
         else undo()
         return
       }
+      if (mod && e.key.toLowerCase() === "c" && !nav.editingCell) {
+        e.preventDefault()
+        void copy()
+        return
+      }
       nav.handleKeyDown(e)
     },
-    [nav, undo, redo],
+    [nav, undo, redo, copy],
   )
 
   const runtime: DataTableRuntime = {

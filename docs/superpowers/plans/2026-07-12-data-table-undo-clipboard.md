@@ -1516,6 +1516,8 @@ git commit -m "feat(data-table): wire Ctrl+C copy (active cell or selected rows 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
+**No deviations** — the actual `use-data-table.ts`/test file matched the plan's assumed shape exactly. Spec review traced selection-vs-active-cell priority (selection wins when both exist) and confirmed the "nothing to copy" path skips `navigator.clipboard.writeText` entirely rather than writing an empty string; hand-verified all 3 tests against real fixtures/`gridToTsv`; confirmed Z/Shift+Z unchanged; 209/209 regression. Code-quality review confirmed `copy`'s dependency array has no stale-closure risk (`table`'s identity is stable across renders per TanStack's own `setOptions` model, so reading `table.getSelectedRowModel()` fresh inside the callback is correct without needing `rowSelection` in the deps) and the async test timing is sound (no race — `writeText` is invoked synchronously before its awaited result suspends, so mock call args are recorded before any `act()` flush is needed). It also found a real, genuinely plan-wide gap: `navigator.clipboard.writeText`'s promise can reject (permission denied, unfocused document, insecure context — all real occurrences, especially Safari/Firefox), and since `handleKeyDown` calls `void copy()`, a rejection would surface only as a console unhandled-rejection warning with zero user feedback, inconsistent with this file's own established sonner-toast pattern for undo/redo. Fixed by wrapping the `writeText` call in try/catch with `toast.error("Couldn't copy to clipboard")`, plus a test asserting the toast fires on rejection (not an unhandled rejection). Traced the same gap into Task 8's not-yet-implemented `paste` snippet below (also plan-given, also missing the same protection) and pre-emptively fixed it there too, so the next task doesn't reintroduce the same class of bug. Final: 36/36 `use-data-table.test.tsx`, 210/210 full suite, lint/typecheck clean. Commit `c8435ef` (amended).
+
 ---
 
 ## Task 8: Wire Paste (Cmd/Ctrl+V) + bulk-clear (Delete/Backspace) + `onCreateRows`
@@ -1752,7 +1754,18 @@ Add `paste` and `clearSelectedOrActiveCells` callbacks right after the `copy` ca
   const paste = React.useCallback(async () => {
     const active = nav.activeCell
     if (!active) return
-    const text = await navigator.clipboard.readText()
+    // Same rejection risk as copy's writeText (Task 7) — readText can reject
+    // (permission denied, unfocused document, etc.) and this is invoked as
+    // `void paste()` in handleKeyDown, so an uncaught rejection here would
+    // otherwise be a silent no-op with an unhandled-rejection console
+    // warning instead of user-visible feedback.
+    let text: string
+    try {
+      text = await navigator.clipboard.readText()
+    } catch {
+      toast.error("Couldn't read from clipboard")
+      return
+    }
     if (!text) return
 
     const startRowIndex = rowIds.indexOf(active.rowId)
