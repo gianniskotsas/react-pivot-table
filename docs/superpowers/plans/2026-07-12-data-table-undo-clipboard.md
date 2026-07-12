@@ -930,6 +930,8 @@ git commit -m "feat(data-table): add sonner Toaster + undo/redo toast notificati
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
+**One real deviation, explicitly sanctioned by this task's own instructions:** the plan's `components/ui/sonner.tsx` snippet was the icon-less shape last verified when this plan was written; the implementer fetched the live upstream shadcn registry source and found it had since gained a `lucide-react` icons map (success/info/warning/error/loading) and a `--border-radius` CSS var — used the real upstream content instead, per this task's own "if the live upstream shape differs... use the real upstream content instead" instruction. Spec review independently re-fetched the same upstream source and confirmed the committed file is byte-for-byte faithful (plus one necessary, minimal addition: `import type * as React from "react"`, required because this repo's tsconfig has no ambient React types). Code-quality review found a real gap: the 3 new toast tests asserted only the toast's call ARGUMENTS (message text, action label) but never invoked the action button's `onClick` — meaning the `undoRef`/`redoRef` forward-reference indirection (the specific mechanism this task added to prevent a stale/swapped-closure bug) had no test actually exercising it; a copy-paste swap (e.g. wiring undo's Redo button to `undoRef.current()` instead of `redoRef.current()`) would have passed every existing test AND typechecked cleanly. Fixed by extending both tests to invoke the captured `onClick` for real and assert the resulting `onUpdateData` call proves the RIGHT direction fired. Full suite: 182/182, typecheck/lint clean. Commit `17b3f3d` (amended).
+
 ---
 
 ## Task 5: Pure `clipboard.ts` — TSV (de)serialization + paste planning

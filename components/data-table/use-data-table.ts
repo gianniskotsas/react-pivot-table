@@ -15,6 +15,7 @@ import {
   type Table,
   type VisibilityState,
 } from "@tanstack/react-table"
+import { toast } from "sonner"
 
 import { useGridNavigation } from "./use-grid-navigation"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
@@ -207,6 +208,7 @@ export function useDataTable<TData>({
     if (!batch) return
     syncUndoState()
     for (const edit of batch) onUpdateData?.(edit.rowId, edit.columnId, edit.prev)
+    toast("Change undone", { action: { label: "Redo", onClick: () => redoRef.current() } })
   }, [onUpdateData, syncUndoState])
 
   const redo = React.useCallback(() => {
@@ -214,7 +216,18 @@ export function useDataTable<TData>({
     if (!batch) return
     syncUndoState()
     for (const edit of batch) onUpdateData?.(edit.rowId, edit.columnId, edit.next)
+    toast("Change redone", { action: { label: "Undo", onClick: () => undoRef.current() } })
   }, [onUpdateData, syncUndoState])
+
+  // undo's toast Redo button needs to call redo, and vice versa, but each
+  // callback is declared before the other exists — resolved via two refs
+  // updated on every render (a plain ref write, not a useEffect) so the
+  // toast buttons always invoke the LATEST undo/redo closures even if a
+  // toast from an earlier render is still on screen when clicked.
+  const undoRef = React.useRef(undo)
+  const redoRef = React.useRef(redo)
+  undoRef.current = undo
+  redoRef.current = redo
 
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])

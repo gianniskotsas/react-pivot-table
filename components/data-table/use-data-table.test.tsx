@@ -1,6 +1,10 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+vi.mock("sonner", () => ({ toast: Object.assign(vi.fn(), { success: vi.fn() }) }))
+
+import { toast } from "sonner"
+
 import { defineColumns } from "./define-columns"
 import { useDataTable } from "./use-data-table"
 
@@ -556,5 +560,66 @@ describe("useDataTable — undo/redo", () => {
       } as any),
     )
     expect(result.current.runtime.activeCell).toEqual({ rowId: "2", columnId: "name" })
+  })
+
+  it("undo() shows a toast with a Redo action that actually redoes (not a stale/swapped closure)", () => {
+    const mockToast = vi.mocked(toast)
+    mockToast.mockClear()
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    mockToast.mockClear()
+    act(() => result.current.runtime.undo())
+    expect(mockToast).toHaveBeenCalledWith(
+      "Change undone",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Redo" }) }),
+    )
+    // The undoRef/redoRef indirection exists specifically so this action
+    // button calls the LATEST redo, not a stale or accidentally-swapped
+    // undo — invoke it for real and confirm it actually redoes (restores
+    // "Baily", the value that was undone), not "does nothing" or "undoes
+    // again" (which would silently no-op here since there's nothing left
+    // to undo, and this assertion would still fail either way).
+    const toastCall = mockToast.mock.calls.find((call) => call[0] === "Change undone")
+    onUpdateData.mockClear()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    act(() => (toastCall![1] as any).action.onClick())
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
+  })
+
+  it("redo() shows a toast with an Undo action that actually undoes (not a stale/swapped closure)", () => {
+    const mockToast = vi.mocked(toast)
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, onUpdateData }),
+    )
+    act(() => result.current.runtime.updateData("1", "name", "Baily"))
+    act(() => result.current.runtime.undo())
+    mockToast.mockClear()
+    act(() => result.current.runtime.redo())
+    expect(mockToast).toHaveBeenCalledWith(
+      "Change redone",
+      expect.objectContaining({ action: expect.objectContaining({ label: "Undo" }) }),
+    )
+    const toastCall = mockToast.mock.calls.find((call) => call[0] === "Change redone")
+    onUpdateData.mockClear()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    act(() => (toastCall![1] as any).action.onClick())
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Bailey") // back to DATA's original value
+  })
+
+  it("undo() with nothing to undo does not toast", () => {
+    const mockToast = vi.mocked(toast)
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id }),
+    )
+    mockToast.mockClear()
+    act(() => result.current.runtime.undo())
+    expect(mockToast).not.toHaveBeenCalled()
   })
 })
