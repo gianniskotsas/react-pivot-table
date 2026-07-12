@@ -1181,7 +1181,7 @@ export function planPaste<TData>(
 - [ ] **Step 4: Run the tests to verify they pass**
 
 Run: `pnpm exec vitest run components/data-table/clipboard.test.ts`
-Expected: PASS (13 tests).
+Expected: PASS (12 tests).
 
 - [ ] **Step 5: Lint + typecheck**
 
@@ -1196,6 +1196,8 @@ git commit -m "feat(data-table): add pure clipboard.ts (TSV parse/serialize + pa
 
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
+
+**Deviation:** the dispatched implementer subagent was interrupted mid-task (killed) after writing the test file but before the implementation — completed directly rather than re-dispatching fresh, since the remaining work (implementing `clipboard.ts` from the plan's own fully-specified code) was small and mechanical. Hand-traced the "rows past the end of rowIds are reported as newRows" test by hand against the real implementation (not just trusting a green run) — confirmed `{name:"Chris",age:22}` is produced exactly as expected. One doc-only correction: the plan's own Step 4 said "13 tests"; the actual file has 12 (4 `parseTsv` + 2 `gridToTsv` + 6 `planPaste`). Since this task was implemented directly rather than via subagent, dispatched a combined spec+quality review anyway to preserve the two-stage discipline: it independently hand-traced every function against hand-constructed inputs (`parseTsv("")`, `parseTsv("\n")`, combined non-zero row+column offsets, mixed parseable/unparseable cells in one overflow row) and found no functional bugs, but identified 2 real test-coverage gaps — a combined-offset paste and a mixed-parseability overflow row (the single most complex branch in the file, previously only tested at its two extremes) — both added with the reviewer's exact specified assertions, hand-verified passing. Final: 14/14 `clipboard.test.ts`, 196/196 full suite, lint/typecheck clean. Commit `282c3dc` (amended).
 
 ---
 
