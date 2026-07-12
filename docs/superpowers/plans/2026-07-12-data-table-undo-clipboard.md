@@ -2319,32 +2319,29 @@ Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 
 ## Task 13: Final verification
 
-- [ ] **Step 1: Full suite**
+- [x] **Step 1: Full suite**
 
-Run: `pnpm exec vitest run` — expect all suites pass (grouped-data-table + table-fields + data-table).
+Run: `pnpm exec vitest run` — expect all suites pass (grouped-data-table + table-fields + data-table). 304/304 passing (303 before the Step 4 fix's new test).
 
-- [ ] **Step 2: Typecheck + lint + production build**
+- [x] **Step 2: Typecheck + lint + production build**
 
-Run: `pnpm typecheck && pnpm exec eslint components/data-table components/table-fields components/ui && pnpm build` — expect all clean.
+Run: `pnpm typecheck && pnpm exec eslint components/data-table components/table-fields components/ui && pnpm build` — expect all clean. Confirmed clean (one pre-existing lint `error` in `components/site/site-header.tsx` — untouched by this branch, identical to `main`, unrelated to Plan 4 — not fixed here as out of scope).
 
-- [ ] **Step 3: Manual smoke test (browser)**
+- [x] **Step 3: Manual smoke test (browser)**
 
-Beyond Task 12's feature-specific checklist, confirm nothing from Plans 1-3 regressed with the new keyboard shortcuts layered in:
-- Arrow-key/Tab navigation, Enter-to-edit, Escape-to-cancel all still work exactly as before (Cmd/Ctrl+Z/C/V/Delete/Backspace are the only new interceptions; everything else still falls through to `nav.handleKeyDown` unchanged).
-- Sort/hide/pin/resize columns still work with the new toolbar's "Export CSV" button sitting next to "Columns" without layout issues.
-- Row selection + tri-state select-all + shift-click range-select (Plan 3) still work; footer calc still works.
-- A read-only table (`editable` not set) still allows copy (Cmd/Ctrl+C) but silently no-ops on paste/bulk-clear (no editable columns for `planPaste`/`clearSelectedOrActiveCells` to touch).
+Verified live at `/data-table-demo` via direct DOM/event dispatch (the Browser pane's `computer` tool's click/key actions don't reliably reach this app's focus-dependent React handlers — worked around with real `.focus()`/`.select()` calls and manually dispatched `MouseEvent`/`KeyboardEvent` objects). Confirmed: undo reverts a cell edit with a "Change undone" toast + working Redo button; Redo reapplies with "Change redone"; Ctrl/Cmd+C copies the active cell alone or every visible column of selected rows as TSV; Ctrl/Cmd+V pastes a 2×2 block with a "Pasted 4 cells" toast, undone as a single Cmd+Z; pasting past the last row appends a new row via `onCreateRows`; selecting rows + Backspace clears them with a "Cleared 10 cells" toast; Backspace while actively editing a cell does not trigger bulk-clear; Export CSV triggers a real Blob download with correct RFC-4180 content matching live table state (including cleared cells and newly-appended rows). Arrow-key/Tab navigation, Enter-to-edit, Escape-to-cancel, sort/hide/pin/resize, and Plan 3's row selection/footer-calc all still function unchanged alongside the new shortcuts.
 
-- [ ] **Step 4: Final holistic review**
+- [x] **Step 4: Final holistic review**
 
-Dispatch a final code-quality review across the full branch diff (`git diff main...feat/data-table-undo-clipboard`), the same kind of integration-level pass done at the end of Plans 2 and 3 — it catches cross-file issues no single task's review can see. Specifically prompt it to check:
-- Does the composed `handleKeyDown` in `use-data-table.ts` correctly compose across ALL of Tasks 3/7/8's additions (Ctrl+Z/Shift+Z, Ctrl+C, Ctrl+V, Delete/Backspace) with no missing `!nav.editingCell` guard anywhere it's needed, and no stale closure over `undo`/`redo`/`copy`/`paste`/`clearSelectedOrActiveCells` in its dependency array?
-- Does `commitBatch` correctly dedupe same-cell ops within one batch (the `seen` Set in Task 3) in a way that's still correct for Task 8's paste (which could theoretically produce duplicate `{rowId, columnId}` pairs if `planPaste` is ever called with malformed input)?
-- Does `paste`'s per-column `fromClipboard: isColumnEditable(id) ? meta?.fromClipboard : undefined` in Task 8 correctly re-derive on every paste (not stale from when the column was first rendered), given `isColumnEditable` could theoretically change if a consumer's `editable` prop changes at runtime?
-- Is there any registry-divergence risk (base-ui vs. Radix) in anything newly added this plan, the same class of bug the Plan 3 final review caught in `row-gutter.tsx`/`footer-aggregation.tsx`? (`export-csv.ts`/`clipboard.ts`/`undo.ts` are pure TS with zero UI-primitive imports, and `components/ui/sonner.tsx` only touches `sonner`/`next-themes`, not base-ui/Radix — but verify this claim rather than trusting it.)
-- Does the sonner `toast()` call pattern used throughout this plan risk toast spam (e.g. does rapid-fire Cmd+Z holding produce one toast per undo correctly, or could React batching cause missed/duplicate toasts)?
+Dispatched a final code-quality review across the full branch diff. It found one genuine, real bug (Critical, confidence 90) not caught by any prior task-level review or the manual browser smoke test (whose demo dataset has only 18 rows, under the page size, so the bug never had a chance to trigger):
 
-- [ ] **Step 5: Finish the branch**
+**Bug:** `paste()` in `use-data-table.ts` derived its "past the last row" target-row list from `table.getRowModel().rows` — which, per TanStack Table's `RowPagination` feature (verified against `@tanstack/table-core@8.21.3` source), is the *post-pagination* row model (only the current page's slice) whenever `enablePagination` is true (the default) and `manualPagination` is false. With the hook's hardcoded `pageSize: 50`, pasting a multi-row block near the bottom of a page beyond row 50 treated the page boundary as the end of the dataset, calling `onCreateRows` to append spurious new rows instead of writing into the real, already-existing rows on the next page — a data-integrity bug for any table with more than one page of client-side data (the common case this feature exists for).
+
+**Fix:** added a separate `pasteRowIds` derived from `table.getPrePaginationRowModel().rows` (which TanStack's `RowExpanding` feature aliases to `getSortedRowModel()` — i.e. the full sorted/filtered dataset, unaffected by pagination — whenever row expanding isn't configured, which this table never does), and switched `paste()`'s `startRowIndex` computation and the `rowIds` argument passed to `planPaste` to use it instead of the paginated `rowIds` (which `nav`/grid-keyboard-navigation correctly keeps using, since confining arrow-key navigation to the current page is intentional). `commitBatch`'s `table.getRow(op.rowId)` lookup was separately verified safe as-is: it already falls back to `table.getCoreRowModel().rowsById[id]` (the full unfiltered/unsorted core model) when a row isn't found in the paginated model, so applying the resulting `onUpdateData` calls for next-page rows works correctly. Added a regression test (`use-data-table.test.tsx`, "a paste crossing a pagination page boundary writes into the real next-page row instead of calling onCreateRows") using a 55-row fixture pasting across the page-1/page-2 boundary; rebuilt the registry (`pnpm registry:build`) since `use-data-table.ts`'s source is embedded in `public/r/data-table.json`/`public/r/data-table-radix.json`. Full suite (304/304), typecheck, lint, and build all re-verified clean after the fix.
+
+Everything else the review checked out clean: the composed `handleKeyDown`'s `!nav.editingCell` guards, `commitBatch`'s dedup-fix correctness, `paste`'s per-render-fresh `isColumnEditable` gating, zero base-ui/Radix divergence risk (the three new pure-TS files have no UI-primitive imports; `sonner.tsx` only touches `sonner`/`next-themes`), and `registry.json`/`public/r/*.json` correctness (both `data-table` and `data-table-radix` items correctly registered, no breakage of pre-existing items).
+
+- [x] **Step 5: Finish the branch**
 
 Use `superpowers:finishing-a-development-branch` to decide how to land this (merge to main, PR, etc.), following the same pattern as Plans 1, 2, and 3.
 

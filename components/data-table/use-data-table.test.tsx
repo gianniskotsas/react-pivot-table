@@ -815,6 +815,48 @@ describe("useDataTable — paste + bulk-clear", () => {
     expect(onCreateRows).toHaveBeenCalledWith([{ name: "Chris", age: 22 }])
   })
 
+  it("a paste crossing a pagination page boundary writes into the real next-page row instead of calling onCreateRows", async () => {
+    // enablePagination defaults to true with a page size of 50, so with 55
+    // rows table.getRowModel() (paginated) only sees rows 1-50 on page 1.
+    // Pasting a 2-row block starting at the last row of page 1 must resolve
+    // its second row against the full 55-row dataset (row 51, a real row
+    // that just isn't on the current page) rather than treating page 1's
+    // boundary as the end of the data and reporting it via onCreateRows.
+    const manyRows: Row[] = Array.from({ length: 55 }, (_, i) => ({
+      id: String(i + 1),
+      name: `Name${i + 1}`,
+      age: i,
+    }))
+    const onUpdateData = vi.fn()
+    const onCreateRows = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: manyRows,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+        onCreateRows,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "50", columnId: "name" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("Baily\t45\nAdah\t31")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("50", "name", "Baily")
+    expect(onUpdateData).toHaveBeenCalledWith("51", "name", "Adah")
+    expect(onCreateRows).not.toHaveBeenCalled()
+  })
+
   it("Delete with a selected active cell clears it to undefined as one undo step", () => {
     const onUpdateData = vi.fn()
     const col = defineColumns<Row>()

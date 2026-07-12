@@ -236,6 +236,20 @@ export function useDataTable<TData>({
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
+  // Paste's "past the last row" detection must be measured against every
+  // row that exists client-side, not just the current page's slice —
+  // getRowModel() is post-pagination, so using `rowIds` here would treat a
+  // page boundary as the end of the dataset and spuriously create new rows
+  // instead of writing into real rows that live on the next page.
+  // getPrePaginationRowModel() falls back to the sorted/filtered model
+  // (unaffected by pagination) whenever row expanding isn't configured,
+  // which this table never does.
+  const prePaginationRows = table.getPrePaginationRowModel().rows
+  const pasteRowIds = React.useMemo(
+    () => prePaginationRows.map((r) => r.id),
+    [prePaginationRows],
+  )
+
   // If the header's select-all cycle has advanced to "all matching"
   // (isAllMatchingSelected), a `data` change that reveals rows not seen
   // before — a new server page loading, a filter narrowing/widening under
@@ -325,7 +339,9 @@ export function useDataTable<TData>({
     }
     if (!text) return
 
-    const startRowIndex = rowIds.indexOf(active.rowId)
+    // Indexed into pasteRowIds (the full, pre-pagination row list), not the
+    // current page's rowIds — see pasteRowIds' definition above for why.
+    const startRowIndex = pasteRowIds.indexOf(active.rowId)
     const startColIndex = columnIds.indexOf(active.columnId)
     if (startRowIndex === -1 || startColIndex === -1) return
 
@@ -342,14 +358,14 @@ export function useDataTable<TData>({
       }
     })
 
-    const plan = planPaste<TData>(parseTsv(text), startRowIndex, startColIndex, rowIds, cols)
+    const plan = planPaste<TData>(parseTsv(text), startRowIndex, startColIndex, pasteRowIds, cols)
     if (plan.updates.length > 0) commitBatch(plan.updates)
     if (plan.newRows.length > 0) onCreateRows?.(plan.newRows)
 
     const cellCount =
       plan.updates.length + plan.newRows.reduce((n, row) => n + Object.keys(row).length, 0)
     if (cellCount > 0) toast(`Pasted ${cellCount} cell${cellCount === 1 ? "" : "s"}`)
-  }, [nav.activeCell, rowIds, columnIds, table, isColumnEditable, commitBatch, onCreateRows])
+  }, [nav.activeCell, pasteRowIds, columnIds, table, isColumnEditable, commitBatch, onCreateRows])
 
   // Clears every editable column of every selected row, or (when nothing is
   // selected) just the active cell if it's editable — same selection-wins
