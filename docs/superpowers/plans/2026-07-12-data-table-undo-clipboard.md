@@ -1330,6 +1330,8 @@ git commit -m "feat(data-table): add pure export-csv.ts (RFC 4180 CSV serializat
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
+**Deviation, real security gap found and fixed:** implemented directly (matching the plan's code verbatim), then dispatched a combined spec+quality review. It hand-traced every RFC 4180 edge case (multi-trigger quoting, header-cell escaping, boundary quote characters, empty input) and found the implementation correct throughout, but flagged — as an FYI below its confidence threshold for a required fix, since it's outside the plan's stated RFC-4180-only scope — that `exportCsv` had no protection against CSV/Excel formula injection (CWE-1236): a field whose value starts with `=`, `+`, `-`, or `@` is executed as a formula by Excel/Sheets/LibreOffice on open rather than shown as plain text. Given this feature's entire purpose is producing a file the user opens in a spreadsheet app, and the fix is the standard, cheap, well-documented OWASP mitigation (prefix with a single quote to force text display), added it directly rather than deferring — a genuine, easily-avoidable security gap in a shipping feature isn't worth leaving open for a hypothetical future task. Also added the reviewer's 2 confirmed test-coverage gaps (multi-reason quoting, header-row escaping) plus 2 tests for the new formula-injection mitigation (prefix applied / not falsely applied to a field that merely *contains* a trigger character mid-string). Final: 10/10 `export-csv.test.ts`, 206/206 full suite, lint/typecheck clean. Commit `bf7aefe` (amended).
+
 ---
 
 ## Task 7: Wire Copy (Cmd/Ctrl+C) into `useDataTable`
