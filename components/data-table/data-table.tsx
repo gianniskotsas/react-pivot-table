@@ -17,8 +17,10 @@ import { cn } from "@/lib/utils"
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
 import { DataTableRuntimeContext } from "./data-table-runtime-context"
+import { DataTableFooter } from "./footer-aggregation"
 import { useDataTable } from "./use-data-table"
-import type { DataTableColumnMeta } from "./types"
+import { useFooterAggregation } from "./use-footer-aggregation"
+import type { CalculableColumn, ComputeAggregateArgs, DataTableColumnMeta } from "./types"
 
 export type DataTableProps<TData> = {
   data: TData[]
@@ -30,6 +32,8 @@ export type DataTableProps<TData> = {
   enableRowSelection?: boolean
   manualPagination?: boolean
   totalRowCount?: number
+  calculableColumns?: CalculableColumn[]
+  computeAggregate?: (args: ComputeAggregateArgs) => Promise<number>
 }
 
 type PinnedCellStyle = { style: React.CSSProperties; className?: string }
@@ -76,6 +80,14 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   const { table, runtime } = useDataTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
+  const aggregation = useFooterAggregation({
+    table,
+    calculableColumns: props.calculableColumns,
+    computeAggregate: props.computeAggregate,
+    manualPagination: props.manualPagination,
+    totalRowCount: props.totalRowCount,
+    isAllMatchingSelected: runtime.isAllMatchingSelected,
+  })
 
   return (
     <DataTableRuntimeContext.Provider value={runtime}>
@@ -144,6 +156,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 ))
               )}
             </TableBody>
+            <DataTableFooter table={table} aggregation={aggregation} />
           </Table>
         </div>
 

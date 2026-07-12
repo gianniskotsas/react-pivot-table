@@ -154,3 +154,26 @@ describe("DataTable — row selection", () => {
     expect(screen.queryByRole("checkbox")).toBeNull()
   })
 })
+
+describe("DataTable — footer calc", () => {
+  it("renders a footer with the aggregated value when calculableColumns is set", () => {
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        calculableColumns={[{ columnId: "age", default: "sum" }]}
+      />,
+    )
+    // Fixture is DATA = [{ age: 44 }, { age: 30 }] (see the top of this
+    // file) — sum is 74, confirmed against the actual fixture rather than
+    // computed at test-run time, so a future edit to DATA that silently
+    // changes the sum makes this test fail loudly instead of drifting.
+    expect(screen.getByText("74")).toBeInTheDocument()
+  })
+
+  it("renders no footer when calculableColumns is not set", () => {
+    const { container } = render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    expect(container.querySelector("tfoot")).toBeNull()
+  })
+})
