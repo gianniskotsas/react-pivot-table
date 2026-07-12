@@ -14,6 +14,9 @@ export {
   type FooterAggregationResult,
 } from "./use-footer-aggregation"
 export { DataTableFooter } from "./footer-aggregation"
+export { createUndoStack, type UndoStack, type UndoBatch, type CellEdit } from "./undo"
+export { parseTsv, gridToTsv, planPaste, type ClipboardColumn, type PastePlan } from "./clipboard"
+export { exportCsv, downloadCsv, type CsvColumn } from "./export-csv"
 export type {
   CellPos,
   DataTableColumnMeta,

@@ -21,6 +21,12 @@ describe("data-table barrel", () => {
       "ALL_AGGREGATION_METHODS",
       "useFooterAggregation",
       "DataTableFooter",
+      "createUndoStack",
+      "parseTsv",
+      "gridToTsv",
+      "planPaste",
+      "exportCsv",
+      "downloadCsv",
     ]) {
       expect(dataTable).toHaveProperty(name)
     }
