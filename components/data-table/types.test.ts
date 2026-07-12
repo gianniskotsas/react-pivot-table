@@ -28,6 +28,11 @@ describe("data-table core types", () => {
       isColumnEditable: () => true,
       updateData: () => {},
       handleKeyDown: () => {},
+      manualPagination: false,
+      totalRowCount: undefined,
+      isAllMatchingSelected: false,
+      setAllMatchingSelected: () => {},
+      toggleRowSelected: () => {},
     }
     expect(runtime.activeCell).toEqual(pos)
   })

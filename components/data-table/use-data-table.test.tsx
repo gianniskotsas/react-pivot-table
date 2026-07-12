@@ -206,3 +206,240 @@ describe("useDataTable", () => {
     expect(result.current.runtime.activeCell).toEqual({ rowId: "1", columnId: "name" })
   })
 })
+
+describe("useDataTable — row selection", () => {
+  it("enableRowSelection prepends the gutter column and it's excluded from keyboard-navigable columns", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+      }),
+    )
+    expect(result.current.table.getAllLeafColumns().map((c) => c.id)).toEqual([
+      "__row-gutter__",
+      "name",
+    ])
+    // Arrow-right from the (only) real column should be a no-op — the
+    // gutter column must not be a stop in keyboard navigation.
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    act(() => result.current.runtime.moveActive("next"))
+    expect(result.current.runtime.activeCell?.columnId).not.toBe("__row-gutter__")
+  })
+
+  it("without enableRowSelection, no gutter column is added", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (row) => row.id }),
+    )
+    expect(result.current.table.getAllLeafColumns().map((c) => c.id)).toEqual(["name"])
+  })
+
+  it("runtime exposes manualPagination and totalRowCount as passed", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        manualPagination: true,
+        totalRowCount: 500,
+      }),
+    )
+    expect(result.current.runtime.manualPagination).toBe(true)
+    expect(result.current.runtime.totalRowCount).toBe(500)
+  })
+
+  it("setAllMatchingSelected(true) sets the flag and selects every loaded row", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+        manualPagination: true,
+        totalRowCount: 500,
+      }),
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    expect(result.current.runtime.isAllMatchingSelected).toBe(true)
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+  })
+
+  it("setAllMatchingSelected(false) clears the flag without forcing deselection", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        enableRowSelection: true,
+      }),
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    act(() => result.current.runtime.setAllMatchingSelected(false))
+    expect(result.current.runtime.isAllMatchingSelected).toBe(false)
+    // Rows stay selected — the row-gutter's own header click handler is the
+    // one that decides whether clearing all-matching should also clear
+    // every row (see row-gutter.test.tsx's "clears everything" case, which
+    // exercises both calls together through the header's own click logic).
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+  })
+
+  // Regression test for a real bug caught in a final-branch code review:
+  // isAllMatchingSelected's own contract (types.ts) is "everything matching
+  // is selected, including rows not yet loaded" — but nothing previously
+  // re-applied that to rows that load in AFTER the flag was set (e.g. a new
+  // server page arriving under manualPagination). The header would keep
+  // asserting "all matching selected" while the newly-loaded rows' own
+  // checkboxes rendered unselected, a directly visible, self-contradictory
+  // state.
+  it("setAllMatchingSelected(true) also selects rows that load in afterward, keeping the header's claim consistent", () => {
+    const col = defineColumns<Row>()
+    const { result, rerender } = renderHook(
+      (props: { data: Row[] }) =>
+        useDataTable({
+          data: props.data,
+          columns: [col.text("name")],
+          getRowId: (row) => row.id,
+          enableRowSelection: true,
+          manualPagination: true,
+          totalRowCount: 500,
+        }),
+      { initialProps: { data: DATA } },
+    )
+    act(() => result.current.runtime.setAllMatchingSelected(true))
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+
+    // Simulate a new server page arriving: entirely new row ids.
+    const nextPage: Row[] = [
+      { id: "3", name: "Charlie", age: 25 },
+      { id: "4", name: "Dana", age: 40 },
+    ]
+    rerender({ data: nextPage })
+
+    expect(result.current.runtime.isAllMatchingSelected).toBe(true)
+    expect(result.current.table.getIsAllRowsSelected()).toBe(true)
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([true, true])
+  })
+
+  it("does not force-select newly-loaded rows when isAllMatchingSelected is false", () => {
+    const col = defineColumns<Row>()
+    const { result, rerender } = renderHook(
+      (props: { data: Row[] }) =>
+        useDataTable({
+          data: props.data,
+          columns: [col.text("name")],
+          getRowId: (row) => row.id,
+          enableRowSelection: true,
+          manualPagination: true,
+          totalRowCount: 500,
+        }),
+      { initialProps: { data: DATA } },
+    )
+    const nextPage: Row[] = [
+      { id: "3", name: "Charlie", age: 25 },
+      { id: "4", name: "Dana", age: 40 },
+    ]
+    rerender({ data: nextPage })
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([false, false])
+  })
+
+  it("toggleRowSelected without shiftKey toggles just the one row, by id", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false))
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([true, false])
+  })
+
+  it("toggleRowSelected with shiftKey selects the inclusive range from the last-touched row", () => {
+    const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: String(i), name: `Row ${i}`, age: i }))
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false)) // plain click sets the anchor at row id "1"
+    act(() => result.current.runtime.toggleRowSelected("4", true, true)) // shift-click extends "1".."4"
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([
+      false, true, true, true, true, false,
+    ])
+  })
+
+  it("toggleRowSelected with shiftKey works in either direction from the anchor", () => {
+    const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: String(i), name: `Row ${i}`, age: i }))
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("4", true, false)) // anchor at row id "4"
+    act(() => result.current.runtime.toggleRowSelected("1", true, true)) // shift-click backwards extends "1".."4"
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([
+      false, true, true, true, true, false,
+    ])
+  })
+
+  it("toggleRowSelected with shiftKey but no prior anchor falls back to toggling just the one row", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("2", true, true))
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([false, true])
+  })
+
+  // Regression coverage for a real bug caught in code review: `row.index` is
+  // fixed at row creation to the row's position in the ORIGINAL, unsorted
+  // `data` array — getSortedRowModel preserves it via a shallow copy rather
+  // than reassigning it — so it is NOT the row's position in the
+  // currently-displayed (sorted) order. An earlier version of
+  // toggleRowSelected took a positional index and indexed straight into
+  // `table.getRowModel().rows`, which broke (toggled the wrong row, or
+  // no-op'd) as soon as the table was sorted. Using row id + a live
+  // `findIndex` lookup instead sidesteps this: these tests sort the table
+  // first, so a regression back to index-based lookup would toggle the
+  // wrong row and fail here.
+  it("toggleRowSelected resolves the correct row by id even after the table has been sorted (row.index would be stale/wrong here)", () => {
+    const rows: Row[] = [
+      { id: "a", name: "Charlie", age: 3 },
+      { id: "b", name: "Alice", age: 1 },
+      { id: "c", name: "Bob", age: 2 },
+    ]
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.table.setSorting([{ id: "name", desc: false }]))
+    // Sorted ascending by name: Alice(b), Bob(c), Charlie(a) — id "b" is now
+    // displayed FIRST even though it was originally the second row (index 1).
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["b", "c", "a"])
+    act(() => result.current.runtime.toggleRowSelected("b", true, false))
+    const selectedIds = result.current.table.getRowModel().rows.filter((r) => r.getIsSelected()).map((r) => r.id)
+    expect(selectedIds).toEqual(["b"])
+  })
+
+  it("toggleRowSelected shift-range resolves anchor and target by their current sorted position, not their original data-array index", () => {
+    const rows: Row[] = [
+      { id: "a", name: "Elm", age: 5 },
+      { id: "b", name: "Ash", age: 2 },
+      { id: "c", name: "Fir", age: 6 },
+      { id: "d", name: "Birch", age: 3 },
+      { id: "e", name: "Oak", age: 4 },
+    ]
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.table.setSorting([{ id: "name", desc: false }]))
+    // Sorted ascending by name: Ash(b), Birch(d), Elm(a), Fir(c), Oak(e).
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["b", "d", "a", "c", "e"])
+    act(() => result.current.runtime.toggleRowSelected("b", true, false)) // anchor at displayed position 0
+    act(() => result.current.runtime.toggleRowSelected("a", true, true)) // shift-click at displayed position 2 -> range 0..2
+    const selectedIds = result.current.table.getRowModel().rows.filter((r) => r.getIsSelected()).map((r) => r.id)
+    expect(selectedIds.sort()).toEqual(["a", "b", "d"])
+  })
+})

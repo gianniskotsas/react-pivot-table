@@ -17,6 +17,11 @@ const STUB_RUNTIME: DataTableRuntime = {
   isColumnEditable: () => false,
   updateData: () => {},
   handleKeyDown: () => {},
+  manualPagination: false,
+  totalRowCount: undefined,
+  isAllMatchingSelected: false,
+  setAllMatchingSelected: () => {},
+  toggleRowSelected: () => {},
 }
 
 function Probe() {

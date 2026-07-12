@@ -198,12 +198,16 @@
       ],
       "files": [
         { "path": "components/data-table/types.ts", "type": "registry:lib", "target": "components/data-table/types.ts" },
+        { "path": "components/data-table/aggregate.ts", "type": "registry:lib", "target": "components/data-table/aggregate.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
+        { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
         { "path": "components/data-table/define-columns.tsx", "type": "registry:lib", "target": "components/data-table/define-columns.tsx" },
         { "path": "components/data-table/primitives.tsx", "type": "registry:component", "target": "components/data-table/primitives.tsx" },
+        { "path": "components/data-table/row-gutter.tsx", "type": "registry:component", "target": "components/data-table/row-gutter.tsx" },
         { "path": "components/data-table/column-header.tsx", "type": "registry:component", "target": "components/data-table/column-header.tsx" },
         { "path": "components/data-table/columns-menu.tsx", "type": "registry:component", "target": "components/data-table/columns-menu.tsx" },
+        { "path": "components/data-table/footer-aggregation.tsx", "type": "registry:component", "target": "components/data-table/footer-aggregation.tsx" },
         { "path": "components/data-table/use-data-table.ts", "type": "registry:hook", "target": "components/data-table/use-data-table.ts" },
         { "path": "components/data-table/data-table.tsx", "type": "registry:component", "target": "components/data-table/data-table.tsx" },
         { "path": "components/data-table/index.ts", "type": "registry:lib", "target": "components/data-table/index.ts" }
@@ -225,12 +229,16 @@
       ],
       "files": [
         { "path": "components/data-table/types.ts", "type": "registry:lib", "target": "components/data-table/types.ts" },
+        { "path": "components/data-table/aggregate.ts", "type": "registry:lib", "target": "components/data-table/aggregate.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
+        { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
         { "path": "components/data-table/define-columns.tsx", "type": "registry:lib", "target": "components/data-table/define-columns.tsx" },
         { "path": "components/data-table/primitives.radix.tsx", "type": "registry:component", "target": "components/data-table/primitives.tsx" },
+        { "path": "components/data-table/row-gutter.radix.tsx", "type": "registry:component", "target": "components/data-table/row-gutter.tsx" },
         { "path": "components/data-table/column-header.tsx", "type": "registry:component", "target": "components/data-table/column-header.tsx" },
         { "path": "components/data-table/columns-menu.tsx", "type": "registry:component", "target": "components/data-table/columns-menu.tsx" },
+        { "path": "components/data-table/footer-aggregation.radix.tsx", "type": "registry:component", "target": "components/data-table/footer-aggregation.tsx" },
         { "path": "components/data-table/use-data-table.ts", "type": "registry:hook", "target": "components/data-table/use-data-table.ts" },
         { "path": "components/data-table/data-table.tsx", "type": "registry:component", "target": "components/data-table/data-table.tsx" },
         { "path": "components/data-table/index.ts", "type": "registry:lib", "target": "components/data-table/index.ts" }

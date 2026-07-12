@@ -11,7 +11,12 @@ import { PopoverButtonTrigger } from "./primitives"
 import type { DataTableColumnMeta } from "./types"
 
 export function ColumnsMenuContent<TData>({ table }: { table: Table<TData> }) {
-  const columns = table.getAllLeafColumns()
+  // Columns that can neither be hidden nor pinned (e.g. row-gutter.tsx's
+  // structural selection/row-number column, which sets both to false) have
+  // nothing for this menu to offer — every control below is conditional on
+  // one of those two capabilities, so such a column would otherwise render
+  // as a bare row showing its raw internal id with no controls at all.
+  const columns = table.getAllLeafColumns().filter((column) => column.getCanHide() || column.getCanPin())
 
   return (
     <div className="space-y-0.5">

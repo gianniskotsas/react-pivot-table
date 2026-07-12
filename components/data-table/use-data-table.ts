@@ -10,12 +10,14 @@ import {
   type ColumnPinningState,
   type ColumnSizingState,
   type PaginationState,
+  type RowSelectionState,
   type SortingState,
   type Table,
   type VisibilityState,
 } from "@tanstack/react-table"
 
 import { useGridNavigation } from "./use-grid-navigation"
+import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import type { DataTableColumnMeta, DataTableRuntime } from "./types"
 
 export type UseDataTableOptions<TData> = {
@@ -25,6 +27,12 @@ export type UseDataTableOptions<TData> = {
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
   enablePagination?: boolean
+  /** Prepends the row-number/selection gutter column. Defaults to false. */
+  enableRowSelection?: boolean
+  /** True when pagination is server-driven — loaded rows aren't necessarily all rows. Defaults to false. */
+  manualPagination?: boolean
+  /** Total row count across all pages/filters when manualPagination is true. */
+  totalRowCount?: number
 }
 
 export type UseDataTableResult<TData> = {
@@ -39,6 +47,9 @@ export function useDataTable<TData>({
   editable = false,
   onUpdateData,
   enablePagination = true,
+  enableRowSelection = false,
+  manualPagination = false,
+  totalRowCount,
 }: UseDataTableOptions<TData>): UseDataTableResult<TData> {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -48,26 +59,36 @@ export function useDataTable<TData>({
     pageIndex: 0,
     pageSize: 50,
   })
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const [isAllMatchingSelected, setIsAllMatchingSelectedState] = React.useState(false)
+
+  const resolvedColumns = React.useMemo(
+    () => (enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns),
+    [enableRowSelection, columns],
+  )
 
   // React Compiler reports "Use of incompatible library" here: useReactTable
   // returns identity-stable functions it cannot safely memoize, so it skips
   // compiling this component. Expected with TanStack Table, harmless.
   const table = useReactTable<TData>({
     data,
-    columns,
+    columns: resolvedColumns,
     getRowId: getRowId ?? ((row, index) => String(index)),
     state: {
       sorting,
       columnVisibility,
       columnPinning,
       columnSizing,
+      rowSelection,
       ...(enablePagination ? { pagination } : {}),
     },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
     onColumnPinningChange: setColumnPinning,
     onColumnSizingChange: setColumnSizing,
+    onRowSelectionChange: setRowSelection,
     onPaginationChange: setPagination,
+    enableRowSelection,
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -75,11 +96,80 @@ export function useDataTable<TData>({
     autoResetPageIndex: false,
   })
 
+  // Deliberately asymmetric: turning matching ON also selects every loaded
+  // row (so visible checkboxes agree with "everything"); turning it OFF does
+  // NOT deselect — see DataTableRuntime.setAllMatchingSelected's doc comment
+  // (types.ts) for why: the caller (row-gutter's header click-cycle) may be
+  // narrowing from "all-matching" back to "all loaded" rather than to "none".
+  const setAllMatchingSelected = React.useCallback(
+    (matching: boolean) => {
+      setIsAllMatchingSelectedState(matching)
+      if (matching) table.toggleAllRowsSelected(true)
+    },
+    [table],
+  )
+
+  // Tracks the row a shift-click range should extend from, by id — the row
+  // touched by the most recent plain (non-shift) toggle, or the far end of
+  // the most recent shift-range. Deliberately an id, not a positional index:
+  // TanStack's `Row.index` is fixed at row creation to the row's position in
+  // the original, unsorted `data`, not its current on-screen position (see
+  // row-gutter.tsx's `displayIndex` comment) — an index captured at click
+  // time would point at the wrong row once sorting/filtering reorders the
+  // table. Both the anchor's and the clicked row's actual positions are
+  // resolved fresh from the live row model on every call instead.
+  const lastToggledRowIdRef = React.useRef<string | null>(null)
+  const toggleRowSelected = React.useCallback(
+    (rowId: string, checked: boolean, shiftKey: boolean) => {
+      const currentRows = table.getRowModel().rows
+      const anchorId = lastToggledRowIdRef.current
+      const anchorIndex = anchorId === null ? -1 : currentRows.findIndex((r) => r.id === anchorId)
+      if (shiftKey && anchorIndex !== -1) {
+        const clickedIndex = currentRows.findIndex((r) => r.id === rowId)
+        if (clickedIndex !== -1) {
+          const [start, end] =
+            anchorIndex < clickedIndex ? [anchorIndex, clickedIndex] : [clickedIndex, anchorIndex]
+          setRowSelection((prev) => {
+            const next = { ...prev }
+            for (let i = start; i <= end; i++) {
+              const r = currentRows[i]
+              if (r) next[r.id] = checked
+            }
+            return next
+          })
+        }
+      } else {
+        table.getRow(rowId)?.toggleSelected(checked)
+      }
+      lastToggledRowIdRef.current = rowId
+    },
+    [table],
+  )
+
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
+  // If the header's select-all cycle has advanced to "all matching"
+  // (isAllMatchingSelected), a `data` change that reveals rows not seen
+  // before — a new server page loading, a filter narrowing/widening under
+  // manualPagination — must keep those newly-visible rows selected too.
+  // setAllMatchingSelected's own contract (types.ts) is that this flag means
+  // "everything matching is selected, including rows not yet loaded"; left
+  // unaddressed, the header would keep asserting that while the freshly-
+  // loaded rows' own checkboxes render unselected (rowSelection is keyed by
+  // id, and the new rows' ids were never in it) — a directly visible,
+  // self-contradictory state. This mirrors setAllMatchingSelected's own
+  // "turning matching ON also selects every loaded row" behavior, reapplied
+  // whenever the loaded set itself changes while matching is already on.
+  React.useEffect(() => {
+    if (isAllMatchingSelected) table.toggleAllRowsSelected(true)
+  }, [rowIds, isAllMatchingSelected, table])
+
   const visibleColumns = table.getVisibleLeafColumns()
-  const columnIds = React.useMemo(() => visibleColumns.map((c) => c.id), [visibleColumns])
+  const columnIds = React.useMemo(
+    () => visibleColumns.filter((c) => c.id !== ROW_GUTTER_COLUMN_ID).map((c) => c.id),
+    [visibleColumns],
+  )
 
   const isColumnEditable = React.useCallback(
     (columnId: string) => {
@@ -177,7 +267,16 @@ export function useDataTable<TData>({
     [onUpdateData],
   )
 
-  const runtime: DataTableRuntime = { ...nav, isColumnEditable, updateData }
+  const runtime: DataTableRuntime = {
+    ...nav,
+    isColumnEditable,
+    updateData,
+    manualPagination,
+    totalRowCount,
+    isAllMatchingSelected,
+    setAllMatchingSelected,
+    toggleRowSelected,
+  }
 
   return { table, runtime }
 }

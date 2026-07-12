@@ -17,8 +17,10 @@ import { cn } from "@/lib/utils"
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
 import { DataTableRuntimeContext } from "./data-table-runtime-context"
+import { DataTableFooter } from "./footer-aggregation"
 import { useDataTable } from "./use-data-table"
-import type { DataTableColumnMeta } from "./types"
+import { useFooterAggregation } from "./use-footer-aggregation"
+import type { CalculableColumn, ComputeAggregateArgs, DataTableColumnMeta } from "./types"
 
 export type DataTableProps<TData> = {
   data: TData[]
@@ -27,6 +29,11 @@ export type DataTableProps<TData> = {
   editable?: boolean
   onUpdateData?: (rowId: string, columnId: string, value: unknown) => void
   enablePagination?: boolean
+  enableRowSelection?: boolean
+  manualPagination?: boolean
+  totalRowCount?: number
+  calculableColumns?: CalculableColumn[]
+  computeAggregate?: (args: ComputeAggregateArgs) => Promise<number>
 }
 
 type PinnedCellStyle = { style: React.CSSProperties; className?: string }
@@ -73,6 +80,14 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   const { table, runtime } = useDataTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
+  const aggregation = useFooterAggregation({
+    table,
+    calculableColumns: props.calculableColumns,
+    computeAggregate: props.computeAggregate,
+    manualPagination: props.manualPagination,
+    totalRowCount: props.totalRowCount,
+    isAllMatchingSelected: runtime.isAllMatchingSelected,
+  })
 
   return (
     <DataTableRuntimeContext.Provider value={runtime}>
@@ -95,11 +110,19 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                         style={{ width: header.getSize(), ...pinned.style }}
                         className={cn("overflow-hidden text-ellipsis", pinned.className)}
                       >
-                        {header.isPlaceholder ? null : (
-                          <ColumnHeader
-                            column={header.column}
-                            label={meta?.label ?? header.column.id}
-                          />
+                        {header.isPlaceholder ? null : meta ? (
+                          <ColumnHeader column={header.column} label={meta.label} />
+                        ) : (
+                          // Structural columns (e.g. the row-gutter column)
+                          // aren't built by defineColumns, so they carry no
+                          // DataTableColumnMeta — flexRender their own
+                          // columnDef.header instead of routing through
+                          // ColumnHeader's label-only rendering, which would
+                          // otherwise print the column id as plain text
+                          // rather than invoking the column's header
+                          // component (e.g. row-gutter's tri-state
+                          // select-all checkbox).
+                          flexRender(header.column.columnDef.header, header.getContext())
                         )}
                       </TableHead>
                     )
@@ -116,7 +139,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
                     {row.getVisibleCells().map((cell) => {
                       const pinned = pinnedStyle(cell.column)
                       return (
@@ -133,6 +156,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 ))
               )}
             </TableBody>
+            <DataTableFooter table={table} aggregation={aggregation} />
           </Table>
         </div>
 
