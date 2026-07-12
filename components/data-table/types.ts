@@ -103,4 +103,17 @@ export type DataTableRuntime = {
    * distinction and calls the appropriate table method itself when needed.
    */
   setAllMatchingSelected: (matching: boolean) => void
+  /**
+   * Selects/deselects a single row by id. When `shiftKey` is true and a
+   * prior call has recorded an anchor row, every row between the anchor and
+   * `rowId` (inclusive, resolved by their live position in the current row
+   * model) is set to `checked` instead of toggling just the one row —
+   * Sheets/Gmail-style range select. Always updates the anchor to `rowId`
+   * afterward, shift-click or not. Takes an id rather than a positional
+   * index deliberately: TanStack's `Row.index` is fixed at row creation to
+   * the row's position in the original, unsorted data, not its current
+   * on-screen position, so an index captured at click time can point at the
+   * wrong row (or nothing) once sorting/filtering has reordered the table.
+   */
+  toggleRowSelected: (rowId: string, checked: boolean, shiftKey: boolean) => void
 }

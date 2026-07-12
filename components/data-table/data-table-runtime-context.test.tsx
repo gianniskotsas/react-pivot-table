@@ -21,6 +21,7 @@ const STUB_RUNTIME: DataTableRuntime = {
   totalRowCount: undefined,
   isAllMatchingSelected: false,
   setAllMatchingSelected: () => {},
+  toggleRowSelected: () => {},
 }
 
 function Probe() {

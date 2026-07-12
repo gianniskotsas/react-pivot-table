@@ -71,34 +71,66 @@ function SelectAllHeader<TData>({ table }: HeaderContext<TData, unknown>) {
 }
 
 function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
-  const [hovered, setHovered] = React.useState(false)
+  const runtime = useDataTableRuntime()
   const selected = row.getIsSelected()
   // `pagination` is an unconditional built-in TanStack feature — the state
   // key always exists (default `{pageIndex: 0, pageSize: 10}`) even when
   // `enablePagination` is false, so this is never undefined in practice.
   const { pageIndex, pageSize } = table.getState().pagination
-  const rowNumber = pageIndex * pageSize + row.index + 1
-  const showCheckbox = selected || hovered
+  // `row.index` is NOT this row's position in the currently-displayed order
+  // — it's fixed at row creation to the row's index in its parent array
+  // (i.e. the original, unsorted `data`), and getSortedRowModel preserves it
+  // via a shallow copy (`{...row}`) rather than reassigning it. Sorting a
+  // column then leaves `row.index` scrambled relative to what's on screen.
+  // The row's real display position is its index within the current row
+  // model instead — looked up by id, not by reference: the `row` this cell
+  // receives via CellContext and the entries in `table.getRowModel().rows`
+  // are logically the same row but NOT the same object (getSortedRowModel
+  // rebuilds a fresh `{...row}` copy per row on each recomputation), so
+  // `indexOf(row)` always misses and silently returns -1.
+  const displayIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id)
+  const rowNumber = pageIndex * pageSize + displayIndex + 1
+
+  // Both the number and the checkbox are always mounted; only their CSS
+  // visibility toggles. An earlier version tracked hover via onMouseEnter/
+  // onMouseLeave React state, but the shared Checkbox primitive gives itself
+  // an oversized invisible touch target (`after:-inset-x-3 after:-inset-y-2`
+  // in components/ui/checkbox.tsx) for accessibility — that hit region
+  // spills a few pixels past this cell's own bounds into the row above/
+  // below, so the pointer can cross into a neighboring row's territory
+  // without ever firing this row's mouseleave, leaving its checkbox stuck
+  // visible. Driving visibility from real-time `:hover`/`:focus-within`
+  // instead of discrete enter/leave events sidesteps that entirely — CSS
+  // pseudo-classes re-evaluate continuously from actual cursor/focus
+  // position, so there's nothing to get "stuck". `[tr:hover_&]` (already
+  // used the same way for pinned-column highlighting in data-table.tsx)
+  // reveals on hovering anywhere in the row, not just this narrow cell,
+  // matching the row's own native hover background. `group`/
+  // `group-focus-within` keep it keyboard-reachable: tabbing onto this
+  // cell's div reveals the checkbox so a second Tab can land on it.
+  const numberHiddenClass = selected ? "hidden" : "[tr:hover_&]:hidden group-focus-within:hidden"
+  const checkboxWrapperClass = selected
+    ? "inline-flex"
+    : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex"
 
   return (
     <div
-      className="flex h-full items-center justify-center px-2 py-1 text-xs text-muted-foreground"
+      className="group flex h-full items-center justify-center px-2 py-1 text-xs text-muted-foreground"
       tabIndex={0}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      onFocus={() => setHovered(true)}
-      onBlur={() => setHovered(false)}
-      aria-label={showCheckbox ? undefined : `Row ${rowNumber}`}
+      aria-label={selected ? undefined : `Row ${rowNumber}`}
     >
-      {showCheckbox ? (
+      <span className={cn("tabular-nums", numberHiddenClass)}>{rowNumber}</span>
+      <span className={checkboxWrapperClass}>
         <Checkbox
           checked={selected}
-          onCheckedChange={(checked) => row.toggleSelected(checked === true)}
+          onCheckedChange={(checked, eventDetails) => {
+            const shiftKey =
+              eventDetails.event instanceof MouseEvent && eventDetails.event.shiftKey
+            runtime?.toggleRowSelected(row.id, checked === true, shiftKey)
+          }}
           aria-label={selected ? `Deselect row ${rowNumber}` : `Select row ${rowNumber}`}
         />
-      ) : (
-        <span className={cn("tabular-nums")}>{rowNumber}</span>
-      )}
+      </span>
     </div>
   )
 }

@@ -139,12 +139,11 @@ describe("DataTable", () => {
 describe("DataTable — row selection", () => {
   it("renders the gutter column and its checkboxes when enableRowSelection is true", () => {
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
-    // Header select-all checkbox is always visible; per-row checkboxes only
-    // reveal on hover or once a row is selected (row-gutter.tsx's deliberate
-    // hover-reveal design — see row-gutter.test.tsx's "shows the row number
-    // by default, and a checkbox on hover"). Selecting all rows via the
-    // header checkbox exercises the full column: header + one per row.
-    expect(screen.getAllByRole("checkbox")).toHaveLength(1)
+    // Header select-all checkbox plus one per row are all always mounted —
+    // row-gutter.tsx reveals/hides them via CSS row-hover/focus classes
+    // rather than conditional rendering (see row-gutter.test.tsx), so the
+    // full count is present from the start, before and after selecting.
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1 + DATA.length)
     fireEvent.click(screen.getAllByRole("checkbox")[0])
     expect(screen.getAllByRole("checkbox")).toHaveLength(1 + DATA.length)
   })
@@ -152,6 +151,55 @@ describe("DataTable — row selection", () => {
   it("does not render the gutter column by default", () => {
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
     expect(screen.queryByRole("checkbox")).toBeNull()
+  })
+
+  // Regression test for a real bug caught in code review and confirmed live
+  // in the browser: TanStack's row objects returned by successive
+  // `table.getRowModel()` calls are NOT the same object instance as the
+  // `row` a cell receives via CellContext, even for the same logical row —
+  // getSortedRowModel rebuilds a fresh `{...row}` copy on every
+  // recomputation. row-gutter.tsx originally used reference-based
+  // `.indexOf(row)` to find a row's on-screen position (for both the
+  // displayed row number and shift-click range selection), which always
+  // returned -1 against a REAL table — this only surfaced against a real
+  // <DataTable> render, not the isolated-cell unit tests in
+  // row-gutter.test.tsx (which happened to place the exact same row
+  // reference into their mock row model). Sorting by a real column and
+  // reading real rendered text is what actually catches this class of bug.
+  it("row numbers reflect real on-screen (sorted) order, not row.index — and shift-click range-selects by that same real order", () => {
+    // Ages deliberately don't overlap with 1/2/3 so they can't be confused
+    // with row-gutter numbers when asserting on rendered text below.
+    const rows: Row[] = [
+      { id: "a", name: "Charlie", age: 30 },
+      { id: "b", name: "Alice", age: 10 },
+      { id: "c", name: "Bob", age: 20 },
+    ]
+    render(<DataTable data={rows} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
+
+    // Sort ascending by Name: Alice(b), Bob(c), Charlie(a).
+    fireEvent.click(screen.getByRole("button", { name: /Name/ }))
+
+    const rowsInDisplayOrder = screen.getAllByRole("row").slice(1) // drop the header row
+    const numberCells = rowsInDisplayOrder.map((r) => r.querySelector("td:first-child span.tabular-nums"))
+    expect(numberCells.map((el) => el?.textContent)).toEqual(["1", "2", "3"])
+    expect(rowsInDisplayOrder.map((r) => r.textContent)).toEqual([
+      expect.stringContaining("Alice"),
+      expect.stringContaining("Bob"),
+      expect.stringContaining("Charlie"),
+    ])
+
+    // Shift-click range-select across the sorted (not original) order:
+    // click Alice's checkbox, then shift-click Bob's — should select
+    // exactly those two (displayed positions 0..1), not Alice+Charlie
+    // (which original-array indices 1 and 0 would wrongly imply).
+    const checkboxesInOrder = rowsInDisplayOrder.map(
+      (r) => r.querySelector('[role="checkbox"]') as HTMLElement,
+    )
+    fireEvent.click(checkboxesInOrder[0])
+    fireEvent.click(checkboxesInOrder[1], { shiftKey: true })
+    expect(rowsInDisplayOrder.map((r) => r.querySelector('[role="checkbox"]')?.getAttribute("aria-checked"))).toEqual(
+      ["true", "true", "false"],
+    )
   })
 })
 

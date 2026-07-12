@@ -288,4 +288,99 @@ describe("useDataTable — row selection", () => {
     // exercises both calls together through the header's own click logic).
     expect(result.current.table.getIsAllRowsSelected()).toBe(true)
   })
+
+  it("toggleRowSelected without shiftKey toggles just the one row, by id", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false))
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([true, false])
+  })
+
+  it("toggleRowSelected with shiftKey selects the inclusive range from the last-touched row", () => {
+    const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: String(i), name: `Row ${i}`, age: i }))
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("1", true, false)) // plain click sets the anchor at row id "1"
+    act(() => result.current.runtime.toggleRowSelected("4", true, true)) // shift-click extends "1".."4"
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([
+      false, true, true, true, true, false,
+    ])
+  })
+
+  it("toggleRowSelected with shiftKey works in either direction from the anchor", () => {
+    const rows: Row[] = Array.from({ length: 6 }, (_, i) => ({ id: String(i), name: `Row ${i}`, age: i }))
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("4", true, false)) // anchor at row id "4"
+    act(() => result.current.runtime.toggleRowSelected("1", true, true)) // shift-click backwards extends "1".."4"
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([
+      false, true, true, true, true, false,
+    ])
+  })
+
+  it("toggleRowSelected with shiftKey but no prior anchor falls back to toggling just the one row", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: DATA, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.runtime.toggleRowSelected("2", true, true))
+    expect(result.current.table.getRowModel().rows.map((r) => r.getIsSelected())).toEqual([false, true])
+  })
+
+  // Regression coverage for a real bug caught in code review: `row.index` is
+  // fixed at row creation to the row's position in the ORIGINAL, unsorted
+  // `data` array — getSortedRowModel preserves it via a shallow copy rather
+  // than reassigning it — so it is NOT the row's position in the
+  // currently-displayed (sorted) order. An earlier version of
+  // toggleRowSelected took a positional index and indexed straight into
+  // `table.getRowModel().rows`, which broke (toggled the wrong row, or
+  // no-op'd) as soon as the table was sorted. Using row id + a live
+  // `findIndex` lookup instead sidesteps this: these tests sort the table
+  // first, so a regression back to index-based lookup would toggle the
+  // wrong row and fail here.
+  it("toggleRowSelected resolves the correct row by id even after the table has been sorted (row.index would be stale/wrong here)", () => {
+    const rows: Row[] = [
+      { id: "a", name: "Charlie", age: 3 },
+      { id: "b", name: "Alice", age: 1 },
+      { id: "c", name: "Bob", age: 2 },
+    ]
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.table.setSorting([{ id: "name", desc: false }]))
+    // Sorted ascending by name: Alice(b), Bob(c), Charlie(a) — id "b" is now
+    // displayed FIRST even though it was originally the second row (index 1).
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["b", "c", "a"])
+    act(() => result.current.runtime.toggleRowSelected("b", true, false))
+    const selectedIds = result.current.table.getRowModel().rows.filter((r) => r.getIsSelected()).map((r) => r.id)
+    expect(selectedIds).toEqual(["b"])
+  })
+
+  it("toggleRowSelected shift-range resolves anchor and target by their current sorted position, not their original data-array index", () => {
+    const rows: Row[] = [
+      { id: "a", name: "Elm", age: 5 },
+      { id: "b", name: "Ash", age: 2 },
+      { id: "c", name: "Fir", age: 6 },
+      { id: "d", name: "Birch", age: 3 },
+      { id: "e", name: "Oak", age: 4 },
+    ]
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({ data: rows, columns: [col.text("name")], getRowId: (r) => r.id, enableRowSelection: true }),
+    )
+    act(() => result.current.table.setSorting([{ id: "name", desc: false }]))
+    // Sorted ascending by name: Ash(b), Birch(d), Elm(a), Fir(c), Oak(e).
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["b", "d", "a", "c", "e"])
+    act(() => result.current.runtime.toggleRowSelected("b", true, false)) // anchor at displayed position 0
+    act(() => result.current.runtime.toggleRowSelected("a", true, true)) // shift-click at displayed position 2 -> range 0..2
+    const selectedIds = result.current.table.getRowModel().rows.filter((r) => r.getIsSelected()).map((r) => r.id)
+    expect(selectedIds.sort()).toEqual(["a", "b", "d"])
+  })
 })

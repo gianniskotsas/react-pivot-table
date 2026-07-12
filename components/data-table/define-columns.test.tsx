@@ -56,6 +56,7 @@ function stubRuntime(overrides: Partial<DataTableRuntime> = {}): DataTableRuntim
     totalRowCount: undefined,
     isAllMatchingSelected: false,
     setAllMatchingSelected: vi.fn(),
+    toggleRowSelected: vi.fn(),
     ...overrides,
   }
 }

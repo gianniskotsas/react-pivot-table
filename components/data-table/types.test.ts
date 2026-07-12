@@ -32,6 +32,7 @@ describe("data-table core types", () => {
       totalRowCount: undefined,
       isAllMatchingSelected: false,
       setAllMatchingSelected: () => {},
+      toggleRowSelected: () => {},
     }
     expect(runtime.activeCell).toEqual(pos)
   })

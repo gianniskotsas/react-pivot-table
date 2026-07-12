@@ -139,7 +139,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                 </TableRow>
               ) : (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} data-state={row.getIsSelected() ? "selected" : undefined}>
                     {row.getVisibleCells().map((cell) => {
                       const pinned = pinnedStyle(cell.column)
                       return (

@@ -109,6 +109,43 @@ export function useDataTable<TData>({
     [table],
   )
 
+  // Tracks the row a shift-click range should extend from, by id — the row
+  // touched by the most recent plain (non-shift) toggle, or the far end of
+  // the most recent shift-range. Deliberately an id, not a positional index:
+  // TanStack's `Row.index` is fixed at row creation to the row's position in
+  // the original, unsorted `data`, not its current on-screen position (see
+  // row-gutter.tsx's `displayIndex` comment) — an index captured at click
+  // time would point at the wrong row once sorting/filtering reorders the
+  // table. Both the anchor's and the clicked row's actual positions are
+  // resolved fresh from the live row model on every call instead.
+  const lastToggledRowIdRef = React.useRef<string | null>(null)
+  const toggleRowSelected = React.useCallback(
+    (rowId: string, checked: boolean, shiftKey: boolean) => {
+      const currentRows = table.getRowModel().rows
+      const anchorId = lastToggledRowIdRef.current
+      const anchorIndex = anchorId === null ? -1 : currentRows.findIndex((r) => r.id === anchorId)
+      if (shiftKey && anchorIndex !== -1) {
+        const clickedIndex = currentRows.findIndex((r) => r.id === rowId)
+        if (clickedIndex !== -1) {
+          const [start, end] =
+            anchorIndex < clickedIndex ? [anchorIndex, clickedIndex] : [clickedIndex, anchorIndex]
+          setRowSelection((prev) => {
+            const next = { ...prev }
+            for (let i = start; i <= end; i++) {
+              const r = currentRows[i]
+              if (r) next[r.id] = checked
+            }
+            return next
+          })
+        }
+      } else {
+        table.getRow(rowId)?.toggleSelected(checked)
+      }
+      lastToggledRowIdRef.current = rowId
+    },
+    [table],
+  )
+
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
@@ -222,6 +259,7 @@ export function useDataTable<TData>({
     totalRowCount,
     isAllMatchingSelected,
     setAllMatchingSelected,
+    toggleRowSelected,
   }
 
   return { table, runtime }
