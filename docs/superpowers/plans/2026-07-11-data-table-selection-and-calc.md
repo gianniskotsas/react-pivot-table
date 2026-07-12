@@ -298,6 +298,8 @@ git commit -m "feat(data-table): add core selection/aggregation types + pure agg
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+**Deviation, found by the implementer:** this plan's own file list missed a 4th file that constructs a full `DataTableRuntime` literal — `components/data-table/use-data-table.ts` itself (the production runtime hook, `runtime: DataTableRuntime = { ...nav, isColumnEditable, updateData }`). Fixed with the same 4 stub defaults (`manualPagination: false`, `totalRowCount: undefined`, `isAllMatchingSelected: false`, `setAllMatchingSelected: () => {}`), documented as temporary pending Task 3's real wiring. Independently spec-verified sound (no behavior change for existing consumers, since nothing reads these fields yet). Quality review found one cheap fix (a comment misattributed the real-wiring task number), applied and amended in. Full repo suite: 194/194 passing. Final commit `1259011`.
+
 ---
 
 ## Task 2: Row-number gutter + tri-state select-all
@@ -622,6 +624,8 @@ git commit -m "feat(data-table): add row-number gutter + tri-state select-all co
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+Independently spec-verified with zero deviations (byte-for-byte match to this plan's given code). Quality review found 4 real issues, all fixed: (1) `indeterminate` was computed but never passed to `<Checkbox>`, so `aria-checked` stayed `"false"` during partial selection instead of `"mixed"`, and the `[&_svg]:opacity-0` CSS hack was dead code (base-ui's Indicator never mounts without `checked || indeterminate`) — fixed by passing `indeterminate={indeterminate}`; (2) the per-row checkbox was unreachable by keyboard for any unselected row (hover-only reveal, no `tabIndex`/focus handling) — fixed with `tabIndex={0}` + `onFocus`/`onBlur` mirroring the mouse handlers; (3) the header's `aria-label` didn't distinguish partial/all-loaded/all-matching states — fixed with a state-aware label matching `column-header.tsx`'s established pattern; (4) the pagination-disabled fallback (`?? table.getRowModel().rows.length`) was dead code resting on an incorrect assumption (TanStack's `pagination` state is never actually `undefined`) — simplified and documented. A 7th test was added for the `aria-checked="mixed"` state. Full regression: 120/120. Amended into the original commit — final SHA `dd89bf4`.
+
 ---
 
 ## Task 3: Wire row selection into `useDataTable` / `DataTable`
@@ -919,6 +923,8 @@ git commit -m "feat(data-table): wire row selection + manualPagination/totalRowC
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
 
+**Two deviations, both spec-verified sound:** (1) `data-table.tsx`'s header rendering had a genuine pre-existing gap — it unconditionally routed every column through `<ColumnHeader label={...} />`, ignoring `columnDef.header` entirely, invisible until now since every `defineColumns`-built column always sets `meta`. Fixed by branching: `meta`-bearing columns keep `ColumnHeader`; meta-less structural columns (the gutter) `flexRender` their own real `header`. Confirmed non-regressive (every existing column still has `meta`). (2) This plan's own literal test ("renders the gutter column and its checkboxes... immediately on render") contradicted Task 2's already-shipped, already-tested hover-reveal design (per-row checkboxes only mount on hover or selection, never all-at-once with nothing selected) — fixed by adjusting the TEST (click select-all first, then assert the count), not regressing Task 2's shipped behavior. Quality review found no blocking issues; added one inline comment documenting `setAllMatchingSelected`'s on/off asymmetry (previously only explained one level up in `types.ts`). Full repo suite: 208/208. Final commit `1df3a01`.
+
 ---
 
 ## Task 4: `useFooterAggregation` — scope resolution + client-side aggregation
@@ -1145,6 +1151,8 @@ git commit -m "feat(data-table): add useFooterAggregation (scope resolution + cl
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+**Deviation, found and verified by empirical revert-and-retest:** this plan's own given test fixture (`useTestTable`) hardcoded `state: { rowSelection: {} }` with a no-op `onRowSelectionChange` — a frozen, uncontrolled TanStack state key that can never actually update (confirmed by tracing TanStack's own controlled-state merge logic AND by temporarily reverting to the exact original fixture and re-running: only the "switches scope to the selection" test failed, exactly as predicted). Fixed with a real `React.useState`-backed controlled-selection pattern. The implementation itself is verbatim, zero deviation. Code-quality review found no issues — the no-op `calculate` stub, unmemoized-but-safe `stateFor` dependencies (TanStack's own row-model getters are internally memoized), and the unchecked `getValue` cast were all confirmed intentional/pre-existing-precedent, not new defects. Full repo suite: 213/213. Commit `2f5b360`.
 
 ---
 
@@ -1434,6 +1442,8 @@ git commit -m "feat(data-table): add hybrid client/server state machine to useFo
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+Independently spec-verified byte-for-byte against this plan's given code (implementation and all 6 new tests). Code-quality review found a real, Critical race condition: `calculate()`'s promise continuations wrote unconditionally into `serverStates`, so a stale in-flight request resolving AFTER a newer request was issued for the same column would silently overwrite the fresher result with no visual indication anything was wrong (reachable simply by changing the aggregation method while a calculation is in flight — no double-click needed). Fixed with a per-column monotonic request-id guard (`requestIdRef`), coexisting with the separate staleness-detection effect. A regression test (two overlapping `calculate()` calls resolved out of arrival order) was added and empirically verified to fail against the pre-fix code and pass post-fix. Full repo suite: 139/139 in `components/data-table/`+`components/table-fields/`. Final commit `bdbe056`.
 
 ---
 
@@ -1740,6 +1750,8 @@ git commit -m "feat(data-table): add TableFooter primitive + footer aggregation 
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```
+
+**Deviation, found by code-quality review:** `TableFooter` was independently confirmed byte-for-byte identical to stock shadcn/ui's own `table.tsx` (fetched live via `gh api`), so no deviation there. `footer-aggregation.tsx`'s `FooterMethodPicker` trigger, however, exposed only a bare method label ("Sum", "—", etc.) with no `aria-label` identifying which column it controlled — with 2+ calculable columns (as this same plan's Task 10 demo wires up), a screen reader user would hear indistinguishable "Sum, button" / "Sum, button" announcements. This mirrors the exact `aria-label` convention already established in `column-header.tsx` and `columns-menu.tsx` earlier in this plan/session. Fixed by threading the column's `meta.label` into `FooterMethodPicker` and building `` `${columnLabel} aggregation: ${method label or "off"}` ``; added a 6th test asserting two columns' triggers get distinct, column-labeled accessible names. `formatValue`'s fixed `en-US`/no-currency formatting and `FooterValueCell`'s `method && state` branch were both investigated and confirmed non-issues (the former is out of scope — `CalculableColumn` carries no field-type metadata to draw from; the latter is unreachable with the real `useFooterAggregation` hook, only a theoretical gap in the test-stub harness). Full `footer-aggregation` suite: 6/6. Typecheck clean. Lint clean (no new warnings; only pre-existing unrelated warnings elsewhere in the repo).
 
 ---
 
