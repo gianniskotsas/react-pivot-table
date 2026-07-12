@@ -67,12 +67,27 @@ describe("ColumnsMenuContent", () => {
     expect(column.pin).toHaveBeenCalledWith(false)
   })
 
-  it("a column with getCanHide/getCanPin both false renders without a checkbox or pin buttons", () => {
-    const column = mockColumn({ id: "name", label: "Name", canHide: false, canPin: false })
+  it("a column with getCanHide/getCanPin both false is omitted entirely — nothing this menu offers applies to it", () => {
+    // e.g. row-gutter.tsx's structural selection/row-number column sets both
+    // to false; every control in this menu is conditional on one of the two,
+    // so listing such a column would just show its raw internal id with no
+    // way to act on it.
+    const column = mockColumn({ id: "__row-gutter__", label: "__row-gutter__", canHide: false, canPin: false })
+    const other = mockColumn({ id: "name", label: "Name" })
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const table = { getAllLeafColumns: () => [column] } as any
+    const table = { getAllLeafColumns: () => [column, other] } as any
     render(<ColumnsMenuContent table={table} />)
+    expect(screen.queryByText("__row-gutter__")).toBeNull()
     expect(screen.getByText("Name")).toBeInTheDocument()
-    expect(screen.queryByRole("checkbox")).toBeNull()
+  })
+
+  it("a column that can be pinned but not hidden (or vice versa) is still listed", () => {
+    const pinOnly = mockColumn({ id: "pinOnly", label: "Pin Only", canHide: false, canPin: true })
+    const hideOnly = mockColumn({ id: "hideOnly", label: "Hide Only", canHide: true, canPin: false })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const table = { getAllLeafColumns: () => [pinOnly, hideOnly] } as any
+    render(<ColumnsMenuContent table={table} />)
+    expect(screen.getByText("Pin Only")).toBeInTheDocument()
+    expect(screen.getByText("Hide Only")).toBeInTheDocument()
   })
 })
