@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { DataTable } from "@/components/data-table"
+import { Toaster } from "@/components/ui/sonner"
 
 import { columns } from "./columns"
 import { tasks as initialTasks, type Task } from "./data"
@@ -15,7 +16,9 @@ import { tasks as initialTasks, type Task } from "./data"
  * edits are visibly reflected in the grid. `enableRowSelection` turns on the
  * row-number/checkbox gutter and tri-state select-all; `calculableColumns`
  * exercises the footer's method picker and client-side aggregation over
- * `hoursLogged`/`budget`.
+ * `hoursLogged`/`budget`. `onCreateRows` appends rows pasted past the end of
+ * the table to local state; `<Toaster />` renders undo/redo/paste/clear/
+ * export confirmation toasts.
  */
 export function DataTableDemoClient() {
   const [data, setData] = React.useState<Task[]>(initialTasks)
@@ -29,18 +32,40 @@ export function DataTableDemoClient() {
     [],
   )
 
+  const handleCreateRows = React.useCallback((partialRows: Partial<Task>[]) => {
+    setData((prev) => [
+      ...prev,
+      ...partialRows.map((partial, i) => ({
+        id: `new-${Date.now()}-${i}`,
+        title: "",
+        assignee: "",
+        priority: "medium",
+        status: "todo",
+        hoursLogged: 0,
+        budget: 0,
+        completed: false,
+        dueDate: new Date().toISOString().slice(0, 10),
+        ...partial,
+      })),
+    ])
+  }, [])
+
   return (
-    <DataTable<Task>
-      data={data}
-      columns={columns}
-      getRowId={(row) => row.id}
-      editable
-      onUpdateData={handleUpdateData}
-      enableRowSelection
-      calculableColumns={[
-        { columnId: "hoursLogged", default: "sum" },
-        { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
-      ]}
-    />
+    <>
+      <DataTable<Task>
+        data={data}
+        columns={columns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        onCreateRows={handleCreateRows}
+        enableRowSelection
+        calculableColumns={[
+          { columnId: "hoursLogged", default: "sum" },
+          { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
+        ]}
+      />
+      <Toaster />
+    </>
   )
 }
