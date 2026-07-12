@@ -212,7 +212,18 @@ function buildColumn<TData, V>(
   // defined, this passes opts.editable through unchanged (including
   // undefined, which correctly falls back to the table default).
   const editable = field.edit ? opts.editable : false
-  const meta: DataTableColumnMeta = { editable, label: labelFor(key, opts.header) }
+  const meta: DataTableColumnMeta = {
+    editable,
+    label: labelFor(key, opts.header),
+    // `V` is erased at the ColumnDef<TData, unknown> boundary this function
+    // returns into — the casts here are safe because toClipboard/fromClipboard
+    // are always called with values that flowed through THIS SAME column
+    // (either read via row.getValue(column.id), or about to be written back
+    // via updateData for that same column), never a value from a different
+    // column's V.
+    toClipboard: field.toClipboard as (value: unknown) => string,
+    fromClipboard: field.fromClipboard as (text: string) => unknown,
+  }
   return {
     id: key,
     // `key` is a validated TData key for every field method except

@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DataTableRuntimeContext } from "./data-table-runtime-context"
 import { defineColumns } from "./define-columns"
-import type { CellPos, DataTableRuntime } from "./types"
+import type { CellPos, DataTableColumnMeta, DataTableRuntime } from "./types"
 
 type Row = { id: string; name: string; age: number; active: boolean }
 
@@ -280,5 +280,31 @@ describe("defineColumns / col builder", () => {
     // Read-only pill renders; no checkbox input present.
     expect(screen.queryByRole("checkbox")).toBeNull()
     expect(screen.getByText("True")).toBeInTheDocument()
+  })
+
+  it("col.text's meta carries the field's toClipboard/fromClipboard for TSV/CSV round-tripping", () => {
+    const col = defineColumns<{ id: string; name: string }>()
+    const column = col.text("name")
+    const meta = column.meta as DataTableColumnMeta
+    expect(meta.toClipboard?.("Bailey")).toBe("Bailey")
+    expect(meta.fromClipboard?.("Bailey")).toBe("Bailey")
+  })
+
+  it("col.number's meta.fromClipboard parses numeric text and returns undefined for unparseable text", () => {
+    const col = defineColumns<{ id: string; age: number }>()
+    const column = col.number("age")
+    const meta = column.meta as DataTableColumnMeta
+    expect(meta.toClipboard?.(42)).toBe("42")
+    expect(meta.fromClipboard?.("42")).toBe(42)
+    expect(meta.fromClipboard?.("not a number")).toBeUndefined()
+  })
+
+  it("col.checkbox's meta round-trips true/false through clipboard text", () => {
+    const col = defineColumns<{ id: string; done: boolean }>()
+    const column = col.checkbox("done")
+    const meta = column.meta as DataTableColumnMeta
+    expect(meta.toClipboard?.(true)).toBe("true")
+    expect(meta.fromClipboard?.("true")).toBe(true)
+    expect(meta.fromClipboard?.("false")).toBe(false)
   })
 })
