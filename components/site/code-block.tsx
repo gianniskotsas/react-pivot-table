@@ -29,7 +29,7 @@ export function CodeBlock({ code, filename, className }: CodeBlockProps) {
     <div
       className={cn(
         "group relative overflow-hidden rounded-lg border bg-muted/40",
-        className,
+        className
       )}
     >
       {filename ? (
@@ -41,7 +41,7 @@ export function CodeBlock({ code, filename, className }: CodeBlockProps) {
         type="button"
         onClick={copy}
         aria-label={copied ? "Copied" : "Copy code"}
-        className="absolute right-2.5 top-2.5 z-10 inline-flex size-7 items-center justify-center rounded-md border bg-background/70 text-muted-foreground backdrop-blur transition hover:text-foreground focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
+        className="absolute top-2.5 right-2.5 z-10 inline-flex size-7 items-center justify-center rounded-md border bg-background/70 text-muted-foreground backdrop-blur transition hover:text-foreground focus-visible:opacity-100 md:opacity-0 md:group-hover:opacity-100"
       >
         {copied ? (
           <Check className="size-3.5 text-foreground" />

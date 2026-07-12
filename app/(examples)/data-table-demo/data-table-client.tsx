@@ -3,7 +3,6 @@
 import * as React from "react"
 
 import { DataTable } from "@/components/data-table"
-import { Toaster } from "@/components/ui/sonner"
 
 import { columns } from "./columns"
 import { tasks as initialTasks, type Task } from "./data"
@@ -17,8 +16,8 @@ import { tasks as initialTasks, type Task } from "./data"
  * row-number/checkbox gutter and tri-state select-all; `calculableColumns`
  * exercises the footer's method picker and client-side aggregation over
  * `hoursLogged`/`budget`. `onCreateRows` appends rows pasted past the end of
- * the table to local state; `<Toaster />` renders undo/redo/paste/clear/
- * export confirmation toasts.
+ * the table to local state. Undo/redo/paste/clear/export confirmation toasts
+ * render via the global `<Toaster />` mounted in the root layout.
  */
 export function DataTableDemoClient() {
   const [data, setData] = React.useState<Task[]>(initialTasks)
@@ -26,10 +25,12 @@ export function DataTableDemoClient() {
   const handleUpdateData = React.useCallback(
     (rowId: string, columnId: string, value: unknown) => {
       setData((prev) =>
-        prev.map((row) => (row.id === rowId ? { ...row, [columnId]: value } : row)),
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
       )
     },
-    [],
+    []
   )
 
   const handleCreateRows = React.useCallback((partialRows: Partial<Task>[]) => {
@@ -51,21 +52,18 @@ export function DataTableDemoClient() {
   }, [])
 
   return (
-    <>
-      <DataTable<Task>
-        data={data}
-        columns={columns}
-        getRowId={(row) => row.id}
-        editable
-        onUpdateData={handleUpdateData}
-        onCreateRows={handleCreateRows}
-        enableRowSelection
-        calculableColumns={[
-          { columnId: "hoursLogged", default: "sum" },
-          { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
-        ]}
-      />
-      <Toaster />
-    </>
+    <DataTable<Task>
+      data={data}
+      columns={columns}
+      getRowId={(row) => row.id}
+      editable
+      onUpdateData={handleUpdateData}
+      onCreateRows={handleCreateRows}
+      enableRowSelection
+      calculableColumns={[
+        { columnId: "hoursLogged", default: "sum" },
+        { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
+      ]}
+    />
   )
 }

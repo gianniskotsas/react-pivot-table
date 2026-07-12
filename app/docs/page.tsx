@@ -1,5 +1,3 @@
-import { TriangleAlert } from "lucide-react"
-
 import {
   Table,
   TableBody,
@@ -8,30 +6,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { CodeBlock } from "@/components/site/code-block"
+import { ComponentPreview } from "@/components/site/component-preview"
+import { InstallTabs } from "@/components/site/install-tabs"
+import { PageHeader, Section } from "@/components/site/page-header"
+import { SimpleDemo } from "@/components/site/simple-demo"
+import { AccountsTable } from "@/app/(examples)/accounts/accounts-table"
+import { accounts } from "@/app/(examples)/accounts/data"
 
-const INSTALL_URL =
-  "npx shadcn@latest add https://ui.kotsas.com/r/grouped-data-table.json"
-
-const INSTALL_RAW =
-  "npx shadcn@latest add https://raw.githubusercontent.com/gianniskotsas/react-pivot-table/main/public/r/grouped-data-table.json"
-
-const NAMESPACE = `// components.json
-{
-  "registries": {
-    "@kotsas-ui": "https://ui.kotsas.com/r/{name}.json"
-  }
-}`
-
-const NAMESPACE_CMD = "npx shadcn@latest add @kotsas-ui/grouped-data-table"
-
-const INSTALL_RADIX_URL =
-  "npx shadcn@latest add https://ui.kotsas.com/r/grouped-data-table-radix.json"
-
-const NAMESPACE_RADIX_CMD =
-  "npx shadcn@latest add @kotsas-ui/grouped-data-table-radix"
-
-const USAGE = `import { GroupedDataTable } from "@/components/grouped-data-table"
+const SIMPLE_USAGE = `import { GroupedDataTable } from "@/components/grouped-data-table"
 import type { ColumnDef } from "@tanstack/react-table"
 
 type Account = { id: string; entity: string; bank: string; balance: number }
@@ -51,32 +33,38 @@ export function Demo({ data }: { data: Account[] }) {
         { id: "entity", label: "Entity" },
         { id: "bank", label: "Bank" },
       ]}
-      initialGrouping={["entity", "bank"]}
+      initialGrouping={["entity"]}
       groupColumn={{
         header: "Account",
-        leaf: { primary: (row) => row.original.id },
+        // name-only leaf — no icon or secondary line
+        leaf: { primary: (row) => row.original.accountName },
       }}
     />
   )
 }`
 
-const LEAF = `groupColumn={{
-  header: "Account",
-  countMode: "leaf", // "leaf" (default) | "immediate"
-  leaf: {
-    primary: (row) => row.original.name,          // required
-    icon: () => <Landmark className="size-4" />,  // optional
-    secondary: (row) => row.original.iban,        // optional
-  },
-  // …or full control (takes precedence over leaf):
-  // renderLeaf: (row) => <YourCell row={row} />,
-}}`
-
-const FILTERS = `filterableColumns={[
-  { id: "bank", label: "Bank", type: "select", options },
-  { id: "balance", label: "Balance", type: "number" },
-  { id: "name", label: "Name", type: "text" },
-]}
+const RICH_USAGE = `<GroupedDataTable<Account>
+  data={accounts}
+  columns={columns}
+  groupableDimensions={[
+    { id: "entity", label: "Entity" },
+    { id: "bank", label: "Bank" },
+  ]}
+  initialGrouping={["entity", "bank"]}
+  filterableColumns={[
+    { id: "entity", label: "Entity", type: "select", options },
+    { id: "bank", label: "Bank", type: "select", options },
+    { id: "balance", label: "Balance", type: "number" },
+  ]}
+  groupColumn={{
+    header: "Account",
+    leaf: {
+      icon: () => <Landmark className="size-4 text-muted-foreground" />,
+      primary: (row) => row.original.accountName,
+      secondary: (row) => row.original.iban,
+    },
+  }}
+/>
 // types: "text" | "number" | "select" | "date"
 // operators are readable: is / is not / contains / does not contain /
 // is any of / is none of / greater than / less than / between …`
@@ -122,85 +110,43 @@ const PROPS: { name: string; type: string; desc: string }[] = [
 
 export default function DocsPage() {
   return (
-    <div className="max-w-3xl space-y-12">
-      <header className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">
-          Grouped Data Table
-        </h1>
-        <p className="text-muted-foreground">
-          An AG-Grid-style grouping / drill-down table for React, distributed as
-          a shadcn registry component.
-        </p>
-      </header>
+    <div className="max-w-3xl space-y-16">
+      <PageHeader
+        title="Grouped Data Table"
+        description="An AG-Grid-style grouping / drill-down table for React, distributed as a shadcn registry component."
+      />
 
       {/* Installation */}
-      <section id="installation" className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Installation</h2>
-
-        <div className="flex gap-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
-          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-500" />
-          <p className="text-muted-foreground">
-            <span className="font-medium text-foreground">
-              Two builds — match your project.
-            </span>{" "}
-            <code className="font-mono text-foreground">
-              grouped-data-table
-            </code>{" "}
-            is for <span className="text-foreground">Base UI</span> shadcn
-            projects;{" "}
-            <code className="font-mono text-foreground">
-              grouped-data-table-radix
-            </code>{" "}
-            (below) is for <span className="text-foreground">Radix UI</span>{" "}
-            projects — same component and API. Not sure which you have? Check
-            the <code className="font-mono text-foreground">base</code> in your{" "}
-            <code className="font-mono text-foreground">components.json</code>{" "}
-            (Base UI is{" "}
-            <code className="font-mono text-foreground">
-              npx shadcn@latest init --base base-ui
-            </code>
-            ).
-          </p>
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          Add it from the hosted registry:
-        </p>
-        <CodeBlock code={INSTALL_URL} />
-        <p className="text-sm text-muted-foreground">…or from GitHub raw:</p>
-        <CodeBlock code={INSTALL_RAW} />
-        <p className="text-sm text-muted-foreground">
-          Or register the <code className="font-mono">@kotsas-ui</code>{" "}
-          namespace and install by alias:
-        </p>
-        <CodeBlock filename="components.json" code={NAMESPACE} />
-        <CodeBlock code={NAMESPACE_CMD} />
-        <p className="text-sm text-muted-foreground">
-          <span className="font-medium text-foreground">Radix projects:</span>{" "}
-          install the Radix build instead (by URL or namespace):
-        </p>
-        <CodeBlock code={INSTALL_RADIX_URL} />
-        <CodeBlock code={NAMESPACE_RADIX_CMD} />
-        <p className="text-sm text-muted-foreground">
-          Either build installs the component into{" "}
-          <code className="font-mono">components/grouped-data-table/</code>, the
-          npm deps (<code className="font-mono">@tanstack/react-table</code>,{" "}
-          <code className="font-mono">@dnd-kit/*</code>,{" "}
-          <code className="font-mono">lucide-react</code>), and the shadcn
-          primitives it needs (table, button, badge, checkbox, popover, select,
-          input).
-        </p>
-      </section>
+      <Section
+        id="installation"
+        title="Installation"
+        description={
+          <>
+            Two builds — <code className="font-mono">grouped-data-table</code>{" "}
+            for Base UI shadcn projects,{" "}
+            <code className="font-mono">grouped-data-table-radix</code> for
+            Radix UI projects.
+          </>
+        }
+      >
+        <InstallTabs package="@kotsas-ui/grouped-data-table" />
+      </Section>
 
       {/* Usage */}
-      <section id="usage" className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Usage</h2>
-        <CodeBlock filename="demo.tsx" code={USAGE} />
-      </section>
+      <Section
+        id="usage"
+        title="Usage"
+        description="Group by a single dimension with a name-only leaf — the smallest useful config."
+      >
+        <ComponentPreview
+          preview={<SimpleDemo />}
+          code={SIMPLE_USAGE}
+          filename="demo.tsx"
+        />
+      </Section>
 
       {/* Props */}
-      <section id="props" className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Props</h2>
+      <Section id="props" title="Props">
         <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
@@ -225,32 +171,28 @@ export default function DocsPage() {
             </TableBody>
           </Table>
         </div>
-      </section>
+      </Section>
 
-      {/* Leaf */}
-      <section id="group-column" className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">
-          Group column &amp; leaf
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          The left-most column renders the hierarchy. For leaf rows, use the
-          declarative <code className="font-mono">leaf</code> (primary required;
-          icon and secondary optional), or{" "}
-          <code className="font-mono">renderLeaf</code> for full control.
-        </p>
-        <CodeBlock code={LEAF} />
-      </section>
-
-      {/* Filters */}
-      <section id="filters" className="space-y-4">
-        <h2 className="text-xl font-semibold tracking-tight">Filters</h2>
-        <p className="text-sm text-muted-foreground">
-          Declare which columns are filterable. Users build two-level AND/OR
-          filter groups in the toolbar; the table re-filters and recomputes
-          group counts and aggregations live.
-        </p>
-        <CodeBlock code={FILTERS} />
-      </section>
+      {/* Rich example */}
+      <Section
+        id="group-column"
+        title="Grouping, filters & rich leaf"
+        description={
+          <>
+            Two-level grouping, AND/OR filter groups, and a leaf with an icon,
+            name, and secondary line. The left-most column renders the hierarchy
+            — use the declarative <code className="font-mono">leaf</code>{" "}
+            (primary required; icon and secondary optional), or{" "}
+            <code className="font-mono">renderLeaf</code> for full control.
+          </>
+        }
+      >
+        <ComponentPreview
+          align="start"
+          preview={<AccountsTable data={accounts} />}
+          code={RICH_USAGE}
+        />
+      </Section>
     </div>
   )
 }
