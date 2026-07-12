@@ -6,9 +6,21 @@ export { useDataTable, type UseDataTableOptions, type UseDataTableResult } from 
 export { useGridNavigation, type GridNavigation, type UseGridNavigationOptions } from "./use-grid-navigation"
 export { DataTableRuntimeContext, useDataTableRuntime } from "./data-table-runtime-context"
 export { PopoverButtonTrigger, type PopoverButtonTriggerProps } from "./primitives"
+export { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
+export { aggregate, AGGREGATION_METHOD_LABELS, ALL_AGGREGATION_METHODS } from "./aggregate"
+export {
+  useFooterAggregation,
+  type UseFooterAggregationOptions,
+  type FooterAggregationResult,
+} from "./use-footer-aggregation"
+export { DataTableFooter } from "./footer-aggregation"
 export type {
   CellPos,
   DataTableColumnMeta,
   DataTableRuntime,
   MoveDirection,
+  AggregationMethod,
+  CalculableColumn,
+  ComputeAggregateArgs,
+  AggregateCellState,
 } from "./types"

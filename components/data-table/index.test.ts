@@ -14,6 +14,13 @@ describe("data-table barrel", () => {
       "DataTableRuntimeContext",
       "useDataTableRuntime",
       "PopoverButtonTrigger",
+      "buildRowGutterColumn",
+      "ROW_GUTTER_COLUMN_ID",
+      "aggregate",
+      "AGGREGATION_METHOD_LABELS",
+      "ALL_AGGREGATION_METHODS",
+      "useFooterAggregation",
+      "DataTableFooter",
     ]) {
       expect(dataTable).toHaveProperty(name)
     }
