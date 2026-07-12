@@ -187,18 +187,22 @@
       "type": "registry:block",
       "title": "Data Table",
       "description": "A type-safe, editable DataTable<TData> for shadcn + TanStack Table v8: grid keyboard navigation, inline cell editing, sortable/hideable/freezable/resizable columns, built on @kotsas-ui/table-fields. Requires a base-ui shadcn setup.",
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "sonner"],
       "registryDependencies": [
         "@kotsas-ui/table-fields",
         "table",
         "button",
         "checkbox",
         "popover",
-        "input"
+        "input",
+        "sonner"
       ],
       "files": [
         { "path": "components/data-table/types.ts", "type": "registry:lib", "target": "components/data-table/types.ts" },
         { "path": "components/data-table/aggregate.ts", "type": "registry:lib", "target": "components/data-table/aggregate.ts" },
+        { "path": "components/data-table/undo.ts", "type": "registry:lib", "target": "components/data-table/undo.ts" },
+        { "path": "components/data-table/clipboard.ts", "type": "registry:lib", "target": "components/data-table/clipboard.ts" },
+        { "path": "components/data-table/export-csv.ts", "type": "registry:lib", "target": "components/data-table/export-csv.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
         { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
@@ -218,18 +222,22 @@
       "type": "registry:block",
       "title": "Data Table (Radix)",
       "description": "Radix-UI build of the Data Table — same component and API as data-table. Install this if your shadcn/ui project uses Radix UI primitives; install data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table", "lucide-react", "sonner"],
       "registryDependencies": [
         "@kotsas-ui/table-fields",
         "table",
         "button",
         "checkbox",
         "popover",
-        "input"
+        "input",
+        "sonner"
       ],
       "files": [
         { "path": "components/data-table/types.ts", "type": "registry:lib", "target": "components/data-table/types.ts" },
         { "path": "components/data-table/aggregate.ts", "type": "registry:lib", "target": "components/data-table/aggregate.ts" },
+        { "path": "components/data-table/undo.ts", "type": "registry:lib", "target": "components/data-table/undo.ts" },
+        { "path": "components/data-table/clipboard.ts", "type": "registry:lib", "target": "components/data-table/clipboard.ts" },
+        { "path": "components/data-table/export-csv.ts", "type": "registry:lib", "target": "components/data-table/export-csv.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
         { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
