@@ -434,6 +434,8 @@ git commit -m "feat(data-table): populate column meta clipboard serializers from
 Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>"
 ```
 
+**No deviations.** `buildColumn`'s existing shape matched the plan's snippet exactly. Spec review hand-verified all 3 new tests against the REAL underlying field implementations (`textField`/`numberField`/`checkboxField`), not just trusting the tests' own assertions — confirmed `col.number`'s `fromClipboard("not a number")` really returns `undefined` (not `NaN`/`0`) by reading `parseNumeric`'s actual empty-string guard. Code-quality review confirmed the type-erasure cast's justification is structurally sound (one fresh `meta` object per column, never shared/reassigned) rather than hand-wavy, and that `buildColumn`'s single shared code path (unconditional passthrough, no branching on field identity or `noAccessor`) makes the 3 tested field types sufficient coverage — a dedicated `col.button` test would exercise no additional logic. 172/172 regression, typecheck shows only the still-expected deferred `use-data-table.ts` failure, lint clean. Commit `8ce4433`.
+
 ---
 
 ## Task 3: Wire undo/redo into `useDataTable` + Cmd/Ctrl+Z keyboard handling
