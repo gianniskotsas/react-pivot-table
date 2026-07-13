@@ -81,11 +81,26 @@ describe("ActionsMenu", () => {
     expect(screen.getByText("1")).toBeInTheDocument()
   })
 
+  it("disables the trigger when no rows are selected, enables it once a row is selected", () => {
+    const { rerender } = render(
+      <ActionsMenu table={mockTable([])} actions={[mockAction()]} />,
+    )
+    expect(screen.getByRole("button", { name: "Actions" })).toBeDisabled()
+
+    rerender(
+      <ActionsMenu
+        table={mockTable([{ id: "1", original: { id: "1", name: "Ada" } }])}
+        actions={[mockAction()]}
+      />,
+    )
+    expect(screen.getByRole("button", { name: /^actions/i })).not.toBeDisabled()
+  })
+
   it("clicking an action closes the popover", async () => {
-    const table = mockTable([])
+    const table = mockTable([{ id: "1", original: { id: "1", name: "Ada" } }])
     render(<ActionsMenu table={table} actions={[mockAction()]} />)
 
-    await userEvent.click(screen.getByRole("button", { name: "Actions" }))
+    await userEvent.click(screen.getByRole("button", { name: /^actions/i }))
     const archive = await screen.findByText("Archive")
     await userEvent.click(archive)
     expect(screen.queryByText("Archive")).toBeNull()

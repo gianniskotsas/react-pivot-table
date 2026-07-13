@@ -3,23 +3,47 @@ import {
   ArrowDownUp,
   ArrowRight,
   Columns3,
+  Download,
+  Filter,
+  LayoutGrid,
   MousePointerClick,
   Rows3,
   Sigma,
   SquareStack,
-  Table2,
   Undo2,
+  Wallet,
 } from "lucide-react"
 
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 
+const BLOCKS = [
+  {
+    href: "/docs/blocks",
+    icon: LayoutGrid,
+    name: "Overview",
+    description: "Ready-to-copy, styled tables for specific use cases.",
+  },
+  {
+    href: "/docs/blocks/financials",
+    icon: Wallet,
+    name: "Financials",
+    description: "Transactions table with category filters and totals.",
+  },
+]
+
 const FEATURES = [
   {
-    href: "/docs/sorting-filtering",
+    href: "/docs/sorting",
     icon: ArrowDownUp,
-    name: "Sorting & Filtering",
-    description: "Click-to-sort columns, and AND/OR filter groups.",
+    name: "Sorting",
+    description: "Click-to-sort columns, ascending / descending / none.",
+  },
+  {
+    href: "/docs/filtering",
+    icon: Filter,
+    name: "Filtering",
+    description: "AND/OR filter groups over readable operators.",
   },
   {
     href: "/docs/column-management",
@@ -31,7 +55,7 @@ const FEATURES = [
     href: "/docs/row-selection",
     icon: MousePointerClick,
     name: "Row Selection & Actions",
-    description: "Tri-state select-all and shift-click range select.",
+    description: "Tri-state select-all, shift-click range, and bulk actions.",
   },
   {
     href: "/docs/footer-aggregation",
@@ -43,7 +67,13 @@ const FEATURES = [
     href: "/docs/copy-paste-undo",
     icon: Undo2,
     name: "Copy/Paste & Undo",
-    description: "Excel-style TSV copy/paste, undo/redo, and CSV export.",
+    description: "Excel-style TSV copy/paste, and undo/redo.",
+  },
+  {
+    href: "/docs/export",
+    icon: Download,
+    name: "Export Data",
+    description: "Export the current sorted/filtered/visible view to CSV.",
   },
   {
     href: "/docs/grouping",
@@ -59,36 +89,15 @@ const FEATURES = [
   },
 ]
 
-const COMPONENTS = [
-  {
-    href: "/docs/components/data-table",
-    icon: Table2,
-    name: "Data Table",
-    description: "Editable spreadsheet-style grid.",
-  },
-  {
-    href: "/docs/components/grouped-data-table",
-    icon: Rows3,
-    name: "Grouped Data Table",
-    description: "AG-Grid-style grouping / drill-down table.",
-  },
-  {
-    href: "/docs/components/table-fields",
-    icon: SquareStack,
-    name: "Table Fields",
-    description: "The field-type catalogue behind Data Table.",
-  },
-]
-
 const PAGE_MARKDOWN = `# Kotsas UI
 
 Copy-paste, typed table components for shadcn/ui, built on TanStack Table.
 
+## Blocks
+${BLOCKS.map((b) => `- [${b.name}](${b.href}): ${b.description}`).join("\n")}
+
 ## Features
 ${FEATURES.map((f) => `- [${f.name}](${f.href}): ${f.description}`).join("\n")}
-
-## Components
-${COMPONENTS.map((c) => `- [${c.name}](${c.href}): ${c.description}`).join("\n")}
 `
 
 function CardGrid({
@@ -131,8 +140,16 @@ export default function DocsOverviewPage() {
       <PageHeader
         title="Overview"
         actions={<CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs" />}
-        description="Copy-paste, typed table components for shadcn/ui, built on TanStack Table. Browse by what you're trying to do (Features), or jump straight to a component's install command and props (Components)."
+        description="Copy-paste, typed table components for shadcn/ui, built on TanStack Table. Grab a ready-to-copy Block for a specific use case, or browse by what you're trying to do (Features)."
       />
+
+      <Section
+        id="blocks"
+        title="Blocks"
+        description="Fully styled, ready-to-copy tables for a specific use case — start from one instead of building from scratch."
+      >
+        <CardGrid items={BLOCKS} />
+      </Section>
 
       <Section
         id="features"
@@ -140,14 +157,6 @@ export default function DocsOverviewPage() {
         description="Capabilities, documented once — each page notes which component(s) support it today."
       >
         <CardGrid items={FEATURES} />
-      </Section>
-
-      <Section
-        id="components"
-        title="Components"
-        description="Install commands, full props reference, and a minimal usage example per component."
-      >
-        <CardGrid items={COMPONENTS} />
       </Section>
     </div>
   )

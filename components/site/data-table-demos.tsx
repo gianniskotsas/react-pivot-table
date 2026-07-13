@@ -114,6 +114,35 @@ export function BasicDataTableDemo() {
   )
 }
 
+export function ColumnManagementDataTableDemo() {
+  const [data, setData] = React.useState(BASIC_DATA)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full">
+      <DataTable<Task>
+        data={data}
+        columns={basicColumns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enablePagination={false}
+        enableExport={false}
+      />
+    </div>
+  )
+}
+
 const SELECTION_DATA: Task[] = [
   ...BASIC_DATA,
   {

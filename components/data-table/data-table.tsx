@@ -48,6 +48,8 @@ export type DataTableProps<TData> = {
   totalRowCount?: number
   calculableColumns?: CalculableColumn[]
   computeAggregate?: (args: ComputeAggregateArgs) => Promise<number>
+  /** Shows the toolbar's Export button. Default true. */
+  enableExport?: boolean
   /** Declares which columns are filterable and how (the filter "options"). */
   filterableColumns?: FilterDef[]
   /** Initial filter state (groups + AND/OR). */
@@ -124,9 +126,9 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
   }
 
   return (
-    <Button type="button" variant="outline" size="sm" onClick={handleExport} aria-label="Export CSV">
+    <Button type="button" variant="outline" size="sm" onClick={handleExport} aria-label="Export">
+      Export
       <Download className="size-4" aria-hidden="true" />
-      Export CSV
     </Button>
   )
 }
@@ -161,7 +163,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
               <ActionsMenu table={table} actions={props.actions} />
             )}
           </div>
-          <ExportCsvButton table={table} />
+          {(props.enableExport ?? true) && <ExportCsvButton table={table} />}
         </div>
 
         <div className="rounded-md border" onKeyDown={runtime.handleKeyDown}>

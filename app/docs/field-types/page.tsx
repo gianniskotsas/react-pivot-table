@@ -1,5 +1,3 @@
-import Link from "next/link"
-
 import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { InstallTabs } from "@/components/site/install-tabs"
@@ -95,15 +93,9 @@ export default function FieldTypesPage() {
         description={
           <>
             The typical entry point is{" "}
-            <code className="font-mono">defineColumns</code> (installed as part
-            of{" "}
-            <Link
-              href="/docs/components/data-table"
-              className="underline underline-offset-4"
-            >
-              Data Table
-            </Link>
-            ), which returns a typed <code className="font-mono">col</code>{" "}
+            <code className="font-mono">defineColumns</code>
+            {" (installed as part of Data Table), "}
+            which returns a typed <code className="font-mono">col</code>{" "}
             builder closed over your row type — each method only accepts a key
             whose value type matches the field.
           </>
@@ -126,13 +118,13 @@ export default function FieldTypesPage() {
           </>
         }
       >
-        <div className="space-y-10">
+        <div className="space-y-14">
           {CATEGORIES.map((category) => (
-            <div key={category} className="space-y-4">
+            <div key={category} className="space-y-6">
               <h3 className="text-sm font-medium text-muted-foreground">
                 {category}
               </h3>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-8">
                 {FIELD_DEMOS.filter((f) => f.category === category).map(
                   (field) => (
                     <div key={field.id} className="space-y-2">

@@ -6,12 +6,15 @@ import {
   ArrowDownUp,
   BookOpen,
   Columns3,
+  Download,
+  Filter,
+  LayoutGrid,
   MousePointerClick,
   Rows3,
   SquareStack,
   Sigma,
-  Table2,
   Undo2,
+  Wallet,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -29,13 +32,17 @@ const GROUPS: {
     items: [{ href: "/docs", label: "Overview", icon: BookOpen }],
   },
   {
+    title: "Blocks",
+    items: [
+      { href: "/docs/blocks", label: "Overview", icon: LayoutGrid },
+      { href: "/docs/blocks/financials", label: "Financials", icon: Wallet },
+    ],
+  },
+  {
     title: "Features",
     items: [
-      {
-        href: "/docs/sorting-filtering",
-        label: "Sorting & Filtering",
-        icon: ArrowDownUp,
-      },
+      { href: "/docs/sorting", label: "Sorting", icon: ArrowDownUp },
+      { href: "/docs/filtering", label: "Filtering", icon: Filter },
       {
         href: "/docs/column-management",
         label: "Column Management",
@@ -56,28 +63,9 @@ const GROUPS: {
         label: "Copy/Paste & Undo",
         icon: Undo2,
       },
+      { href: "/docs/export", label: "Export Data", icon: Download },
       { href: "/docs/grouping", label: "Grouping & Hierarchy", icon: Rows3 },
       { href: "/docs/field-types", label: "Field Types", icon: SquareStack },
-    ],
-  },
-  {
-    title: "Components",
-    items: [
-      {
-        href: "/docs/components/data-table",
-        label: "Data Table",
-        icon: Table2,
-      },
-      {
-        href: "/docs/components/grouped-data-table",
-        label: "Grouped Data Table",
-        icon: Rows3,
-      },
-      {
-        href: "/docs/components/table-fields",
-        label: "Table Fields",
-        icon: SquareStack,
-      },
     ],
   },
 ]

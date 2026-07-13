@@ -12,7 +12,7 @@ const GITHUB_URL = "https://github.com/gianniskotsas/react-pivot-table"
 
 const SHOWCASE = [
   {
-    href: "/docs/components/grouped-data-table",
+    href: "/docs/grouping",
     icon: Rows3,
     name: "Grouped Data Table",
     description:
@@ -20,7 +20,7 @@ const SHOWCASE = [
     preview: <HomeGroupedPreview />,
   },
   {
-    href: "/docs/components/data-table",
+    href: "/docs/sorting",
     icon: Table2,
     name: "Data Table",
     description:

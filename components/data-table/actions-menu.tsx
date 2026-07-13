@@ -65,7 +65,7 @@ export function ActionsMenu<TData>({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverButtonTrigger className="gap-2">
+      <PopoverButtonTrigger className="gap-2" disabled={rowIds.length === 0}>
         Actions
         {rowIds.length > 0 && <Badge variant="secondary">{rowIds.length}</Badge>}
         <ChevronDown className="size-4" aria-hidden="true" />

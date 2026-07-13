@@ -266,6 +266,18 @@ describe("DataTable — footer calc", () => {
 })
 
 describe("DataTable — export CSV", () => {
+  it("omits the Export button when enableExport is false", () => {
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        enableExport={false}
+      />,
+    )
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull()
+  })
+
   it("renders an Export CSV button that downloads the current (sorted/filtered/visible) view", () => {
     // downloadCsv is a thin DOM wrapper (Blob + anchor click) with no
     // jsdom-observable side effect worth asserting on directly — spy on the
@@ -280,7 +292,7 @@ describe("DataTable — export CSV", () => {
     // `downloadCsv` references through the same mutable module object.
     const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
     expect(downloadSpy).toHaveBeenCalled()
     const [filename, csv] = downloadSpy.mock.calls[0]
     expect(filename).toMatch(/\.csv$/)
@@ -295,7 +307,7 @@ describe("DataTable — export CSV", () => {
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
     fireEvent.click(screen.getByRole("button", { name: /columns/i }))
     fireEvent.click(screen.getByRole("checkbox", { name: "Age" }))
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
     expect(downloadSpy).toHaveBeenCalled()
     const [, csv] = downloadSpy.mock.calls[0]
     expect(csv.split("\r\n")[0]).toBe("Name")
@@ -306,7 +318,7 @@ describe("DataTable — export CSV", () => {
   it("excludes the row-gutter (selection) column from the exported CSV when enableRowSelection is on", () => {
     const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
     render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
-    fireEvent.click(screen.getByRole("button", { name: "Export CSV" }))
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
     expect(downloadSpy).toHaveBeenCalled()
     const [, csv] = downloadSpy.mock.calls[0]
     // Exact-equality (not .toContain) so a regression in the
@@ -381,7 +393,7 @@ describe("DataTable — filters and actions toolbar", () => {
       "div.flex.items-center.justify-between",
     ) as HTMLElement
     expect(toolbar).not.toBeNull()
-    const exportButton = screen.getByRole("button", { name: "Export CSV" })
+    const exportButton = screen.getByRole("button", { name: "Export" })
     // Export CSV is a direct child of the justify-between row, not nested
     // inside the left-hand gap-2 group with Columns/Filters/Actions.
     expect(exportButton.parentElement).toBe(toolbar)

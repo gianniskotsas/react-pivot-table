@@ -2,7 +2,7 @@ import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 import { WorksWith } from "@/components/site/works-with"
-import { SelectionDataTableDemo } from "@/components/site/data-table-demos"
+import { ColumnManagementDataTableDemo } from "@/components/site/data-table-demos"
 
 const CODE = `col.text("title", {
   enableHiding: true,   // default true — can be toggled in the Columns menu
@@ -41,7 +41,10 @@ export default function ColumnManagementPage() {
         description="Open the Columns menu in the toolbar to toggle visibility or pin a column. Both are opt-in per column via defineColumns."
       >
         <WorksWith components={["data-table"]} />
-        <ComponentPreview preview={<SelectionDataTableDemo />} code={CODE} />
+        <ComponentPreview
+          preview={<ColumnManagementDataTableDemo />}
+          code={CODE}
+        />
       </Section>
     </div>
   )
