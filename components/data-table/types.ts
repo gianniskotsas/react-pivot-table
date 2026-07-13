@@ -129,3 +129,58 @@ export type DataTableRuntime = {
   /** Whether `redo()` currently does anything. */
   canRedo: boolean
 }
+
+export type FilterType = "text" | "number" | "select" | "date"
+
+export type FilterOperator =
+  | "contains" | "doesNotContain" | "equals" | "isNot" | "startsWith"
+  | "eq" | "ne" | "gt" | "lt" | "between"
+  | "is" | "isAnyOf" | "isNoneOf"
+  | "before" | "after" | "dateBetween"
+
+export type FilterDef = {
+  /**
+   * Must match a column's `id`/`accessorKey` AND a key on the row data — the
+   * filter engine reads the value via `row[id]`. Filterable columns must
+   * therefore be accessorKey-based (not `accessorFn`-only).
+   */
+  id: string
+  label: string
+  type: FilterType
+  /** Allowed operators; falls back to the type default when omitted. */
+  operators?: FilterOperator[]
+  /** Required for type "select" — the choosable values. */
+  options?: { label: string; value: string }[]
+}
+
+export type FilterValue =
+  | string
+  | number
+  | [number, number]
+  | [string, string]
+  | string[]
+  | null
+
+export type FilterCondition = {
+  /** Unique id for keying / removal. */
+  id: string
+  columnId: string
+  operator: FilterOperator
+  value: FilterValue
+}
+
+export type Combinator = "and" | "or"
+export type FilterGroup = { id: string; combinator: Combinator; conditions: FilterCondition[] }
+export type FilterState = { combinator: Combinator; groups: FilterGroup[] }
+
+/** One developer-configured entry in the Actions dropdown. */
+export type DataTableAction<TData> = {
+  /** Unique id for keying. */
+  id: string
+  label: string
+  icon?: React.ComponentType<{ className?: string }>
+  /** Disable this action (e.g. based on selection state); defaults to enabled. */
+  disabled?: boolean
+  variant?: "default" | "destructive"
+  onClick: (context: { rowIds: string[]; rows: TData[] }) => void
+}

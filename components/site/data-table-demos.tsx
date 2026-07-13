@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { Archive, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 
-import { DataTable, defineColumns } from "@/components/data-table"
+import { DataTable, defineColumns, type DataTableAction } from "@/components/data-table"
 
 type Task = {
   id: string
@@ -147,6 +149,22 @@ const selectionColumns = [
   selectionCol.currency("budget", { header: "Budget" }),
 ]
 
+const selectionActions: DataTableAction<Task>[] = [
+  {
+    id: "archive",
+    label: "Archive",
+    icon: Archive,
+    onClick: ({ rows }) => toast(`Archived ${rows.length} task${rows.length === 1 ? "" : "s"}`),
+  },
+  {
+    id: "delete",
+    label: "Delete",
+    icon: Trash2,
+    variant: "destructive",
+    onClick: ({ rows }) => toast(`Deleted ${rows.length} task${rows.length === 1 ? "" : "s"}`),
+  },
+]
+
 export function SelectionDataTableDemo() {
   const [data, setData] = React.useState(SELECTION_DATA)
 
@@ -171,9 +189,51 @@ export function SelectionDataTableDemo() {
         onUpdateData={handleUpdateData}
         enableRowSelection
         enablePagination={false}
+        actions={selectionActions}
         calculableColumns={[
           { columnId: "hours", default: "sum" },
           { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
+        ]}
+      />
+    </div>
+  )
+}
+
+const filterCol = defineColumns<Task>()
+const filterColumns = [
+  filterCol.text("title", { header: "Title" }),
+  filterCol.singleSelect("priority", { header: "Priority", options: PRIORITIES }),
+  filterCol.singleSelect("status", { header: "Status", options: STATUSES }),
+  filterCol.currency("budget", { header: "Budget" }),
+]
+
+export function FilterableDataTableDemo() {
+  const [data, setData] = React.useState(SELECTION_DATA)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full">
+      <DataTable<Task>
+        data={data}
+        columns={filterColumns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enablePagination={false}
+        filterableColumns={[
+          { id: "priority", label: "Priority", type: "select", options: PRIORITIES },
+          { id: "status", label: "Status", type: "select", options: STATUSES },
+          { id: "budget", label: "Budget", type: "number" },
         ]}
       />
     </div>

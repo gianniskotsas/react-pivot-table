@@ -997,3 +997,73 @@ describe("useDataTable — paste + bulk-clear", () => {
     expect(mockToast).not.toHaveBeenCalled()
   })
 })
+
+describe("useDataTable filtering", () => {
+  it("pre-filters rows from initialFilterState before they reach the table", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (row) => row.id,
+        filterableColumns: [{ id: "name", label: "Name", type: "text" }],
+        initialFilterState: {
+          combinator: "and",
+          groups: [
+            { id: "g1", combinator: "and", conditions: [
+              { id: "f1", columnId: "name", operator: "equals", value: "Ada" },
+            ] },
+          ],
+        },
+      }),
+    )
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["2"])
+  })
+
+  it("setFilterState re-filters the row model reactively", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (row) => row.id,
+        filterableColumns: [{ id: "name", label: "Name", type: "text" }],
+      }),
+    )
+    expect(result.current.table.getRowModel().rows).toHaveLength(2)
+    act(() =>
+      result.current.setFilterState({
+        combinator: "and",
+        groups: [
+          { id: "g1", combinator: "and", conditions: [
+            { id: "f1", columnId: "name", operator: "equals", value: "Bailey" },
+          ] },
+        ],
+      }),
+    )
+    expect(result.current.table.getRowModel().rows.map((r) => r.id)).toEqual(["1"])
+  })
+
+  it("setFilterState normalizes away unknown-column conditions", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name")],
+        getRowId: (row) => row.id,
+        filterableColumns: [{ id: "name", label: "Name", type: "text" }],
+      }),
+    )
+    act(() =>
+      result.current.setFilterState({
+        combinator: "and",
+        groups: [
+          { id: "g1", combinator: "and", conditions: [
+            { id: "f1", columnId: "ghost", operator: "is", value: "x" },
+          ] },
+        ],
+      }),
+    )
+    expect(result.current.filterState.groups).toEqual([])
+  })
+})

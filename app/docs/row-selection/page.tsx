@@ -11,6 +11,10 @@ const CODE = `<DataTable<Task>
   columns={columns}
   getRowId={(row) => row.id}
   enableRowSelection
+  actions={[
+    { id: "archive", label: "Archive", icon: Archive, onClick: ({ rows }) => archive(rows) },
+    { id: "delete", label: "Delete", icon: Trash2, variant: "destructive", onClick: ({ rows }) => remove(rows) },
+  ]}
 />`
 
 const PAGE_MARKDOWN = `# Row Selection & Actions
@@ -18,8 +22,10 @@ const PAGE_MARKDOWN = `# Row Selection & Actions
 enableRowSelection adds a checkbox gutter with a tri-state select-all
 header (none → all loaded → all matching, when totalRowCount exceeds what's
 loaded) and Sheets/Gmail-style shift-click range select. Selected rows scope
-Footer & Aggregation and become the target of Delete/Backspace bulk-clear.
-Works with: Data Table.
+Footer & Aggregation, become the target of Delete/Backspace bulk-clear, and
+are passed to every action in the \`actions\` dropdown (Columns → Filters →
+Actions in the toolbar) via \`onClick({ rowIds, rows })\`. Works with: Data
+Table.
 
 \`\`\`tsx
 ${CODE}
@@ -49,15 +55,18 @@ export default function RowSelectionPage() {
               className="underline underline-offset-4"
             >
               footer aggregation
-            </Link>{" "}
-            and become the target of Delete/Backspace bulk-clear (see{" "}
+            </Link>
+            , become the target of Delete/Backspace bulk-clear (see{" "}
             <Link
               href="/docs/copy-paste-undo"
               className="underline underline-offset-4"
             >
               Copy/Paste &amp; Undo
             </Link>
-            ).
+            {
+              "), and are passed to the developer-configured Actions dropdown — shown in the toolbar next to Columns and Filters, with a chevron-down trigger — via each action's "
+            }
+            <code className="font-mono">onClick({"{ rowIds, rows }"})</code>.
           </>
         }
       >

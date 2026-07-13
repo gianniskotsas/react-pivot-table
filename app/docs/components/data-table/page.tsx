@@ -102,6 +102,21 @@ const PROPS: { name: string; type: string; desc: string }[] = [
     type: "(args: ComputeAggregateArgs) => Promise<number>",
     desc: 'Server-side aggregate for scopes exceeding what\'s loaded (manualPagination), e.g. "sum of this column across all matching rows."',
   },
+  {
+    name: "filterableColumns?",
+    type: "FilterDef[]",
+    desc: "Which columns are filterable and how — { id, label, type: \"text\" | \"number\" | \"select\" | \"date\", operators?, options? }[]. Adds the toolbar's Filters popover when non-empty.",
+  },
+  {
+    name: "initialFilterState?",
+    type: "FilterState",
+    desc: "Initial AND/OR filter groups, applied once at mount. Use the returned setFilterState from useDataTable to change filters imperatively.",
+  },
+  {
+    name: "actions?",
+    type: "DataTableAction<TData>[]",
+    desc: "Developer-configured bulk actions — { id, label, icon?, disabled?, variant?, onClick: ({ rowIds, rows }) => void }[]. Adds the toolbar's Actions dropdown (chevron-down trigger) when non-empty.",
+  },
 ]
 
 const PAGE_MARKDOWN = `# Data Table

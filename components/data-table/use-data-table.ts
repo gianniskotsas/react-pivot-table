@@ -21,7 +21,12 @@ import { useGridNavigation } from "./use-grid-navigation"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
 import { gridToTsv, parseTsv, planPaste } from "./clipboard"
-import type { DataTableColumnMeta, DataTableRuntime } from "./types"
+import { evaluateFilterState, normalizeFilterState, emptyFilterState } from "./filter-utils"
+import type { DataTableColumnMeta, DataTableRuntime, FilterDef, FilterState } from "./types"
+
+// Stable empty default so omitting `filterableColumns` doesn't create a new
+// array reference each render (which would churn the derived memos/callbacks).
+const EMPTY_FILTER_COLUMNS: FilterDef[] = []
 
 export type UseDataTableOptions<TData> = {
   data: TData[]
@@ -38,11 +43,17 @@ export type UseDataTableOptions<TData> = {
   manualPagination?: boolean
   /** Total row count across all pages/filters when manualPagination is true. */
   totalRowCount?: number
+  /** Declares which columns are filterable and how (the filter "options"). */
+  filterableColumns?: FilterDef[]
+  /** Initial filter state (groups + AND/OR). */
+  initialFilterState?: FilterState
 }
 
 export type UseDataTableResult<TData> = {
   table: Table<TData>
   runtime: DataTableRuntime
+  filterState: FilterState
+  setFilterState: (next: FilterState | ((prev: FilterState) => FilterState)) => void
 }
 
 export function useDataTable<TData>({
@@ -56,6 +67,8 @@ export function useDataTable<TData>({
   enableRowSelection = false,
   manualPagination = false,
   totalRowCount,
+  filterableColumns = EMPTY_FILTER_COLUMNS,
+  initialFilterState,
 }: UseDataTableOptions<TData>): UseDataTableResult<TData> {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -68,6 +81,36 @@ export function useDataTable<TData>({
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
   const [isAllMatchingSelected, setIsAllMatchingSelectedState] = React.useState(false)
 
+  const filterableIds = React.useMemo(
+    () => filterableColumns.map((f) => f.id),
+    [filterableColumns],
+  )
+
+  const [filterState, setFilterStateRaw] = React.useState<FilterState>(() =>
+    normalizeFilterState(initialFilterState ?? emptyFilterState(), filterableIds),
+  )
+
+  const setFilterState = React.useCallback(
+    (next: FilterState | ((prev: FilterState) => FilterState)) => {
+      setFilterStateRaw((prev) =>
+        normalizeFilterState(typeof next === "function" ? next(prev) : next, filterableIds),
+      )
+    },
+    [filterableIds],
+  )
+
+  // Pre-filter rows against the FilterState tree, then hand the result to
+  // TanStack — mirrors grouped-data-table's use-grouped-table.ts exactly, so
+  // getPrePaginationRowModel()/getCoreRowModel() downstream (paste-boundary
+  // detection, commitBatch's row lookup) already reflect "post-filter" rows.
+  // Values are read by accessorKey via `row[columnId]` — see FilterDef.id.
+  const filteredData = React.useMemo(() => {
+    if (filterState.groups.length === 0) return data
+    return data.filter((row) =>
+      evaluateFilterState(filterState, (columnId) => (row as Record<string, unknown>)[columnId]),
+    )
+  }, [data, filterState])
+
   const resolvedColumns = React.useMemo(
     () => (enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns),
     [enableRowSelection, columns],
@@ -77,7 +120,7 @@ export function useDataTable<TData>({
   // returns identity-stable functions it cannot safely memoize, so it skips
   // compiling this component. Expected with TanStack Table, harmless.
   const table = useReactTable<TData>({
-    data,
+    data: filteredData,
     columns: resolvedColumns,
     getRowId: getRowId ?? ((row, index) => String(index)),
     state: {
@@ -532,5 +575,5 @@ export function useDataTable<TData>({
     handleKeyDown,
   }
 
-  return { table, runtime }
+  return { table, runtime, filterState, setFilterState }
 }

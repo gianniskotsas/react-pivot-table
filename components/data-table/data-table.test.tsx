@@ -317,3 +317,73 @@ describe("DataTable — export CSV", () => {
     downloadSpy.mockRestore()
   })
 })
+
+describe("DataTable — filters and actions toolbar", () => {
+  it("omits the Filters and Actions buttons when filterableColumns/actions aren't provided", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    expect(screen.queryByRole("button", { name: /filters/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /actions/i })).toBeNull()
+  })
+
+  it("renders the Filters button next to Columns and filters rows via the builder", () => {
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        filterableColumns={[{ id: "name", label: "Name", type: "text" }]}
+      />,
+    )
+    expect(screen.getByText("Bailey")).toBeInTheDocument()
+    expect(screen.getByText("Ada")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: /filters/i }))
+    fireEvent.click(screen.getByRole("button", { name: /add filter group/i }))
+    fireEvent.change(screen.getByLabelText("Filter value for Name"), {
+      target: { value: "Ada" },
+    })
+
+    expect(screen.queryByText("Bailey")).toBeNull()
+    expect(screen.getByText("Ada")).toBeInTheDocument()
+  })
+
+  it("renders a configured Actions dropdown with a chevron-down trigger, invoking onClick with selected rows", () => {
+    const onClick = vi.fn()
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        enableRowSelection
+        actions={[{ id: "archive", label: "Archive", onClick }]}
+      />,
+    )
+    const trigger = screen.getByRole("button", { name: /actions/i })
+    expect(trigger.querySelector("svg")).toBeInTheDocument() // ChevronDown icon
+
+    fireEvent.click(screen.getAllByRole("checkbox")[1]) // select "Bailey" (row "1")
+    fireEvent.click(trigger)
+    fireEvent.click(screen.getByText("Archive"))
+    expect(onClick).toHaveBeenCalledWith({ rowIds: ["1"], rows: [DATA[0]] })
+  })
+
+  it("puts Export CSV on the opposite side of the toolbar from Columns/Filters/Actions", () => {
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        filterableColumns={[{ id: "name", label: "Name", type: "text" }]}
+        actions={[{ id: "archive", label: "Archive", onClick: vi.fn() }]}
+      />,
+    )
+    const toolbar = screen.getByRole("button", { name: /columns/i }).closest(
+      "div.flex.items-center.justify-between",
+    ) as HTMLElement
+    expect(toolbar).not.toBeNull()
+    const exportButton = screen.getByRole("button", { name: "Export CSV" })
+    // Export CSV is a direct child of the justify-between row, not nested
+    // inside the left-hand gap-2 group with Columns/Filters/Actions.
+    expect(exportButton.parentElement).toBe(toolbar)
+  })
+})

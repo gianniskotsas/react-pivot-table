@@ -16,15 +16,24 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
+import { ActionsMenu } from "./actions-menu"
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
 import { DataTableRuntimeContext } from "./data-table-runtime-context"
 import { downloadCsv, exportCsv } from "./export-csv"
+import { FilterPopover } from "./filter-builder"
 import { DataTableFooter } from "./footer-aggregation"
 import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { useDataTable } from "./use-data-table"
 import { useFooterAggregation } from "./use-footer-aggregation"
-import type { CalculableColumn, ComputeAggregateArgs, DataTableColumnMeta } from "./types"
+import type {
+  CalculableColumn,
+  ComputeAggregateArgs,
+  DataTableAction,
+  DataTableColumnMeta,
+  FilterDef,
+  FilterState,
+} from "./types"
 
 export type DataTableProps<TData> = {
   data: TData[]
@@ -39,6 +48,12 @@ export type DataTableProps<TData> = {
   totalRowCount?: number
   calculableColumns?: CalculableColumn[]
   computeAggregate?: (args: ComputeAggregateArgs) => Promise<number>
+  /** Declares which columns are filterable and how (the filter "options"). */
+  filterableColumns?: FilterDef[]
+  /** Initial filter state (groups + AND/OR). */
+  initialFilterState?: FilterState
+  /** Developer-configured bulk actions, shown in the Actions dropdown next to Columns. */
+  actions?: DataTableAction<TData>[]
 }
 
 type PinnedCellStyle = { style: React.CSSProperties; className?: string }
@@ -117,7 +132,7 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
 }
 
 export function DataTable<TData>(props: DataTableProps<TData>) {
-  const { table, runtime } = useDataTable(props)
+  const { table, runtime, filterState, setFilterState } = useDataTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
   const aggregation = useFooterAggregation({
@@ -132,8 +147,20 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
   return (
     <DataTableRuntimeContext.Provider value={runtime}>
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <ColumnsMenu table={table} />
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ColumnsMenu table={table} />
+            {props.filterableColumns && props.filterableColumns.length > 0 && (
+              <FilterPopover
+                filterableColumns={props.filterableColumns}
+                filterState={filterState}
+                onFilterStateChange={setFilterState}
+              />
+            )}
+            {props.actions && props.actions.length > 0 && (
+              <ActionsMenu table={table} actions={props.actions} />
+            )}
+          </div>
           <ExportCsvButton table={table} />
         </div>
 
