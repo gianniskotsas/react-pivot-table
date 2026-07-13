@@ -10,6 +10,7 @@ import {
   MousePointerClick,
   MoveHorizontal,
   Rows3,
+  ShoppingCart,
   Sigma,
   SquareStack,
   Undo2,
@@ -44,6 +45,12 @@ const BLOCKS = [
     icon: Megaphone,
     name: "Marketing Campaigns",
     description: "Campaign performance grid with spend/return totals.",
+  },
+  {
+    href: "/docs/blocks/reservations",
+    icon: ShoppingCart,
+    name: "Reservations",
+    description: "Bookings table with date-range filters and status badges.",
   },
 ]
 

@@ -86,7 +86,40 @@ const basicColumns = [
   basicCol.checkbox("done", { header: "Done" }),
 ]
 
+// Plain demo — no selection/actions/filters, and Export off, since it's
+// reused across feature pages (Sorting, Column Resizing, Copy/Paste & Undo)
+// whose own topic isn't the toolbar's Export button. See ExportDataTableDemo
+// for the one page (Export Data) where Export should actually be visible.
 export function BasicDataTableDemo() {
+  const [data, setData] = React.useState(BASIC_DATA)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full">
+      <DataTable<Task>
+        data={data}
+        columns={basicColumns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enablePagination={false}
+        enableExport={false}
+      />
+    </div>
+  )
+}
+
+export function ExportDataTableDemo() {
   const [data, setData] = React.useState(BASIC_DATA)
 
   const handleUpdateData = React.useCallback(
@@ -194,7 +227,9 @@ const selectionActions: DataTableAction<Task>[] = [
   },
 ]
 
-export function SelectionDataTableDemo() {
+// Row Selection & Actions' own demo: selection + the Actions dropdown only —
+// no footer (that's Footer & Aggregation's own demo below) and Export off.
+export function RowSelectionDataTableDemo() {
   const [data, setData] = React.useState(SELECTION_DATA)
 
   const handleUpdateData = React.useCallback(
@@ -218,7 +253,41 @@ export function SelectionDataTableDemo() {
         onUpdateData={handleUpdateData}
         enableRowSelection
         enablePagination={false}
+        enableExport={false}
         actions={selectionActions}
+      />
+    </div>
+  )
+}
+
+// Footer & Aggregation's own demo: selection is kept (the footer scopes to
+// it — that's the feature's own mechanic, not an unrelated one), but no
+// Actions dropdown and Export off.
+export function FooterAggregationDataTableDemo() {
+  const [data, setData] = React.useState(SELECTION_DATA)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full">
+      <DataTable<Task>
+        data={data}
+        columns={selectionColumns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enableRowSelection
+        enablePagination={false}
+        enableExport={false}
         calculableColumns={[
           { columnId: "hours", default: "sum" },
           { columnId: "budget", methods: ["sum", "avg"], default: "sum" },
@@ -259,6 +328,7 @@ export function FilterableDataTableDemo() {
         editable
         onUpdateData={handleUpdateData}
         enablePagination={false}
+        enableExport={false}
         filterableColumns={[
           { id: "priority", label: "Priority", type: "select", options: PRIORITIES },
           { id: "status", label: "Status", type: "select", options: STATUSES },

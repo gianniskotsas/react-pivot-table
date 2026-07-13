@@ -1,3 +1,5 @@
+import Link from "next/link"
+
 import {
   Table,
   TableBody,
@@ -49,9 +51,7 @@ Every edit — typing, a paste, or a bulk-clear — pushes one undo step, so a
 multi-cell paste or a selection-wide clear undoes as a single Ctrl/Cmd+Z.
 Copy and paste move tab-separated values, compatible with Excel/Sheets. A
 block pasted past the last row is reported through onCreateRows instead of
-being silently dropped. The toolbar's Export CSV button exports the current
-sorted/filtered/visible view (RFC 4180, with formula-injection–neutralizing
-for fields starting with =, +, -, or @). Works with: Data Table.
+being silently dropped. Works with: Data Table.
 
 ## Keyboard shortcuts
 ${SHORTCUTS.map((s) => `- \`${s.keys}\`: ${s.desc}`).join("\n")}
@@ -69,7 +69,7 @@ export default function CopyPasteUndoPage() {
         actions={
           <CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs/copy-paste-undo" />
         }
-        description="Excel/Sheets-compatible TSV copy/paste, a single undo/redo history across edits, bulk-clear, and CSV export."
+        description="Excel/Sheets-compatible TSV copy/paste, a single undo/redo history across edits, and bulk-clear."
       />
 
       <Section
@@ -94,23 +94,6 @@ export default function CopyPasteUndoPage() {
           code="<DataTable editable onUpdateData={...} onCreateRows={...} />"
         />
       </Section>
-
-      <Section
-        id="csv-export"
-        title="CSV export"
-        description={
-          <>
-            The toolbar&apos;s{" "}
-            <span className="font-medium text-foreground">Export CSV</span>{" "}
-            button exports the current sorted/filtered/visible view (RFC 4180,
-            with formula-injection–neutralizing for fields starting with{" "}
-            <code className="font-mono">=</code>,{" "}
-            <code className="font-mono">+</code>,{" "}
-            <code className="font-mono">-</code>, or{" "}
-            <code className="font-mono">@</code>).
-          </>
-        }
-      />
 
       <Section
         id="clipboard-serialization"
@@ -150,6 +133,16 @@ export default function CopyPasteUndoPage() {
               ))}
             </TableBody>
           </Table>
+        </div>
+      </Section>
+
+      <Section id="see-also" title="See also">
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          Downloading the current view as a file is a separate feature — see{" "}
+          <Link href="/docs/export" className="underline underline-offset-4">
+            Export Data
+          </Link>
+          .
         </div>
       </Section>
     </div>

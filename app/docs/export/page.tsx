@@ -2,7 +2,7 @@ import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 import { WorksWith } from "@/components/site/works-with"
-import { BasicDataTableDemo } from "@/components/site/data-table-demos"
+import { ExportDataTableDemo } from "@/components/site/data-table-demos"
 
 const CODE = `<DataTable
   data={rows}
@@ -39,7 +39,7 @@ export default function ExportDataPage() {
         description="On by default. Each column serializes with the same formatter its cell uses (currency, date, percent, …), so the CSV matches what users see, not raw values."
       >
         <WorksWith components={["data-table"]} />
-        <ComponentPreview preview={<BasicDataTableDemo />} code={CODE} />
+        <ComponentPreview preview={<ExportDataTableDemo />} code={CODE} />
       </Section>
     </div>
   )

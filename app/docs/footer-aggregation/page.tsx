@@ -4,7 +4,7 @@ import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 import { WorksWith } from "@/components/site/works-with"
-import { SelectionDataTableDemo } from "@/components/site/data-table-demos"
+import { FooterAggregationDataTableDemo } from "@/components/site/data-table-demos"
 
 const CODE = `<DataTable<Task>
   data={rows}
@@ -59,7 +59,7 @@ export default function FooterAggregationPage() {
         }
       >
         <WorksWith components={["data-table"]} />
-        <ComponentPreview preview={<SelectionDataTableDemo />} code={CODE} />
+        <ComponentPreview preview={<FooterAggregationDataTableDemo />} code={CODE} />
       </Section>
 
       <Section

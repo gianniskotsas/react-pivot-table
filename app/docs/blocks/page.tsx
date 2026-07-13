@@ -1,7 +1,6 @@
 import Link from "next/link"
-import { ArrowRight, ShoppingCart, Users, Wallet, Megaphone } from "lucide-react"
+import { ArrowRight, Megaphone, ShoppingCart, Users, Wallet } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 
@@ -12,27 +11,24 @@ const BLOCKS = [
     name: "Financials",
     description:
       "Transactions table with category/account filters, sign-colored amounts, and live totals.",
-    status: "ready" as const,
   },
   {
     href: "/docs/blocks/crm",
     icon: Users,
     name: "CRM",
     description: "Deals pipeline grouped by stage, with owner filters.",
-    status: "ready" as const,
   },
   {
+    href: "/docs/blocks/reservations",
     icon: ShoppingCart,
     name: "Reservations",
     description: "Bookings table with date-range filters and status badges.",
-    status: "soon" as const,
   },
   {
     href: "/docs/blocks/marketing-campaigns",
     icon: Megaphone,
     name: "Marketing Campaigns",
     description: "Campaign performance grid with spend/return aggregation.",
-    status: "ready" as const,
   },
 ]
 
@@ -41,7 +37,7 @@ const PAGE_MARKDOWN = `# Blocks
 Fully styled, ready-to-copy tables for a specific use case — start from one
 instead of building from scratch.
 
-${BLOCKS.map((b) => `- ${b.name}${b.status === "soon" ? " (coming soon)" : ""}: ${b.description}`).join("\n")}
+${BLOCKS.map((b) => `- [${b.name}](${b.href}): ${b.description}`).join("\n")}
 `
 
 export default function BlocksOverviewPage() {
@@ -55,44 +51,24 @@ export default function BlocksOverviewPage() {
 
       <Section id="blocks" title="Available blocks">
         <div className="grid gap-3 sm:grid-cols-2">
-          {BLOCKS.map(({ href, icon: Icon, name, description, status }) => {
-            const content = (
-              <>
-                <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <h3 className="text-sm font-medium">{name}</h3>
-                    {status === "soon" ? (
-                      <Badge variant="secondary" className="text-[10px]">
-                        Soon
-                      </Badge>
-                    ) : (
-                      <ArrowRight className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                    )}
-                  </div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {description}
-                  </p>
+          {BLOCKS.map(({ href, icon: Icon, name, description }) => (
+            <Link
+              key={href}
+              href={href}
+              className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:border-foreground/20"
+            >
+              <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-medium">{name}</h3>
+                  <ArrowRight className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                 </div>
-              </>
-            )
-            return status === "ready" && href ? (
-              <Link
-                key={name}
-                href={href}
-                className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:border-foreground/20"
-              >
-                {content}
-              </Link>
-            ) : (
-              <div
-                key={name}
-                className="flex items-start gap-3 rounded-lg border border-dashed p-4 opacity-60"
-              >
-                {content}
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {description}
+                </p>
               </div>
-            )
-          })}
+            </Link>
+          ))}
         </div>
       </Section>
     </div>
