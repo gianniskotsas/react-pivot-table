@@ -399,3 +399,42 @@ describe("DataTable — filters and actions toolbar", () => {
     expect(exportButton.parentElement).toBe(toolbar)
   })
 })
+
+describe("DataTable — column resizing", () => {
+  it("renders a resize handle only on resizable columns, not on the row-gutter", () => {
+    render(
+      <DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />,
+    )
+    expect(screen.getByRole("separator", { name: "Resize Name column" })).toBeInTheDocument()
+    expect(screen.getByRole("separator", { name: "Resize Age column" })).toBeInTheDocument()
+    // row-gutter.tsx sets enableResizing: false, so it gets no handle.
+    expect(screen.queryAllByRole("separator")).toHaveLength(2)
+  })
+
+  it("dragging the handle grows the column via columnSizing state", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    const th = screen.getByText("Name").closest("th") as HTMLTableCellElement
+    expect(th.style.width).toBe("150px") // TanStack's default column size
+
+    const handle = screen.getByRole("separator", { name: "Resize Name column" })
+    fireEvent.mouseDown(handle, { clientX: 100 })
+    fireEvent.mouseMove(document, { clientX: 160 })
+    fireEvent.mouseUp(document, { clientX: 160 })
+
+    expect(th.style.width).toBe("210px")
+  })
+
+  it("double-clicking the handle resets the column to its default size", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+    const th = screen.getByText("Name").closest("th") as HTMLTableCellElement
+    const handle = screen.getByRole("separator", { name: "Resize Name column" })
+
+    fireEvent.mouseDown(handle, { clientX: 100 })
+    fireEvent.mouseMove(document, { clientX: 160 })
+    fireEvent.mouseUp(document, { clientX: 160 })
+    expect(th.style.width).toBe("210px")
+
+    fireEvent.doubleClick(handle)
+    expect(th.style.width).toBe("150px")
+  })
+})

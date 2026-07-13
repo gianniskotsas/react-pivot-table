@@ -178,7 +178,7 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                       <TableHead
                         key={header.id}
                         style={{ width: header.getSize(), ...pinned.style }}
-                        className={cn("overflow-hidden text-ellipsis", pinned.className)}
+                        className={cn("relative overflow-hidden text-ellipsis", pinned.className)}
                       >
                         {header.isPlaceholder ? null : meta ? (
                           <ColumnHeader column={header.column} label={meta.label} />
@@ -193,6 +193,20 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                           // component (e.g. row-gutter's tri-state
                           // select-all checkbox).
                           flexRender(header.column.columnDef.header, header.getContext())
+                        )}
+                        {header.column.getCanResize() && (
+                          <div
+                            onMouseDown={header.getResizeHandler()}
+                            onTouchStart={header.getResizeHandler()}
+                            onDoubleClick={() => header.column.resetSize()}
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={`Resize ${meta?.label ?? header.column.id} column`}
+                            className={cn(
+                              "absolute top-0 right-0 h-full w-1.5 cursor-col-resize touch-none select-none hover:bg-foreground/20",
+                              header.column.getIsResizing() && "bg-foreground/40"
+                            )}
+                          />
                         )}
                       </TableHead>
                     )

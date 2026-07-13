@@ -6,11 +6,14 @@ import {
   Download,
   Filter,
   LayoutGrid,
+  Megaphone,
   MousePointerClick,
+  MoveHorizontal,
   Rows3,
   Sigma,
   SquareStack,
   Undo2,
+  Users,
   Wallet,
 } from "lucide-react"
 
@@ -29,6 +32,18 @@ const BLOCKS = [
     icon: Wallet,
     name: "Financials",
     description: "Transactions table with category filters and totals.",
+  },
+  {
+    href: "/docs/blocks/crm",
+    icon: Users,
+    name: "CRM",
+    description: "Deals grouped by pipeline stage, with owner filters.",
+  },
+  {
+    href: "/docs/blocks/marketing-campaigns",
+    icon: Megaphone,
+    name: "Marketing Campaigns",
+    description: "Campaign performance grid with spend/return totals.",
   },
 ]
 
@@ -50,6 +65,12 @@ const FEATURES = [
     icon: Columns3,
     name: "Column Management",
     description: "Show/hide columns and pin them left or right.",
+  },
+  {
+    href: "/docs/column-resizing",
+    icon: MoveHorizontal,
+    name: "Column Resizing",
+    description: "Drag a column's edge to resize; double-click to reset.",
   },
   {
     href: "/docs/row-selection",

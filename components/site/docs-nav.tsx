@@ -9,11 +9,14 @@ import {
   Download,
   Filter,
   LayoutGrid,
+  Megaphone,
   MousePointerClick,
+  MoveHorizontal,
   Rows3,
   SquareStack,
   Sigma,
   Undo2,
+  Users,
   Wallet,
 } from "lucide-react"
 
@@ -36,6 +39,12 @@ const GROUPS: {
     items: [
       { href: "/docs/blocks", label: "Overview", icon: LayoutGrid },
       { href: "/docs/blocks/financials", label: "Financials", icon: Wallet },
+      { href: "/docs/blocks/crm", label: "CRM", icon: Users },
+      {
+        href: "/docs/blocks/marketing-campaigns",
+        label: "Marketing Campaigns",
+        icon: Megaphone,
+      },
     ],
   },
   {
@@ -47,6 +56,11 @@ const GROUPS: {
         href: "/docs/column-management",
         label: "Column Management",
         icon: Columns3,
+      },
+      {
+        href: "/docs/column-resizing",
+        label: "Column Resizing",
+        icon: MoveHorizontal,
       },
       {
         href: "/docs/row-selection",

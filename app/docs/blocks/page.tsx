@@ -15,10 +15,11 @@ const BLOCKS = [
     status: "ready" as const,
   },
   {
+    href: "/docs/blocks/crm",
     icon: Users,
     name: "CRM",
-    description: "Contacts and deals, pipeline-stage grouping, activity log.",
-    status: "soon" as const,
+    description: "Deals pipeline grouped by stage, with owner filters.",
+    status: "ready" as const,
   },
   {
     icon: ShoppingCart,
@@ -27,10 +28,11 @@ const BLOCKS = [
     status: "soon" as const,
   },
   {
+    href: "/docs/blocks/marketing-campaigns",
     icon: Megaphone,
     name: "Marketing Campaigns",
     description: "Campaign performance grid with spend/return aggregation.",
-    status: "soon" as const,
+    status: "ready" as const,
   },
 ]
 
