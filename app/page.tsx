@@ -44,7 +44,11 @@ export default function HomePage() {
 
       <main className="mx-auto max-w-5xl px-6">
         {/* Hero */}
-        <section className="flex flex-col items-center gap-6 py-24 text-center md:py-32">
+        <section className="relative flex flex-col items-center gap-6 py-24 text-center md:py-32">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_50%_50%_at_50%_0%,color-mix(in_oklch,var(--primary),transparent_88%),transparent)]"
+          />
           <Badge variant="secondary" className="rounded-full font-normal">
             Open source · shadcn registry
           </Badge>
@@ -80,7 +84,7 @@ export default function HomePage() {
           {SHOWCASE.map(({ href, icon: Icon, name, description, preview }) => (
             <div
               key={href}
-              className="group relative flex flex-col overflow-hidden rounded-xl border bg-card transition-colors hover:border-foreground/20"
+              className="group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-foreground/5 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
             >
               <div className="relative h-56 overflow-hidden bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_93%)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black_65%,transparent_100%)] bg-[size:14px_14px] p-4">
                 <div className="pointer-events-none origin-top-left scale-[0.82]">

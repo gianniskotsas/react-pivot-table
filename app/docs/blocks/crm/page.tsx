@@ -137,7 +137,7 @@ const filterableColumns: FilterDef[] = [
 
 export function CrmBlock() {
   return (
-    <div className="w-full space-y-4 rounded-xl border bg-card p-4">
+    <div className="w-full space-y-4 rounded-xl border bg-card p-4 shadow-sm ring-1 ring-foreground/5">
       <div>
         <h3 className="font-semibold">Pipeline</h3>
         <p className="text-sm text-muted-foreground">10 open and closed deals, grouped by stage.</p>

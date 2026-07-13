@@ -55,7 +55,7 @@ export default function BlocksOverviewPage() {
             <Link
               key={href}
               href={href}
-              className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:border-foreground/20"
+              className="group flex items-start gap-3 rounded-lg border bg-card p-4 shadow-sm ring-1 ring-foreground/5 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
             >
               <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
               <div className="min-w-0">

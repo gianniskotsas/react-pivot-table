@@ -41,7 +41,12 @@ export function ComponentPreview({
   }
 
   return (
-    <div className={cn("overflow-hidden rounded-lg border bg-card", className)}>
+    <div
+      className={cn(
+        "overflow-hidden rounded-lg border bg-card shadow-sm ring-1 ring-foreground/5",
+        className
+      )}
+    >
       <div className="flex h-10 items-center justify-between border-b px-3">
         <div className="flex h-full items-center gap-4 text-sm">
           <button

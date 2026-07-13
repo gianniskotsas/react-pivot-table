@@ -107,7 +107,7 @@ export function ReservationsBlock() {
   }, [data])
 
   return (
-    <div className="w-full space-y-4 rounded-xl border bg-card p-4">
+    <div className="w-full space-y-4 rounded-xl border bg-card p-4 shadow-sm ring-1 ring-foreground/5">
       <div>
         <h3 className="font-semibold">Bookings</h3>
         <p className="text-sm text-muted-foreground">July – August 2026, across every room type.</p>
