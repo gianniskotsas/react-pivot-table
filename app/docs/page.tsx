@@ -1,197 +1,153 @@
+import Link from "next/link"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { ComponentPreview } from "@/components/site/component-preview"
-import { InstallTabs } from "@/components/site/install-tabs"
+  ArrowDownUp,
+  ArrowRight,
+  Columns3,
+  MousePointerClick,
+  Rows3,
+  Sigma,
+  SquareStack,
+  Table2,
+  Undo2,
+} from "lucide-react"
+
+import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
-import { SimpleDemo } from "@/components/site/simple-demo"
-import { AccountsTable } from "@/app/(examples)/accounts/accounts-table"
-import { accounts } from "@/app/(examples)/accounts/data"
 
-const SIMPLE_USAGE = `import { GroupedDataTable } from "@/components/grouped-data-table"
-import type { ColumnDef } from "@tanstack/react-table"
-
-type Account = { id: string; entity: string; bank: string; balance: number }
-
-const columns: ColumnDef<Account, unknown>[] = [
-  { id: "entity", accessorKey: "entity", header: "Entity", enableGrouping: true },
-  { id: "bank", accessorKey: "bank", header: "Bank", enableGrouping: true },
-  { id: "balance", accessorKey: "balance", header: "Balance", aggregationFn: "sum" },
+const FEATURES = [
+  {
+    href: "/docs/sorting-filtering",
+    icon: ArrowDownUp,
+    name: "Sorting & Filtering",
+    description: "Click-to-sort columns, and AND/OR filter groups.",
+  },
+  {
+    href: "/docs/column-management",
+    icon: Columns3,
+    name: "Column Management",
+    description: "Show/hide columns and pin them left or right.",
+  },
+  {
+    href: "/docs/row-selection",
+    icon: MousePointerClick,
+    name: "Row Selection & Actions",
+    description: "Tri-state select-all and shift-click range select.",
+  },
+  {
+    href: "/docs/footer-aggregation",
+    icon: Sigma,
+    name: "Footer & Aggregation",
+    description: "Sum/avg/min/max/count, scoped to the current selection.",
+  },
+  {
+    href: "/docs/copy-paste-undo",
+    icon: Undo2,
+    name: "Copy/Paste & Undo",
+    description: "Excel-style TSV copy/paste, undo/redo, and CSV export.",
+  },
+  {
+    href: "/docs/grouping",
+    icon: Rows3,
+    name: "Grouping & Hierarchy",
+    description: "Row grouping, drag-and-drop dimensions, drill-down.",
+  },
+  {
+    href: "/docs/field-types",
+    icon: SquareStack,
+    name: "Field Types",
+    description: "Fifteen typed, formatted, clipboard-aware field types.",
+  },
 ]
 
-export function Demo({ data }: { data: Account[] }) {
+const COMPONENTS = [
+  {
+    href: "/docs/components/data-table",
+    icon: Table2,
+    name: "Data Table",
+    description: "Editable spreadsheet-style grid.",
+  },
+  {
+    href: "/docs/components/grouped-data-table",
+    icon: Rows3,
+    name: "Grouped Data Table",
+    description: "AG-Grid-style grouping / drill-down table.",
+  },
+  {
+    href: "/docs/components/table-fields",
+    icon: SquareStack,
+    name: "Table Fields",
+    description: "The field-type catalogue behind Data Table.",
+  },
+]
+
+const PAGE_MARKDOWN = `# Kotsas UI
+
+Copy-paste, typed table components for shadcn/ui, built on TanStack Table.
+
+## Features
+${FEATURES.map((f) => `- [${f.name}](${f.href}): ${f.description}`).join("\n")}
+
+## Components
+${COMPONENTS.map((c) => `- [${c.name}](${c.href}): ${c.description}`).join("\n")}
+`
+
+function CardGrid({
+  items,
+}: {
+  items: {
+    href: string
+    icon: React.ComponentType<{ className?: string }>
+    name: string
+    description: string
+  }[]
+}) {
   return (
-    <GroupedDataTable<Account>
-      data={data}
-      columns={columns}
-      groupableDimensions={[
-        { id: "entity", label: "Entity" },
-        { id: "bank", label: "Bank" },
-      ]}
-      initialGrouping={["entity"]}
-      groupColumn={{
-        header: "Account",
-        // name-only leaf — no icon or secondary line
-        leaf: { primary: (row) => row.original.accountName },
-      }}
-    />
+    <div className="grid gap-3 sm:grid-cols-2">
+      {items.map(({ href, icon: Icon, name, description }) => (
+        <Link
+          key={href}
+          href={href}
+          className="group flex items-start gap-3 rounded-lg border p-4 transition-colors hover:border-foreground/20"
+        >
+          <Icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-sm font-medium">{name}</h3>
+              <ArrowRight className="size-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+            </div>
+            <p className="mt-0.5 text-sm text-muted-foreground">
+              {description}
+            </p>
+          </div>
+        </Link>
+      ))}
+    </div>
   )
-}`
+}
 
-const RICH_USAGE = `<GroupedDataTable<Account>
-  data={accounts}
-  columns={columns}
-  groupableDimensions={[
-    { id: "entity", label: "Entity" },
-    { id: "bank", label: "Bank" },
-  ]}
-  initialGrouping={["entity", "bank"]}
-  filterableColumns={[
-    { id: "entity", label: "Entity", type: "select", options },
-    { id: "bank", label: "Bank", type: "select", options },
-    { id: "balance", label: "Balance", type: "number" },
-  ]}
-  groupColumn={{
-    header: "Account",
-    leaf: {
-      icon: () => <Landmark className="size-4 text-muted-foreground" />,
-      primary: (row) => row.original.accountName,
-      secondary: (row) => row.original.iban,
-    },
-  }}
-/>
-// types: "text" | "number" | "select" | "date"
-// operators are readable: is / is not / contains / does not contain /
-// is any of / is none of / greater than / less than / between …`
-
-const PROPS: { name: string; type: string; desc: string }[] = [
-  { name: "data", type: "TData[]", desc: "The rows to display." },
-  {
-    name: "columns",
-    type: "ColumnDef<TData>[]",
-    desc: "TanStack column defs for measure/attribute columns. Mark groupable ones with enableGrouping.",
-  },
-  {
-    name: "groupColumn",
-    type: "GroupColumnConfig<TData>",
-    desc: "The synthesized group column: header, leaf (primary/icon?/secondary?) or renderLeaf, and countMode.",
-  },
-  {
-    name: "groupableDimensions",
-    type: "DimensionDef[]",
-    desc: "Columns the user may group by (shown in the Group by picker).",
-  },
-  {
-    name: "initialGrouping?",
-    type: "string[]",
-    desc: 'Initial hierarchy order, e.g. ["entity", "bank"]. Applied at mount.',
-  },
-  {
-    name: "filterableColumns?",
-    type: "FilterDef[]",
-    desc: "Columns the user may filter, with type + operators.",
-  },
-  {
-    name: "initialFilterState?",
-    type: "FilterState",
-    desc: "Initial AND/OR filter groups.",
-  },
-  {
-    name: "enablePagination?",
-    type: "boolean",
-    desc: "Client-side pagination. Default true.",
-  },
-]
-
-export default function DocsPage() {
+export default function DocsOverviewPage() {
   return (
     <div className="max-w-3xl space-y-16">
       <PageHeader
-        title="Grouped Data Table"
-        description="An AG-Grid-style grouping / drill-down table for React, distributed as a shadcn registry component."
+        title="Overview"
+        actions={<CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs" />}
+        description="Copy-paste, typed table components for shadcn/ui, built on TanStack Table. Browse by what you're trying to do (Features), or jump straight to a component's install command and props (Components)."
       />
 
-      {/* Installation */}
       <Section
-        id="installation"
-        title="Installation"
-        description={
-          <>
-            Two builds — <code className="font-mono">grouped-data-table</code>{" "}
-            for Base UI shadcn projects,{" "}
-            <code className="font-mono">grouped-data-table-radix</code> for
-            Radix UI projects.
-          </>
-        }
+        id="features"
+        title="Features"
+        description="Capabilities, documented once — each page notes which component(s) support it today."
       >
-        <InstallTabs package="@kotsas-ui/grouped-data-table" />
+        <CardGrid items={FEATURES} />
       </Section>
 
-      {/* Usage */}
       <Section
-        id="usage"
-        title="Usage"
-        description="Group by a single dimension with a name-only leaf — the smallest useful config."
+        id="components"
+        title="Components"
+        description="Install commands, full props reference, and a minimal usage example per component."
       >
-        <ComponentPreview
-          preview={<SimpleDemo />}
-          code={SIMPLE_USAGE}
-          filename="demo.tsx"
-        />
-      </Section>
-
-      {/* Props */}
-      <Section id="props" title="Props">
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-44">Prop</TableHead>
-                <TableHead className="w-52">Type</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {PROPS.map((p) => (
-                <TableRow key={p.name}>
-                  <TableCell className="font-mono text-xs">{p.name}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {p.type}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {p.desc}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </Section>
-
-      {/* Rich example */}
-      <Section
-        id="group-column"
-        title="Grouping, filters & rich leaf"
-        description={
-          <>
-            Two-level grouping, AND/OR filter groups, and a leaf with an icon,
-            name, and secondary line. The left-most column renders the hierarchy
-            — use the declarative <code className="font-mono">leaf</code>{" "}
-            (primary required; icon and secondary optional), or{" "}
-            <code className="font-mono">renderLeaf</code> for full control.
-          </>
-        }
-      >
-        <ComponentPreview
-          align="start"
-          preview={<AccountsTable data={accounts} />}
-          code={RICH_USAGE}
-        />
+        <CardGrid items={COMPONENTS} />
       </Section>
     </div>
   )

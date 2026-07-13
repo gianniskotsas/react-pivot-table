@@ -1,8 +1,10 @@
 import Link from "next/link"
 
 import { ComponentPreview } from "@/components/site/component-preview"
+import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { InstallTabs } from "@/components/site/install-tabs"
 import { PageHeader, Section } from "@/components/site/page-header"
+import { WorksWith } from "@/components/site/works-with"
 import { CodeBlock } from "@/components/site/code-block"
 import { FieldPreview } from "@/components/site/field-preview"
 import {
@@ -46,21 +48,39 @@ const CATEGORIES: FieldDemoMeta["category"][] = [
   "Other",
 ]
 
-export default function TableFieldsDocsPage() {
+const PAGE_MARKDOWN = `# Field Types
+
+Fifteen type-safe, Airtable-style field types — display renderers, Intl
+formatters, header icons, and clipboard/CSV serialization, all built in.
+Works with: Data Table (via defineColumns); the raw display/*Cell functions
+work standalone in any TanStack table, including Grouped Data Table.
+
+## Installation
+
+\`\`\`
+npx shadcn@latest add @kotsas-ui/table-fields
+\`\`\`
+
+## Field catalogue
+
+${CATEGORIES.map((category) =>
+  FIELD_DEMOS.filter((f) => f.category === category)
+    .map((f) => `- \`${f.code}\` (${f.valueType}): ${f.description}`)
+    .join("\n")
+).join("\n")}
+`
+
+export default function FieldTypesPage() {
   return (
     <div className="max-w-3xl space-y-16">
       <PageHeader
-        title="Table Fields"
-        description={
-          <>
-            Fifteen type-safe, Airtable-style field types for any shadcn +
-            TanStack Table — display renderers, Intl formatters, header icons,
-            and clipboard/CSV serialization, all built in.
-          </>
+        title="Field Types"
+        actions={
+          <CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs/field-types" />
         }
+        description="Fifteen type-safe, Airtable-style field types — display renderers, Intl formatters, header icons, and clipboard/CSV serialization, all built in."
       />
 
-      {/* Installation */}
       <Section
         id="installation"
         title="Installation"
@@ -69,7 +89,6 @@ export default function TableFieldsDocsPage() {
         <InstallTabs package="@kotsas-ui/table-fields" />
       </Section>
 
-      {/* Usage */}
       <Section
         id="usage"
         title="Usage"
@@ -79,7 +98,7 @@ export default function TableFieldsDocsPage() {
             <code className="font-mono">defineColumns</code> (installed as part
             of{" "}
             <Link
-              href="/docs/data-table"
+              href="/docs/components/data-table"
               className="underline underline-offset-4"
             >
               Data Table
@@ -90,19 +109,20 @@ export default function TableFieldsDocsPage() {
           </>
         }
       >
+        <WorksWith components={["data-table", "grouped-data-table"]} />
         <CodeBlock code={USAGE} filename="employee-table.tsx" />
       </Section>
 
-      {/* Field catalogue */}
       <Section
         id="fields"
         title="Field catalogue"
         description={
           <>
-            Every <code className="font-mono">col.*</code> method, rendered
-            live. The first argument is always a key of your row type; the last
-            is an options object — see &quot;Common options&quot; below for the
-            ones every field shares.
+            Every <code className="font-mono">col.*</code>
+            {" method, rendered live. "}
+            The first argument is always a key of your row type; the last is an
+            options object — see &quot;Common options&quot; below for the ones
+            every field shares.
           </>
         }
       >
@@ -142,7 +162,6 @@ export default function TableFieldsDocsPage() {
         </div>
       </Section>
 
-      {/* Common options */}
       <Section
         id="common-options"
         title="Common options"
@@ -151,7 +170,6 @@ export default function TableFieldsDocsPage() {
         <CodeBlock code={OPTIONS_COMMON} />
       </Section>
 
-      {/* Standalone display */}
       <Section
         id="standalone"
         title="Display-only usage"
@@ -169,7 +187,8 @@ export default function TableFieldsDocsPage() {
             functions (<code className="font-mono">currencyCell</code>,{" "}
             <code className="font-mono">dateCell</code>, …) wrap that pattern
             for one-line use inside a raw{" "}
-            <code className="font-mono">ColumnDef</code>.
+            <code className="font-mono">ColumnDef</code> — this is how
+            you&apos;d use Table Fields inside Grouped Data Table today.
           </>
         }
       />

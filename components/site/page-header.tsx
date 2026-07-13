@@ -3,15 +3,20 @@ import * as React from "react"
 export function PageHeader({
   title,
   description,
+  actions,
   children,
 }: {
   title: string
   description: React.ReactNode
+  actions?: React.ReactNode
   children?: React.ReactNode
 }) {
   return (
     <header className="space-y-3 border-b pb-8">
-      <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        {actions ? <div className="shrink-0 pt-1">{actions}</div> : null}
+      </div>
       <p className="max-w-2xl text-muted-foreground">{description}</p>
       {children}
     </header>

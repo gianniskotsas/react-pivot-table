@@ -8,7 +8,7 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
     <div className="min-h-svh">
       <SiteHeader />
       <div className="mx-auto flex max-w-6xl gap-12 px-6 py-10 md:py-14">
-        <aside className="hidden w-52 shrink-0 md:block">
+        <aside className="hidden w-56 shrink-0 md:block">
           <div className="sticky top-20">
             <DocsNav />
           </div>

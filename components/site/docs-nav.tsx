@@ -2,7 +2,17 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Rows3, SquareStack, Table2 } from "lucide-react"
+import {
+  ArrowDownUp,
+  BookOpen,
+  Columns3,
+  MousePointerClick,
+  Rows3,
+  SquareStack,
+  Sigma,
+  Table2,
+  Undo2,
+} from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
@@ -15,11 +25,59 @@ const GROUPS: {
   }[]
 }[] = [
   {
+    title: "Getting Started",
+    items: [{ href: "/docs", label: "Overview", icon: BookOpen }],
+  },
+  {
+    title: "Features",
+    items: [
+      {
+        href: "/docs/sorting-filtering",
+        label: "Sorting & Filtering",
+        icon: ArrowDownUp,
+      },
+      {
+        href: "/docs/column-management",
+        label: "Column Management",
+        icon: Columns3,
+      },
+      {
+        href: "/docs/row-selection",
+        label: "Row Selection & Actions",
+        icon: MousePointerClick,
+      },
+      {
+        href: "/docs/footer-aggregation",
+        label: "Footer & Aggregation",
+        icon: Sigma,
+      },
+      {
+        href: "/docs/copy-paste-undo",
+        label: "Copy/Paste & Undo",
+        icon: Undo2,
+      },
+      { href: "/docs/grouping", label: "Grouping & Hierarchy", icon: Rows3 },
+      { href: "/docs/field-types", label: "Field Types", icon: SquareStack },
+    ],
+  },
+  {
     title: "Components",
     items: [
-      { href: "/docs", label: "Grouped Data Table", icon: Rows3 },
-      { href: "/docs/table-fields", label: "Table Fields", icon: SquareStack },
-      { href: "/docs/data-table", label: "Data Table", icon: Table2 },
+      {
+        href: "/docs/components/data-table",
+        label: "Data Table",
+        icon: Table2,
+      },
+      {
+        href: "/docs/components/grouped-data-table",
+        label: "Grouped Data Table",
+        icon: Rows3,
+      },
+      {
+        href: "/docs/components/table-fields",
+        label: "Table Fields",
+        icon: SquareStack,
+      },
     ],
   },
 ]
