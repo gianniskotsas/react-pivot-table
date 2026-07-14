@@ -1,20 +1,19 @@
 import type { ReactNode } from "react"
 
-import { DocsNav } from "@/components/site/docs-nav"
-import { SiteHeader } from "@/components/site/site-header"
+import { DocsHeader } from "@/components/site/docs-header"
+import { DocsSidebar } from "@/components/site/docs-sidebar"
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-svh">
-      <SiteHeader />
-      <div className="mx-auto flex max-w-6xl gap-12 px-6 py-10 md:py-14">
-        <aside className="hidden w-56 shrink-0 md:block">
-          <div className="sticky top-20">
-            <DocsNav />
-          </div>
-        </aside>
-        <main className="min-w-0 flex-1 pb-24">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider>
+      <DocsSidebar />
+      <SidebarInset>
+        <DocsHeader />
+        <main className="mx-auto w-full max-w-4xl min-w-0 flex-1 px-6 py-10 md:py-14">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
