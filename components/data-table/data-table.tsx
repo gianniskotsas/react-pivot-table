@@ -1,6 +1,12 @@
 "use client"
 
-import { flexRender, type Column, type ColumnDef, type Table as ReactTable } from "@tanstack/react-table"
+import {
+  flexRender,
+  type Column,
+  type ColumnDef,
+  type ColumnPinningState,
+  type Table as ReactTable,
+} from "@tanstack/react-table"
 import { Download } from "lucide-react"
 import type * as React from "react"
 import { toast } from "sonner"
@@ -48,6 +54,8 @@ export type DataTableProps<TData> = {
   totalRowCount?: number
   calculableColumns?: CalculableColumn[]
   computeAggregate?: (args: ComputeAggregateArgs) => Promise<number>
+  /** Columns frozen from the start, e.g. { left: ["name"] }. Users can still re-pin via the Columns menu. */
+  initialColumnPinning?: ColumnPinningState
   /** Shows the toolbar's Export button. Default true. */
   enableExport?: boolean
   /** Declares which columns are filterable and how (the filter "options"). */

@@ -8,12 +8,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ApiTable, apiRowsToMarkdown, type ApiRow } from "@/components/site/api-table"
+import { CodeBlock } from "@/components/site/code-block"
 import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
+import { InstallTabs } from "@/components/site/install-tabs"
 import { PageHeader, Section } from "@/components/site/page-header"
 import { WorksWith } from "@/components/site/works-with"
-import { CodeBlock } from "@/components/site/code-block"
 import { BasicDataTableDemo } from "@/components/site/data-table-demos"
+
+const USAGE_CODE = `<DataTable
+  data={rows}
+  columns={columns}
+  getRowId={(row) => row.id}
+  editable
+  onUpdateData={(rowId, columnId, value) => applyEdit(rowId, columnId, value)}
+  onCreateRows={(partialRows) => appendRows(partialRows)}
+/>`
 
 const CLIPBOARD_META = `col.currency("budget", { currency: "USD" })
 // meta.toClipboard / meta.fromClipboard are populated automatically by
@@ -45,6 +56,40 @@ const SHORTCUTS: { keys: string; desc: string }[] = [
   },
 ]
 
+const API_ROWS: ApiRow[] = [
+  {
+    name: "editable?",
+    type: "boolean",
+    defaultValue: "false",
+    description:
+      "Table-level default for whether cells can be edited; per-column editable in defineColumns overrides it.",
+  },
+  {
+    name: "onUpdateData?",
+    type: "(rowId, columnId, value) => void",
+    description:
+      "Called for every committed edit (typing, paste, bulk-clear, undo, redo). The library never mutates data itself — you own applying the change.",
+  },
+  {
+    name: "onCreateRows?",
+    type: "(partialRows: Partial<TData>[]) => void",
+    description:
+      "Called when a paste extends past the last row, once per overflow row, with only the pasted columns populated.",
+  },
+  {
+    name: "meta.toClipboard?",
+    type: "(value) => string",
+    description:
+      "Per-column serializer for copy/export — populated automatically by defineColumns from the field type.",
+  },
+  {
+    name: "meta.fromClipboard?",
+    type: "(text) => unknown",
+    description:
+      "Per-column parser for paste. Return undefined to reject a value; omit entirely to make a column paste-proof.",
+  },
+]
+
 const PAGE_MARKDOWN = `# Copy/Paste & Undo
 
 Every edit — typing, a paste, or a bulk-clear — pushes one undo step, so a
@@ -53,12 +98,26 @@ Copy and paste move tab-separated values, compatible with Excel/Sheets. A
 block pasted past the last row is reported through onCreateRows instead of
 being silently dropped. Works with: Data Table.
 
+## Installation
+\`\`\`
+npx shadcn@latest add @kotsas-ui/data-table
+\`\`\`
+
+## Usage
+\`\`\`tsx
+${USAGE_CODE}
+\`\`\`
+
 ## Keyboard shortcuts
 ${SHORTCUTS.map((s) => `- \`${s.keys}\`: ${s.desc}`).join("\n")}
 
+## Clipboard serialization
 \`\`\`tsx
 ${CLIPBOARD_META}
 \`\`\`
+
+## API Reference
+${apiRowsToMarkdown(API_ROWS)}
 `
 
 export default function CopyPasteUndoPage() {
@@ -73,6 +132,15 @@ export default function CopyPasteUndoPage() {
       />
 
       <Section
+        id="installation"
+        title="Installation"
+        description="Copy/paste and undo ship with Data Table — no separate install."
+      >
+        <WorksWith components={["data-table"]} />
+        <InstallTabs package="@kotsas-ui/data-table" />
+      </Section>
+
+      <Section
         id="usage"
         title="Usage"
         description={
@@ -82,22 +150,39 @@ export default function CopyPasteUndoPage() {
             <code className="font-mono">Ctrl/Cmd+V</code>), then undo (
             <code className="font-mono">Ctrl/Cmd+Z</code>) — a multi-cell paste
             or a selection-wide clear undoes as a single step, not one step per
-            cell. A block pasted past the last row is reported through{" "}
-            <code className="font-mono">onCreateRows</code> instead of being
-            silently dropped.
+            cell.
           </>
         }
       >
-        <WorksWith components={["data-table"]} />
-        <ComponentPreview
-          preview={<BasicDataTableDemo />}
-          code="<DataTable editable onUpdateData={...} onCreateRows={...} />"
-        />
+        <ComponentPreview preview={<BasicDataTableDemo />} code={USAGE_CODE} />
+      </Section>
+
+      <Section id="shortcuts" title="Keyboard shortcuts">
+        <div className="overflow-hidden rounded-lg border bg-card shadow-sm ring-1 ring-foreground/5">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-52">Keys</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {SHORTCUTS.map((s) => (
+                <TableRow key={s.keys}>
+                  <TableCell className="font-mono text-xs">{s.keys}</TableCell>
+                  <TableCell className="text-sm whitespace-normal text-muted-foreground">
+                    {s.desc}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </Section>
 
       <Section
-        id="clipboard-serialization"
-        title="Clipboard serialization"
+        id="examples"
+        title="Examples"
         description={
           <>
             Copy/paste serialization is per-column, populated automatically by{" "}
@@ -113,27 +198,8 @@ export default function CopyPasteUndoPage() {
         <CodeBlock code={CLIPBOARD_META} />
       </Section>
 
-      <Section id="shortcuts" title="Keyboard shortcuts">
-        <div className="overflow-hidden rounded-lg border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-52">Keys</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {SHORTCUTS.map((s) => (
-                <TableRow key={s.keys}>
-                  <TableCell className="font-mono text-xs">{s.keys}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {s.desc}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+      <Section id="api" title="API Reference">
+        <ApiTable rows={API_ROWS} />
       </Section>
 
       <Section id="see-also" title="See also">

@@ -24,20 +24,42 @@ function GithubMark() {
   )
 }
 
+// Longest-prefix wins: /docs/blocks/* highlights Blocks, every other /docs/*
+// highlights Docs — a plain startsWith would light both up at once.
 const NAV = [
   { href: "/docs", label: "Docs" },
-  { href: "/examples", label: "Examples" },
+  { href: "/docs/blocks", label: "Blocks" },
 ]
+
+function activeHref(pathname: string): string | null {
+  const matches = NAV.filter(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/"),
+  )
+  if (matches.length === 0) return null
+  return matches.reduce((a, b) => (b.href.length > a.href.length ? b : a)).href
+}
+
+// Hydration-safe "has mounted" without a setState-in-effect: the server
+// snapshot is false, the client snapshot is true, and the (empty) subscribe
+// never fires — so it flips exactly once, on hydration.
+const emptySubscribe = () => () => {}
+function useMounted() {
+  return React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
 
 function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-  React.useEffect(() => setMounted(true), [])
+  const mounted = useMounted()
 
   return (
     <Button
       variant="ghost"
       size="icon-sm"
+      className="rounded-full"
       aria-label="Toggle theme"
       onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
     >
@@ -52,47 +74,47 @@ function ThemeToggle() {
 
 export function SiteHeader() {
   const pathname = usePathname()
+  const active = activeHref(pathname)
+
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/80 backdrop-blur">
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-6">
+    <header className="sticky top-0 z-40 w-full px-4 pt-3">
+      <div className="mx-auto flex h-12 max-w-4xl items-center justify-between gap-4 rounded-full border border-border/60 bg-background/75 py-1.5 pr-2 pl-4 shadow-sm ring-1 ring-foreground/5 backdrop-blur-md">
         <Link
           href="/"
           className="flex items-center gap-2 text-sm font-semibold tracking-tight"
         >
           <span
             aria-hidden
-            className="grid size-5 place-items-center rounded bg-foreground text-[10px] font-bold text-background"
+            className="grid size-5 place-items-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground"
           >
             K
           </span>
           Kotsas UI
         </Link>
 
-        <div className="flex items-center gap-0.5">
-          <nav className="flex items-center">
-            {NAV.map((item) => {
-              const active =
-                pathname === item.href || pathname.startsWith(item.href + "/")
-              return (
-                <Button
-                  key={item.href}
-                  variant="ghost"
-                  size="sm"
-                  className={cn(
-                    "font-normal text-muted-foreground",
-                    active && "text-foreground"
-                  )}
-                  nativeButton={false}
-                  render={<Link href={item.href} />}
-                >
-                  {item.label}
-                </Button>
-              )
-            })}
+        <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "rounded-full px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground",
+                  active === item.href && "bg-muted font-medium text-foreground"
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
           </nav>
+          <span
+            aria-hidden
+            className="mx-1 h-4 w-px bg-border"
+          />
           <Button
             variant="ghost"
             size="icon-sm"
+            className="rounded-full"
             aria-label="GitHub repository"
             nativeButton={false}
             render={<a href={GITHUB_URL} target="_blank" rel="noreferrer" />}

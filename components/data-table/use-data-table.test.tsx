@@ -998,6 +998,36 @@ describe("useDataTable — paste + bulk-clear", () => {
   })
 })
 
+describe("useDataTable column freezing", () => {
+  it("initialColumnPinning freezes columns from the start", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (row) => row.id,
+        initialColumnPinning: { left: ["name"] },
+      }),
+    )
+    expect(result.current.table.getColumn("name")!.getIsPinned()).toBe("left")
+    expect(result.current.table.getColumn("age")!.getIsPinned()).toBe(false)
+  })
+
+  it("users can still unpin an initially-frozen column", () => {
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (row) => row.id,
+        initialColumnPinning: { left: ["name"] },
+      }),
+    )
+    act(() => result.current.table.getColumn("name")!.pin(false))
+    expect(result.current.table.getColumn("name")!.getIsPinned()).toBe(false)
+  })
+})
+
 describe("useDataTable filtering", () => {
   it("pre-filters rows from initialFilterState before they reach the table", () => {
     const col = defineColumns<Row>()

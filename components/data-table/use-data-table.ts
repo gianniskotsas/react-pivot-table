@@ -43,6 +43,12 @@ export type UseDataTableOptions<TData> = {
   manualPagination?: boolean
   /** Total row count across all pages/filters when manualPagination is true. */
   totalRowCount?: number
+  /**
+   * Columns frozen from the start, e.g. { left: ["name"], right: [] }.
+   * Applied once at mount; users can still change pinning afterwards via the
+   * Columns menu (per-column enablePinning permitting).
+   */
+  initialColumnPinning?: ColumnPinningState
   /** Declares which columns are filterable and how (the filter "options"). */
   filterableColumns?: FilterDef[]
   /** Initial filter state (groups + AND/OR). */
@@ -67,12 +73,15 @@ export function useDataTable<TData>({
   enableRowSelection = false,
   manualPagination = false,
   totalRowCount,
+  initialColumnPinning,
   filterableColumns = EMPTY_FILTER_COLUMNS,
   initialFilterState,
 }: UseDataTableOptions<TData>): UseDataTableResult<TData> {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
-  const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>({})
+  const [columnPinning, setColumnPinning] = React.useState<ColumnPinningState>(
+    () => initialColumnPinning ?? {},
+  )
   const [columnSizing, setColumnSizing] = React.useState<ColumnSizingState>({})
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,

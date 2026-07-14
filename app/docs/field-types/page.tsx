@@ -1,3 +1,4 @@
+import { ApiTable, apiRowsToMarkdown, type ApiRow } from "@/components/site/api-table"
 import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { InstallTabs } from "@/components/site/install-tabs"
@@ -29,15 +30,50 @@ function EmployeeTable({ data }: { data: Employee[] }) {
   // ...render table.getRowModel().rows with flexRender, same as any TanStack table
 }`
 
-const OPTIONS_COMMON = `col.text("name", {
-  header: "Full name",   // overrides the auto-generated label
-  editable: false,       // per-column override of the table default
-  enableSorting: true,   // default true
-  enableHiding: true,    // default true
-  enablePinning: true,   // default true
-  enableResizing: true,  // default true
-  size: 200,              // fixed width in px
-})`
+const API_ROWS: ApiRow[] = [
+  {
+    name: "header?",
+    type: "string",
+    defaultValue: "key name",
+    description: "Overrides the auto-generated column label.",
+  },
+  {
+    name: "editable?",
+    type: "boolean",
+    defaultValue: "table default",
+    description: "Per-column override of the table-level editable default.",
+  },
+  {
+    name: "enableSorting?",
+    type: "boolean",
+    defaultValue: "true",
+    description: "Click-to-sort on the column header.",
+  },
+  {
+    name: "enableHiding?",
+    type: "boolean",
+    defaultValue: "true",
+    description: "Visibility checkbox in the Columns menu.",
+  },
+  {
+    name: "enablePinning?",
+    type: "boolean",
+    defaultValue: "true",
+    description: "Freeze-left/right buttons in the Columns menu.",
+  },
+  {
+    name: "enableResizing?",
+    type: "boolean",
+    defaultValue: "true",
+    description: "Drag handle on the header's right edge.",
+  },
+  {
+    name: "size?",
+    type: "number",
+    defaultValue: "150",
+    description: "Starting width in px.",
+  },
+]
 
 const CATEGORIES: FieldDemoMeta["category"][] = [
   "Text",
@@ -66,6 +102,9 @@ ${CATEGORIES.map((category) =>
     .map((f) => `- \`${f.code}\` (${f.valueType}): ${f.description}`)
     .join("\n")
 ).join("\n")}
+
+## API Reference (common options, every field method)
+${apiRowsToMarkdown(API_ROWS)}
 `
 
 export default function FieldTypesPage() {
@@ -113,8 +152,8 @@ export default function FieldTypesPage() {
             Every <code className="font-mono">col.*</code>
             {" method, rendered live. "}
             The first argument is always a key of your row type; the last is an
-            options object — see &quot;Common options&quot; below for the ones
-            every field shares.
+            options object — see &quot;API Reference&quot; below for the
+            options every field shares.
           </>
         }
       >
@@ -155,11 +194,11 @@ export default function FieldTypesPage() {
       </Section>
 
       <Section
-        id="common-options"
-        title="Common options"
-        description="Every field method accepts these, in addition to its own type-specific options:"
+        id="api"
+        title="API Reference"
+        description="Common options — every field method accepts these, in addition to its own type-specific options:"
       >
-        <CodeBlock code={OPTIONS_COMMON} />
+        <ApiTable rows={API_ROWS} />
       </Section>
 
       <Section

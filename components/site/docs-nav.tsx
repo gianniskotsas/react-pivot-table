@@ -93,23 +93,29 @@ const GROUPS: {
 export function DocsNav() {
   const pathname = usePathname()
   return (
-    <nav className="space-y-6">
+    <nav className="space-y-7">
       {GROUPS.map((group) => (
-        <div key={group.title} className="space-y-1">
-          <p className="px-2 text-xs font-medium tracking-wide text-muted-foreground/70 uppercase">
+        <div key={group.title} className="space-y-1.5">
+          <p className="px-2.5 text-[11px] font-semibold tracking-widest text-muted-foreground/60 uppercase">
             {group.title}
           </p>
-          <ul className="space-y-0.5">
+          <ul className="relative space-y-px border-l border-border/60 pl-0">
             {group.items.map((item) => {
               const active = pathname === item.href
               const Icon = item.icon
               return (
-                <li key={item.href}>
+                <li key={item.href} className="relative">
+                  {active && (
+                    <span
+                      aria-hidden
+                      className="absolute top-1.5 -left-px h-[calc(100%-12px)] w-px bg-primary"
+                    />
+                  )}
                   <Link
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground",
-                      active && "bg-accent font-medium text-foreground"
+                      "flex items-center gap-2 rounded-r-md py-1.5 pr-2 pl-3 text-sm text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground",
+                      active && "bg-primary/5 font-medium text-primary"
                     )}
                   >
                     <Icon className="size-3.5 shrink-0" />

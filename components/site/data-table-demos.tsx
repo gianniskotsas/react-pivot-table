@@ -338,3 +338,74 @@ export function FilterableDataTableDemo() {
     </div>
   )
 }
+
+type Employee = {
+  id: string
+  name: string
+  email: string
+  department: string
+  role: string
+  location: string
+  salary: number
+  startDate: string
+  active: boolean
+}
+
+const DEPARTMENTS = [
+  { label: "Engineering", value: "engineering" },
+  { label: "Design", value: "design" },
+  { label: "Sales", value: "sales" },
+  { label: "Operations", value: "operations" },
+]
+
+const EMPLOYEES: Employee[] = [
+  { id: "1", name: "Elena Ruiz", email: "elena@acme.dev", department: "engineering", role: "Staff Engineer", location: "Barcelona, ES", salary: 132000, startDate: "2021-03-15", active: true },
+  { id: "2", name: "Marcus Webb", email: "marcus@acme.dev", department: "design", role: "Product Designer", location: "London, UK", salary: 98000, startDate: "2022-09-01", active: true },
+  { id: "3", name: "Sofia Novak", email: "sofia@acme.dev", department: "sales", role: "Account Executive", location: "Prague, CZ", salary: 87000, startDate: "2023-01-10", active: true },
+  { id: "4", name: "Liam Chen", email: "liam@acme.dev", department: "engineering", role: "Frontend Engineer", location: "Singapore, SG", salary: 112000, startDate: "2020-11-23", active: false },
+  { id: "5", name: "Amara Diallo", email: "amara@acme.dev", department: "operations", role: "Ops Manager", location: "Dakar, SN", salary: 91000, startDate: "2024-05-06", active: true },
+]
+
+const employeeCol = defineColumns<Employee>()
+const employeeColumns = [
+  employeeCol.text("name", { header: "Name", size: 180 }),
+  employeeCol.email("email", { header: "Email", size: 220 }),
+  employeeCol.singleSelect("department", { header: "Department", options: DEPARTMENTS, size: 160 }),
+  employeeCol.text("role", { header: "Role", size: 190 }),
+  employeeCol.text("location", { header: "Location", size: 170 }),
+  employeeCol.currency("salary", { header: "Salary", size: 140 }),
+  employeeCol.date("startDate", { header: "Start Date", size: 140 }),
+  employeeCol.checkbox("active", { header: "Active", size: 110 }),
+]
+
+// Wide on purpose (~1300px of columns) so the preview canvas scrolls
+// horizontally and the frozen Name column visibly holds its ground.
+export function FreezeColumnsDataTableDemo() {
+  const [data, setData] = React.useState(EMPLOYEES)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) =>
+          row.id === rowId ? { ...row, [columnId]: value } : row
+        )
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full">
+      <DataTable<Employee>
+        data={data}
+        columns={employeeColumns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enablePagination={false}
+        enableExport={false}
+        initialColumnPinning={{ left: ["name"] }}
+      />
+    </div>
+  )
+}

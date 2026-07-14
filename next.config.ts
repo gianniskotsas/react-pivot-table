@@ -41,6 +41,13 @@ const nextConfig: NextConfig = {
         destination: "/docs/sorting",
         permanent: true,
       },
+      // Standalone Examples page removed (2026-07-14) — every feature and
+      // block page carries its own live demos now.
+      {
+        source: "/examples",
+        destination: "/docs",
+        permanent: true,
+      },
     ]
   },
 }
