@@ -128,7 +128,7 @@ ${apiRowsToMarkdown(API_ROWS)}
 
 export default function GroupingPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Grouping & Hierarchy"
         actions={<CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs/grouping" />}

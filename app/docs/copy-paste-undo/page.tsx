@@ -122,7 +122,7 @@ ${apiRowsToMarkdown(API_ROWS)}
 
 export default function CopyPasteUndoPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Copy/Paste & Undo"
         actions={

@@ -42,7 +42,7 @@ ${BLOCKS.map((b) => `- [${b.name}](${b.href}): ${b.description}`).join("\n")}
 
 export default function BlocksOverviewPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Blocks"
         actions={<CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs/blocks" />}

@@ -109,7 +109,7 @@ ${apiRowsToMarkdown(API_ROWS)}
 
 export default function FieldTypesPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Field Types"
         actions={

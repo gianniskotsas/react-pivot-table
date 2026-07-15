@@ -91,7 +91,7 @@ table-wide footer — see Grouping & Hierarchy.
 
 export default function FooterAggregationPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Footer & Aggregation"
         actions={

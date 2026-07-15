@@ -164,7 +164,7 @@ function CardGrid({
 
 export default function DocsOverviewPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Overview"
         actions={<CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs" />}

@@ -74,7 +74,7 @@ ${apiRowsToMarkdown(API_ROWS)}
 
 export default function ColumnManagementPage() {
   return (
-    <div className="max-w-3xl space-y-16">
+    <div className="space-y-16">
       <PageHeader
         title="Column Management"
         actions={
