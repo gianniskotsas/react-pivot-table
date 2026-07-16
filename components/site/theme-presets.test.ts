@@ -59,4 +59,22 @@ describe("THEME_PRESETS", () => {
       expect(preset.light["--primary"]).toBeTruthy()
     }
   })
+
+  it("presets differ in SURFACES, not just accent — background, border, and radius all vary", () => {
+    // Regression: accent-only presets looked near-identical on a docs page
+    // (tables are ~95% background/muted/border/radius). Assert the preset set
+    // spans visibly different backgrounds and radii so that can't quietly
+    // regress back to five same-looking gray themes.
+    const nonDefault = THEME_PRESETS.filter((p) => p.id !== "default")
+    for (const preset of nonDefault) {
+      expect(preset.light["--background"]).toBeTruthy()
+      expect(preset.light["--border"]).toBeTruthy()
+      expect(preset.light["--radius"]).toBeTruthy()
+      expect(preset.light["--radius"]).toBe(preset.dark["--radius"])
+    }
+    const backgrounds = new Set(nonDefault.map((p) => p.light["--background"]))
+    const radii = new Set(nonDefault.map((p) => p.light["--radius"]))
+    expect(backgrounds.size).toBe(nonDefault.length)
+    expect(radii.size).toBeGreaterThanOrEqual(3)
+  })
 })

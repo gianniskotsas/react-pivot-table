@@ -20,122 +20,234 @@ export type ThemePreset = {
   dark: ThemeVars
 }
 
-// shadcn's stock neutral scale — the base every color preset builds on.
-const NEUTRAL_LIGHT: ThemeVars = {
-  "--background": "oklch(1 0 0)",
-  "--foreground": "oklch(0.145 0 0)",
-  "--card": "oklch(1 0 0)",
-  "--card-foreground": "oklch(0.145 0 0)",
-  "--popover": "oklch(1 0 0)",
-  "--popover-foreground": "oklch(0.145 0 0)",
-  "--primary": "oklch(0.205 0 0)",
-  "--primary-foreground": "oklch(0.985 0 0)",
-  "--secondary": "oklch(0.97 0 0)",
-  "--secondary-foreground": "oklch(0.205 0 0)",
-  "--muted": "oklch(0.97 0 0)",
-  "--muted-foreground": "oklch(0.556 0 0)",
-  "--accent": "oklch(0.97 0 0)",
-  "--accent-foreground": "oklch(0.205 0 0)",
-  "--destructive": "oklch(0.577 0.245 27.325)",
-  "--border": "oklch(0.922 0 0)",
-  "--input": "oklch(0.922 0 0)",
-  "--ring": "oklch(0.708 0 0)",
-  "--sidebar": "oklch(0.965 0 0)",
-  "--sidebar-foreground": "oklch(0.145 0 0)",
-  "--sidebar-primary": "oklch(0.205 0 0)",
-  "--sidebar-primary-foreground": "oklch(0.985 0 0)",
-  "--sidebar-accent": "oklch(0.92 0 0)",
-  "--sidebar-accent-foreground": "oklch(0.205 0 0)",
-  "--sidebar-border": "oklch(0.922 0 0)",
-  "--sidebar-ring": "oklch(0.708 0 0)",
+/**
+ * Compact seed → full variable set. A docs page is ~95% background, muted,
+ * border, and radius — an accent-only preset is invisible on it (learned the
+ * hard way). So every preset here shifts the SURFACES: tinted backgrounds,
+ * border strength, radius from square to pillowy — differences that show on
+ * every card, button, and table row, not just the two primary-colored pixels.
+ */
+type ModeSeed = {
+  background: string
+  foreground: string
+  card: string
+  primary: string
+  primaryForeground: string
+  muted: string
+  mutedForeground: string
+  accent: string
+  border: string
+  input: string
+  sidebar: string
+  sidebarAccent: string
+  destructive: string
 }
 
-const NEUTRAL_DARK: ThemeVars = {
-  "--background": "oklch(0.145 0 0)",
-  "--foreground": "oklch(0.985 0 0)",
-  "--card": "oklch(0.205 0 0)",
-  "--card-foreground": "oklch(0.985 0 0)",
-  "--popover": "oklch(0.205 0 0)",
-  "--popover-foreground": "oklch(0.985 0 0)",
-  "--primary": "oklch(0.922 0 0)",
-  "--primary-foreground": "oklch(0.205 0 0)",
-  "--secondary": "oklch(0.269 0 0)",
-  "--secondary-foreground": "oklch(0.985 0 0)",
-  "--muted": "oklch(0.269 0 0)",
-  "--muted-foreground": "oklch(0.708 0 0)",
-  "--accent": "oklch(0.269 0 0)",
-  "--accent-foreground": "oklch(0.985 0 0)",
-  "--destructive": "oklch(0.704 0.191 22.216)",
-  "--border": "oklch(1 0 0 / 16%)",
-  "--input": "oklch(1 0 0 / 20%)",
-  "--ring": "oklch(0.556 0 0)",
-  "--sidebar": "oklch(0.1 0 0)",
-  "--sidebar-foreground": "oklch(0.985 0 0)",
-  "--sidebar-primary": "oklch(0.922 0 0)",
-  "--sidebar-primary-foreground": "oklch(0.205 0 0)",
-  "--sidebar-accent": "oklch(0.269 0 0)",
-  "--sidebar-accent-foreground": "oklch(0.985 0 0)",
-  "--sidebar-border": "oklch(1 0 0 / 16%)",
-  "--sidebar-ring": "oklch(0.556 0 0)",
-}
-
-/** A neutral base recolored with an accent primary/ring, per mode. */
-function accented(
-  light: { primary: string; primaryForeground: string },
-  dark: { primary: string; primaryForeground: string },
-): { light: ThemeVars; dark: ThemeVars } {
+function modeVars(seed: ModeSeed, radius: string): ThemeVars {
   return {
-    light: {
-      ...NEUTRAL_LIGHT,
-      "--primary": light.primary,
-      "--primary-foreground": light.primaryForeground,
-      "--ring": light.primary,
-      "--sidebar-primary": light.primary,
-      "--sidebar-primary-foreground": light.primaryForeground,
-      "--sidebar-ring": light.primary,
-    },
-    dark: {
-      ...NEUTRAL_DARK,
-      "--primary": dark.primary,
-      "--primary-foreground": dark.primaryForeground,
-      "--ring": dark.primary,
-      "--sidebar-primary": dark.primary,
-      "--sidebar-primary-foreground": dark.primaryForeground,
-      "--sidebar-ring": dark.primary,
-    },
+    "--background": seed.background,
+    "--foreground": seed.foreground,
+    "--card": seed.card,
+    "--card-foreground": seed.foreground,
+    "--popover": seed.card,
+    "--popover-foreground": seed.foreground,
+    "--primary": seed.primary,
+    "--primary-foreground": seed.primaryForeground,
+    "--secondary": seed.muted,
+    "--secondary-foreground": seed.foreground,
+    "--muted": seed.muted,
+    "--muted-foreground": seed.mutedForeground,
+    "--accent": seed.accent,
+    "--accent-foreground": seed.foreground,
+    "--destructive": seed.destructive,
+    "--border": seed.border,
+    "--input": seed.input,
+    "--ring": seed.primary,
+    "--radius": radius,
+    "--sidebar": seed.sidebar,
+    "--sidebar-foreground": seed.foreground,
+    "--sidebar-primary": seed.primary,
+    "--sidebar-primary-foreground": seed.primaryForeground,
+    "--sidebar-accent": seed.sidebarAccent,
+    "--sidebar-accent-foreground": seed.foreground,
+    "--sidebar-border": seed.border,
+    "--sidebar-ring": seed.primary,
   }
 }
+
+const RED_LIGHT = "oklch(0.577 0.245 27.325)"
+const RED_DARK = "oklch(0.704 0.191 22.216)"
 
 export const THEME_PRESETS: ThemePreset[] = [
   // The site's own warm-paper + teal theme lives in globals.css; `{}` clears
   // every inline override so the stylesheet shows through untouched.
   { id: "default", label: "Kotsas (default)", swatch: "oklch(0.5 0.11 175)", light: {}, dark: {} },
-  { id: "neutral", label: "Neutral", swatch: "oklch(0.205 0 0)", light: NEUTRAL_LIGHT, dark: NEUTRAL_DARK },
   {
-    id: "blue",
-    label: "Blue",
-    swatch: "oklch(0.546 0.245 262.881)",
-    ...accented(
-      { primary: "oklch(0.546 0.245 262.881)", primaryForeground: "oklch(0.985 0 0)" },
-      { primary: "oklch(0.623 0.214 259.815)", primaryForeground: "oklch(0.985 0 0)" },
+    // Brutalist: pure white/black, square corners, borders you can't miss.
+    id: "mono",
+    label: "Mono",
+    swatch: "oklch(0.09 0 0)",
+    light: modeVars(
+      {
+        background: "oklch(1 0 0)",
+        foreground: "oklch(0.09 0 0)",
+        card: "oklch(1 0 0)",
+        primary: "oklch(0.09 0 0)",
+        primaryForeground: "oklch(0.98 0 0)",
+        muted: "oklch(0.94 0 0)",
+        mutedForeground: "oklch(0.44 0 0)",
+        accent: "oklch(0.91 0 0)",
+        border: "oklch(0.82 0 0)",
+        input: "oklch(0.82 0 0)",
+        sidebar: "oklch(0.96 0 0)",
+        sidebarAccent: "oklch(0.89 0 0)",
+        destructive: RED_LIGHT,
+      },
+      "0rem",
+    ),
+    dark: modeVars(
+      {
+        background: "oklch(0.05 0 0)",
+        foreground: "oklch(0.98 0 0)",
+        card: "oklch(0.16 0 0)",
+        primary: "oklch(0.98 0 0)",
+        primaryForeground: "oklch(0.1 0 0)",
+        muted: "oklch(0.23 0 0)",
+        mutedForeground: "oklch(0.72 0 0)",
+        accent: "oklch(0.26 0 0)",
+        border: "oklch(1 0 0 / 24%)",
+        input: "oklch(1 0 0 / 28%)",
+        sidebar: "oklch(0.12 0 0)",
+        sidebarAccent: "oklch(0.24 0 0)",
+        destructive: RED_DARK,
+      },
+      "0rem",
     ),
   },
   {
-    id: "violet",
-    label: "Violet",
-    swatch: "oklch(0.541 0.281 293.009)",
-    ...accented(
-      { primary: "oklch(0.541 0.281 293.009)", primaryForeground: "oklch(0.985 0 0)" },
-      { primary: "oklch(0.606 0.25 292.717)", primaryForeground: "oklch(0.985 0 0)" },
+    // Cool slate-blue neutrals with an indigo accent — the "SaaS dashboard".
+    id: "slate",
+    label: "Slate",
+    swatch: "oklch(0.511 0.262 276.966)",
+    light: modeVars(
+      {
+        background: "oklch(0.984 0.003 247.9)",
+        foreground: "oklch(0.208 0.042 265.8)",
+        card: "oklch(1 0 0)",
+        primary: "oklch(0.511 0.262 276.966)",
+        primaryForeground: "oklch(0.985 0 0)",
+        muted: "oklch(0.955 0.009 250)",
+        mutedForeground: "oklch(0.554 0.046 257.4)",
+        accent: "oklch(0.929 0.013 255.5)",
+        border: "oklch(0.9 0.016 253)",
+        input: "oklch(0.9 0.016 253)",
+        sidebar: "oklch(0.955 0.011 251)",
+        sidebarAccent: "oklch(0.91 0.018 254)",
+        destructive: RED_LIGHT,
+      },
+      "0.5rem",
+    ),
+    dark: modeVars(
+      {
+        background: "oklch(0.208 0.042 265.755)",
+        foreground: "oklch(0.968 0.007 247.9)",
+        card: "oklch(0.279 0.041 260.031)",
+        primary: "oklch(0.673 0.182 276.935)",
+        primaryForeground: "oklch(0.15 0.04 270)",
+        muted: "oklch(0.31 0.04 260)",
+        mutedForeground: "oklch(0.704 0.04 256.788)",
+        accent: "oklch(0.372 0.044 257.287)",
+        border: "oklch(0.9 0.02 260 / 18%)",
+        input: "oklch(0.9 0.02 260 / 22%)",
+        sidebar: "oklch(0.155 0.042 264.7)",
+        sidebarAccent: "oklch(0.34 0.042 259)",
+        destructive: RED_DARK,
+      },
+      "0.5rem",
     ),
   },
   {
-    id: "rose",
-    label: "Rose",
-    swatch: "oklch(0.645 0.246 16.439)",
-    ...accented(
-      { primary: "oklch(0.645 0.246 16.439)", primaryForeground: "oklch(0.985 0 0)" },
-      { primary: "oklch(0.645 0.246 16.439)", primaryForeground: "oklch(0.985 0 0)" },
+    // Warm cream + orange, pillowy 1rem radius — maximum distance from Mono.
+    id: "sunset",
+    label: "Sunset",
+    swatch: "oklch(0.646 0.222 41.116)",
+    light: modeVars(
+      {
+        background: "oklch(0.985 0.018 90)",
+        foreground: "oklch(0.28 0.06 40)",
+        card: "oklch(0.998 0.008 95)",
+        primary: "oklch(0.646 0.222 41.116)",
+        primaryForeground: "oklch(0.98 0.01 90)",
+        muted: "oklch(0.945 0.032 85)",
+        mutedForeground: "oklch(0.52 0.07 55)",
+        accent: "oklch(0.92 0.045 78)",
+        border: "oklch(0.88 0.045 80)",
+        input: "oklch(0.88 0.045 80)",
+        sidebar: "oklch(0.955 0.028 88)",
+        sidebarAccent: "oklch(0.905 0.05 80)",
+        destructive: RED_LIGHT,
+      },
+      "1rem",
+    ),
+    dark: modeVars(
+      {
+        background: "oklch(0.17 0.025 45)",
+        foreground: "oklch(0.95 0.02 85)",
+        card: "oklch(0.22 0.03 50)",
+        primary: "oklch(0.75 0.183 55.934)",
+        primaryForeground: "oklch(0.18 0.05 50)",
+        muted: "oklch(0.265 0.03 50)",
+        mutedForeground: "oklch(0.7 0.045 60)",
+        accent: "oklch(0.3 0.035 55)",
+        border: "oklch(1 0.04 80 / 17%)",
+        input: "oklch(1 0.04 80 / 21%)",
+        sidebar: "oklch(0.125 0.02 45)",
+        sidebarAccent: "oklch(0.28 0.033 52)",
+        destructive: RED_DARK,
+      },
+      "1rem",
+    ),
+  },
+  {
+    // Deep greens on green-tinted paper — tonal, calm, clearly not gray.
+    id: "forest",
+    label: "Forest",
+    swatch: "oklch(0.527 0.154 150.069)",
+    light: modeVars(
+      {
+        background: "oklch(0.98 0.009 155)",
+        foreground: "oklch(0.22 0.03 155)",
+        card: "oklch(0.995 0.004 155)",
+        primary: "oklch(0.527 0.154 150.069)",
+        primaryForeground: "oklch(0.97 0.01 155)",
+        muted: "oklch(0.94 0.02 155)",
+        mutedForeground: "oklch(0.5 0.04 155)",
+        accent: "oklch(0.91 0.028 155)",
+        border: "oklch(0.88 0.024 155)",
+        input: "oklch(0.88 0.024 155)",
+        sidebar: "oklch(0.95 0.016 155)",
+        sidebarAccent: "oklch(0.9 0.03 155)",
+        destructive: RED_LIGHT,
+      },
+      "0.75rem",
+    ),
+    dark: modeVars(
+      {
+        background: "oklch(0.16 0.02 160)",
+        foreground: "oklch(0.95 0.012 155)",
+        card: "oklch(0.21 0.026 160)",
+        primary: "oklch(0.792 0.209 151.711)",
+        primaryForeground: "oklch(0.15 0.04 155)",
+        muted: "oklch(0.255 0.028 158)",
+        mutedForeground: "oklch(0.7 0.05 155)",
+        accent: "oklch(0.29 0.032 158)",
+        border: "oklch(0.95 0.03 155 / 16%)",
+        input: "oklch(0.95 0.03 155 / 20%)",
+        sidebar: "oklch(0.12 0.018 160)",
+        sidebarAccent: "oklch(0.27 0.03 158)",
+        destructive: RED_DARK,
+      },
+      "0.75rem",
     ),
   },
 ]
