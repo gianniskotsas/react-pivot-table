@@ -8,7 +8,9 @@ export function DocsHeader() {
   return (
     // rounded-t matches SidebarInset's rounded-xl card so the sticky header's
     // backdrop doesn't square off the card's top corners on md+.
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border/60 bg-background/95 px-4 backdrop-blur-sm md:rounded-t-xl">
+    // px must stay in lockstep with the content wrapper in app/docs/layout.tsx
+    // so the breadcrumb and the page title share a left edge.
+    <header className="sticky top-0 z-40 flex h-14 items-center gap-4 border-b border-border/60 bg-background/95 px-6 backdrop-blur-sm md:rounded-t-xl lg:px-8">
       {/* Desktop keeps the sidebar permanently open, so the toggle only exists
           on mobile, where the sidebar is a drawer that needs a way to open. */}
       <SidebarTrigger className="md:hidden" />
