@@ -107,23 +107,27 @@
   --accent: oklch(0.21 0.009 75);
   --accent-foreground: oklch(0.96 0.004 75);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0.01 75 / 10%);
-  --input: oklch(1 0.01 75 / 14%);
+  /* 10% white over a near-black background was borderline invisible — table
+     outlines and card edges disappeared entirely in dark mode. 16/20% keeps
+     them hairline-subtle but actually present. */
+  --border: oklch(1 0.01 75 / 16%);
+  --input: oklch(1 0.01 75 / 20%);
   --ring: oklch(0.72 0.13 175);
   --chart-1: oklch(0.87 0.01 75);
   --chart-2: oklch(0.556 0.01 75);
   --chart-3: oklch(0.439 0.01 75);
   --chart-4: oklch(0.371 0.01 75);
   --chart-5: oklch(0.269 0.01 75);
-  /* One step DARKER than --background (0.11) so the inset content card reads
-     as lifted above the sidebar canvas in dark mode too. */
-  --sidebar: oklch(0.085 0.004 70);
+  /* Clearly darker than --background (0.11) so the inset content card reads
+     as lifted above the sidebar canvas — perceptual differences compress near
+     black, so the gap needs to be bigger than light mode's. */
+  --sidebar: oklch(0.065 0.004 70);
   --sidebar-foreground: oklch(0.96 0.004 75);
   --sidebar-primary: oklch(0.72 0.13 175);
   --sidebar-primary-foreground: oklch(0.12 0.02 175);
   --sidebar-accent: oklch(0.19 0.007 75);
   --sidebar-accent-foreground: oklch(0.96 0.004 75);
-  --sidebar-border: oklch(1 0.01 75 / 10%);
+  --sidebar-border: oklch(1 0.01 75 / 16%);
   --sidebar-ring: oklch(0.72 0.13 175);
 }
 

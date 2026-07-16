@@ -1,6 +1,7 @@
 import { DocsBreadcrumb } from "@/components/site/docs-breadcrumb"
 import { DocsSearch } from "@/components/site/docs-search"
 import { GithubStars } from "@/components/site/github-stars"
+import { ThemePresetPicker } from "@/components/site/theme-preset-picker"
 import { ThemeToggle } from "@/components/site/theme-toggle"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 
@@ -18,6 +19,7 @@ export function DocsHeader() {
       <div className="flex flex-1 items-center justify-end gap-1">
         <DocsSearch />
         <GithubStars />
+        <ThemePresetPicker />
         <ThemeToggle />
       </div>
     </header>

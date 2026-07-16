@@ -43,7 +43,9 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
 
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          {/* Muted band matching data-table's header treatment — column labels
+              anchor the grid instead of floating on the body's surface. */}
+          <TableHeader className="bg-muted/50">
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (

@@ -95,7 +95,10 @@ type PinnedCellStyle = { style: React.CSSProperties; className?: string }
 // translucent, so the pinned cell can't reuse it directly. The `color-mix`
 // reproduces that exact tint as a solid color (muted 50% over background),
 // keeping the pinned column opaque while matching the rest of the hovered row.
-function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
+function pinnedStyle<TData>(
+  column: Column<TData, unknown>,
+  variant: "head" | "cell" = "cell",
+): PinnedCellStyle {
   const pinned = column.getIsPinned()
   if (!pinned) return { style: {} }
   return {
@@ -110,7 +113,14 @@ function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
           : "-1px 0 0 0 var(--border) inset",
     },
     className:
-      "bg-background [tr:hover_&]:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] [tr[data-state=selected]_&]:bg-muted",
+      variant === "head"
+        ? // The header row carries a translucent bg-muted/50 band; a pinned
+          // header cell must render that SAME tint but opaque (the color-mix
+          // equivalent), or scrolled columns bleed through it. No hover/
+          // selected variants — header rows have no selection state and the
+          // band already matches the row's hover color.
+          "bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]"
+        : "bg-background [tr:hover_&]:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] [tr[data-state=selected]_&]:bg-muted",
   }
 }
 
@@ -208,12 +218,15 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
 
         <div className="rounded-md border" onKeyDown={runtime.handleKeyDown}>
           <Table style={{ tableLayout: "fixed" }}>
-            <TableHeader>
+            {/* The muted band gives the header row visual weight so the grid
+                doesn't read as headless markup — column labels anchor the
+                columns instead of floating in the same surface as the data. */}
+            <TableHeader className="bg-muted/50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as DataTableColumnMeta | undefined
-                    const pinned = pinnedStyle(header.column)
+                    const pinned = pinnedStyle(header.column, "head")
                     return (
                       <TableHead
                         key={header.id}

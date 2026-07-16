@@ -131,6 +131,31 @@ describe("DataTable", () => {
     expect(cell.style.position).toBe("sticky")
   })
 
+  it("a pinned HEADER cell renders the header band's tint as an opaque color, not bg-background", () => {
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /columns/i }))
+    fireEvent.click(screen.getByRole("button", { name: "Pin Name left" }))
+
+    // getAllByText: the open Columns menu also renders a "Name" label — only
+    // one of the matches sits inside a <th>.
+    const th = screen
+      .getAllByText("Name")
+      .map((el) => el.closest("th"))
+      .find(Boolean) as HTMLTableCellElement
+    // TableHeader carries a translucent bg-muted/50 band; the sticky pinned
+    // header cell must paint that SAME tint opaquely (the color-mix
+    // equivalent) or scrolled columns bleed through it — and a plain
+    // bg-background would visibly break the band.
+    expect(th.className).toContain(
+      "bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
+    )
+    expect(th.className).not.toContain("bg-background")
+    expect(th.style.position).toBe("sticky")
+    // The band itself lives on <thead>.
+    expect(th.closest("thead")?.className).toContain("bg-muted/50")
+  })
+
   it("pagination controls are shown by default and can be disabled", () => {
     const { rerender } = render(
       <DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} />,
