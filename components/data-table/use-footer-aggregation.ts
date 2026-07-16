@@ -107,7 +107,13 @@ export function useFooterAggregation<TData>({
 
   // A resolved server value goes stale when its inputs (method or scope)
   // change since it was last requested — re-derive an identity key per
-  // column each render and compare against what was last seen.
+  // column each render and compare against what was last seen. The same key
+  // change also has to invalidate a request still in flight: bumping the
+  // column's request id makes the pending promise's commit guard fail on
+  // arrival, so a "sum" requested before the user switched to "avg" can never
+  // land and display under the new method's label as if it were fresh. A
+  // column caught mid-flight resets to idle (its "Calculate" trigger) rather
+  // than staying loading forever for a result that will now be dropped.
   const requestKeyRef = React.useRef<Record<string, string>>({})
   React.useEffect(() => {
     for (const columnId of columnConfig.keys()) {
@@ -115,10 +121,14 @@ export function useFooterAggregation<TData>({
       const key = `${method ?? ""}:${scopeIsSelection ? "selection" : "all"}`
       const prevKey = requestKeyRef.current[columnId]
       if (prevKey !== undefined && prevKey !== key) {
+        requestIdRef.current[columnId] = (requestIdRef.current[columnId] ?? 0) + 1
         setServerStates((prev) => {
           const existing = prev[columnId]
           if (existing?.status === "value") {
             return { ...prev, [columnId]: { status: "stale", value: existing.value } }
+          }
+          if (existing?.status === "loading") {
+            return { ...prev, [columnId]: { status: "idle" } }
           }
           return prev
         })

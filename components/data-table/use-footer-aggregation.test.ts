@@ -254,3 +254,39 @@ describe("useFooterAggregation — hybrid client/server", () => {
     expect(result.current.stateFor("amount")).toEqual({ status: "value", value: 60, partial: true })
   })
 })
+
+describe("useFooterAggregation — in-flight invalidation", () => {
+  it("drops an in-flight response when the method changes mid-flight (a slow sum can never land labeled as avg)", async () => {
+    let resolveFirst!: (value: number) => void
+    const computeAggregate = vi.fn().mockImplementationOnce(
+      () =>
+        new Promise<number>((res) => {
+          resolveFirst = res
+        }),
+    )
+    const { result } = renderHook(() => {
+      const table = useTestTable()
+      return useFooterAggregation({
+        table,
+        calculableColumns: [{ columnId: "amount", methods: ["sum", "avg"], default: "sum" }],
+        isAllMatchingSelected: false,
+        manualPagination: true,
+        totalRowCount: 1000,
+        computeAggregate,
+      })
+    })
+
+    act(() => result.current.calculate("amount")) // "sum" request in flight
+    expect(result.current.stateFor("amount")).toEqual({ status: "loading" })
+
+    // Switch method while the request is still pending: the pending result is
+    // now for the wrong method, so the column resets to its Calculate trigger…
+    act(() => result.current.setMethod("amount", "avg"))
+    expect(result.current.stateFor("amount")).toEqual({ status: "idle" })
+
+    // …and when the stale "sum" response finally arrives, it must be dropped —
+    // NOT committed as a fresh value under the "avg" label.
+    await act(async () => resolveFirst(999))
+    expect(result.current.stateFor("amount")).toEqual({ status: "idle" })
+  })
+})

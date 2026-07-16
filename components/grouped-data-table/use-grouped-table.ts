@@ -167,5 +167,20 @@ export function useGroupedTable<TData>({
     autoResetPageIndex: false,
   })
 
+  // autoResetPageIndex: false keeps the user's page, but TanStack never
+  // clamps: grouping routinely collapses 120 leaf rows into a handful of
+  // groups, so a user sitting on page 3 who then groups by a 4-value
+  // dimension would get rows.slice(100, 150) of a 4-row model — an empty
+  // table rendering "No results." + "Page 3 of 1". Snap back to the last
+  // real page instead. pageCount is 0 for an empty result set (nothing to
+  // snap to), hence the > 0 guard.
+  const pageCount = table.getPageCount()
+  const pageIndex = table.getState().pagination.pageIndex
+  React.useEffect(() => {
+    if (enablePagination && pageCount > 0 && pageIndex > pageCount - 1) {
+      table.setPageIndex(pageCount - 1)
+    }
+  }, [enablePagination, pageCount, pageIndex, table])
+
   return { table, grouping, setGrouping, filterState, setFilterState }
 }

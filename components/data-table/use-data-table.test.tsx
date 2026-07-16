@@ -1097,3 +1097,44 @@ describe("useDataTable filtering", () => {
     expect(result.current.filterState.groups).toEqual([])
   })
 })
+
+describe("useDataTable — pagination clamping", () => {
+  it("clamps the page index when a filter shrinks the page count (regression: rendered 'No results.' + 'Page 3 of 1')", () => {
+    // 120 rows = 3 pages of 50; the age < 10 filter leaves 10 rows = 1 page.
+    const col = defineColumns<Row>()
+    const many: Row[] = Array.from({ length: 120 }, (_, i) => ({
+      id: String(i + 1),
+      name: `Row ${i + 1}`,
+      age: i,
+    }))
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: many,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (row) => row.id,
+        // Declared so normalizeFilterState keeps the "age" condition below.
+        filterableColumns: [{ id: "age", label: "Age", type: "number" }],
+      }),
+    )
+    act(() => result.current.table.setPageIndex(2))
+    expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+
+    act(() =>
+      result.current.setFilterState({
+        combinator: "and",
+        groups: [
+          {
+            id: "g1",
+            combinator: "and",
+            conditions: [{ id: "c1", columnId: "age", operator: "lt", value: 10 }],
+          },
+        ],
+      }),
+    )
+    // autoResetPageIndex is off (don't bounce the user on data edits), so the
+    // clamp effect is what snaps an out-of-range page back to the last real one.
+    expect(result.current.table.getPageCount()).toBe(1)
+    expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+    expect(result.current.table.getRowModel().rows.length).toBe(10)
+  })
+})

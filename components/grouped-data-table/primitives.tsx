@@ -75,6 +75,7 @@ export type PopoverButtonTriggerProps = {
   size?: React.ComponentProps<typeof Button>["size"]
   className?: string
   ariaLabel?: string
+  disabled?: boolean
 }
 
 /**
@@ -88,6 +89,7 @@ export function PopoverButtonTrigger({
   size = "sm",
   className,
   ariaLabel,
+  disabled,
 }: PopoverButtonTriggerProps) {
   return (
     <PopoverTrigger
@@ -99,6 +101,7 @@ export function PopoverButtonTrigger({
           size={size}
           aria-label={ariaLabel}
           className={className}
+          disabled={disabled}
         />
       )}
     >

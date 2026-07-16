@@ -101,8 +101,24 @@ export function percentField(
       <span className="tabular-nums">{formatPercent(ctx.getValue(), opts)}</span>
     ),
     edit: numericEdit,
-    toClipboard: toClipboardNumber,
-    fromClipboard: parseNumeric,
+    // Percent stores a FRACTION of 1 (0.42 renders "42%" via Intl's percent
+    // style), but spreadsheets serialize percent cells as "42%" — so unlike
+    // the other numeric fields, the clipboard boundary must convert. Copy
+    // emits the display form ("42%", float noise stripped via toPrecision so
+    // 0.1 doesn't leak out as "10.000000000000002%"); paste divides by 100
+    // when a % is present and otherwise takes the number as the raw fraction,
+    // which keeps our own copy→paste round-trip exact AND fixes Excel/Sheets
+    // pastes that previously landed 100× too large (a "42%" cell stored 42
+    // and rendered "4,200%").
+    toClipboard: (value) =>
+      value == null || Number.isNaN(value)
+        ? ""
+        : `${Number((value * 100).toPrecision(12))}%`,
+    fromClipboard: (text) => {
+      const n = parseNumeric(text)
+      if (n === undefined) return undefined
+      return text.includes("%") ? n / 100 : n
+    },
   }
 }
 

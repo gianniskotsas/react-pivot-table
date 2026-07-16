@@ -142,3 +142,43 @@ describe("planPaste", () => {
     expect(plan.newRows).toEqual([{ name: "Chris" }])
   })
 })
+
+describe("parseTsv — quoted fields (Excel/Sheets multi-line cells)", () => {
+  it("keeps a quoted cell containing a newline in ONE grid cell instead of splitting into phantom rows", () => {
+    expect(parseTsv('"line one\nline two"\tb')).toEqual([["line one\nline two", "b"]])
+  })
+
+  it("keeps a quoted cell containing a tab in ONE grid cell instead of splitting into phantom columns", () => {
+    expect(parseTsv('"has\ttab"\tb')).toEqual([["has\ttab", "b"]])
+  })
+
+  it("unescapes doubled quotes inside a quoted field", () => {
+    expect(parseTsv('"say ""hi"""\tb')).toEqual([['say "hi"', "b"]])
+  })
+
+  it("treats a quote appearing mid-field as a literal character (spreadsheet behavior)", () => {
+    expect(parseTsv('5" nails\tb')).toEqual([['5" nails', "b"]])
+  })
+
+  it("still drops exactly one trailing empty line after a quoted final field", () => {
+    expect(parseTsv('a\t"multi\nline"\n')).toEqual([["a", "multi\nline"]])
+  })
+})
+
+describe("gridToTsv — field quoting", () => {
+  const stringColumns: ClipboardColumn[] = [
+    { id: "a", toClipboard: (v) => String(v ?? "") },
+    { id: "b", toClipboard: (v) => String(v ?? "") },
+  ]
+
+  it("quote-wraps a value containing a newline, tab, or quote (doubling embedded quotes)", () => {
+    expect(gridToTsv([["multi\nline", "plain"]], stringColumns)).toBe('"multi\nline"\tplain')
+    expect(gridToTsv([["has\ttab", "plain"]], stringColumns)).toBe('"has\ttab"\tplain')
+    expect(gridToTsv([['say "hi"', "plain"]], stringColumns)).toBe('"say ""hi"""\tplain')
+  })
+
+  it("copy → paste round-trips a multi-line cell intact through parseTsv", () => {
+    const grid = [["line one\nline two", 'quote " and\ttab']]
+    expect(parseTsv(gridToTsv(grid, stringColumns))).toEqual(grid)
+  })
+})

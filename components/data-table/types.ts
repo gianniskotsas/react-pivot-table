@@ -182,5 +182,13 @@ export type DataTableAction<TData> = {
   /** Disable this action (e.g. based on selection state); defaults to enabled. */
   disabled?: boolean
   variant?: "default" | "destructive"
-  onClick: (context: { rowIds: string[]; rows: TData[] }) => void
+  /**
+   * `rowIds`/`rows` are the selected rows that exist client-side. When
+   * `allMatching` is true (manual pagination, the select-all cycle advanced
+   * to "every row matching the filter"), the logical selection exceeds what's
+   * loaded — `rows` covers only the loaded subset, and the action should run
+   * its own server-side bulk path (mirroring how `computeAggregate` handles
+   * the same scope for footer aggregation) rather than iterating `rows`.
+   */
+  onClick: (context: { rowIds: string[]; rows: TData[]; allMatching: boolean }) => void
 }

@@ -1,6 +1,12 @@
 import { act, fireEvent, render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }),
+}))
+
+import { toast } from "sonner"
+
 import { DataTable } from "./data-table"
 import { defineColumns } from "./define-columns"
 import * as ExportCsvModule from "./export-csv"
@@ -357,6 +363,37 @@ describe("DataTable — export CSV", () => {
     expect(csv).toContain("Ada")
     downloadSpy.mockRestore()
   })
+
+  // Regression: an "all matching" logical selection under manual pagination
+  // used to narrow the export to the loaded/selected subset and toast a plain
+  // "Exported 2 rows" — a silently truncated CSV presented as complete.
+  it("exports all loaded rows and reports the partial scope when 'all matching' is selected under manual pagination", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(
+      <DataTable
+        data={DATA}
+        columns={columns()}
+        getRowId={(r) => r.id}
+        enableRowSelection
+        manualPagination
+        totalRowCount={100}
+      />,
+    )
+    // Select-all click cycle: none → all loaded → all matching (the second
+    // click is offered because totalRowCount exceeds the 2 loaded rows).
+    const selectAll = screen.getAllByRole("checkbox")[0]
+    fireEvent.click(selectAll)
+    fireEvent.click(selectAll)
+
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    const [, csv] = downloadSpy.mock.calls[0]
+    expect(csv).toContain("Bailey")
+    expect(csv).toContain("Ada")
+    expect(toast).toHaveBeenCalledWith(
+      "Exported 2 of 100 matching rows to CSV — only loaded rows can be exported",
+    )
+    downloadSpy.mockRestore()
+  })
 })
 
 describe("DataTable — filters and actions toolbar", () => {
@@ -405,7 +442,7 @@ describe("DataTable — filters and actions toolbar", () => {
     fireEvent.click(screen.getAllByRole("checkbox")[1]) // select "Bailey" (row "1")
     fireEvent.click(trigger)
     fireEvent.click(screen.getByText("Archive"))
-    expect(onClick).toHaveBeenCalledWith({ rowIds: ["1"], rows: [DATA[0]] })
+    expect(onClick).toHaveBeenCalledWith({ rowIds: ["1"], rows: [DATA[0]], allMatching: false })
   })
 
   it("puts Export CSV on the opposite side of the toolbar from Columns/Filters/Actions", () => {

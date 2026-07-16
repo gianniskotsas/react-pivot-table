@@ -154,6 +154,21 @@ export function useDataTable<TData>({
     autoResetPageIndex: false,
   })
 
+  // autoResetPageIndex: false keeps the user's page across data edits, but
+  // TanStack never clamps: if a filter shrinks the row count while the user
+  // sits on page 3 of what is now 1 page, getPaginationRowModel slices
+  // rows.slice(100, 150) of a 4-row model and renders an empty table ("No
+  // results." + "Page 3 of 1"). Snap back to the last real page instead.
+  // Guarded to pageCount > 0: manual pagination without a known total
+  // reports -1, and an empty result set reports 0 (nothing to snap to).
+  const pageCount = table.getPageCount()
+  const pageIndex = table.getState().pagination.pageIndex
+  React.useEffect(() => {
+    if (enablePagination && pageCount > 0 && pageIndex > pageCount - 1) {
+      table.setPageIndex(pageCount - 1)
+    }
+  }, [enablePagination, pageCount, pageIndex, table])
+
   // Deliberately asymmetric: turning matching ON also selects every loaded
   // row (so visible checkboxes agree with "everything"); turning it OFF does
   // NOT deselect — see DataTableRuntime.setAllMatchingSelected's doc comment

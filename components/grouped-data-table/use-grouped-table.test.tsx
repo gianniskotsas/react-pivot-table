@@ -131,3 +131,35 @@ describe("useGroupedTable", () => {
     expect(result.current.filterState.groups).toEqual([])
   })
 })
+
+describe("useGroupedTable — pagination clamping", () => {
+  it("clamps the page index when grouping collapses the page count (regression: rendered 'No results.' + 'Page 3 of 1')", () => {
+    // 120 leaf rows = 3 pages of 50; grouping by entity collapses to 2 top-level rows = 1 page.
+    const many: Acct[] = Array.from({ length: 120 }, (_, i) => ({
+      id: String(i + 1),
+      entity: i % 2 === 0 ? "Coffee Inc" : "Holding BV",
+      bank: i % 3 === 0 ? "Citi" : "HSBC",
+      currency: "USD",
+    }))
+    const { result } = renderHook(() =>
+      useGroupedTable<Acct>({
+        data: many,
+        columns,
+        groupableDimensions: [
+          { id: "entity", label: "Entity" },
+          { id: "bank", label: "Bank" },
+        ],
+        groupColumn: { renderLeaf: (row) => row.original.id },
+        enablePagination: true,
+      }),
+    )
+    act(() => result.current.table.setPageIndex(2))
+    expect(result.current.table.getState().pagination.pageIndex).toBe(2)
+
+    act(() => result.current.setGrouping(["entity"]))
+    // autoResetPageIndex is off (don't bounce the user on data edits), so the
+    // clamp effect is what snaps an out-of-range page back to the last real one.
+    expect(result.current.table.getState().pagination.pageIndex).toBe(0)
+    expect(result.current.table.getRowModel().rows.length).toBeGreaterThan(0)
+  })
+})

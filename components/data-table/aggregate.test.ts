@@ -46,3 +46,19 @@ describe("aggregate", () => {
     expect(ALL_AGGREGATION_METHODS).toEqual(["sum", "avg", "min", "max", "count"])
   })
 })
+
+describe("aggregate — non-numeric values", () => {
+  it("ignores non-number values (e.g. strings from a misconfigured calculableColumns) instead of corrupting sum via string concatenation", () => {
+    const values = [1, "abc", 2] as unknown as number[]
+    expect(aggregate("sum", values)).toBe(3)
+    expect(aggregate("avg", values)).toBe(1.5)
+    expect(aggregate("min", values)).toBe(1)
+    expect(aggregate("max", values)).toBe(2)
+  })
+
+  it("an all-non-numeric input behaves like an all-blank one", () => {
+    const values = ["abc", "def"] as unknown as number[]
+    expect(aggregate("sum", values)).toBe(0)
+    expect(aggregate("avg", values)).toBeNaN()
+  })
+})

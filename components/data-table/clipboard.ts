@@ -8,15 +8,74 @@ export type ClipboardColumn = {
 
 /**
  * Parses TSV text (as read from the clipboard) into a 2D grid of raw cell
- * strings. Normalizes \r\n and bare \r line endings to \n before splitting.
- * Drops exactly one trailing empty line — pasting from Excel/Sheets always
- * ends the copied block with a line terminator, which would otherwise show
- * up as one extra, entirely-empty row here.
+ * strings. Normalizes \r\n and bare \r line endings to \n before parsing.
+ * Quote-aware, matching what Excel/Sheets actually emit: a cell containing a
+ * literal tab, newline, or quote is wrapped in double quotes (with embedded
+ * quotes doubled), so a copied multi-line cell must land in ONE grid cell
+ * rather than being naively split into phantom rows/columns. A quote only
+ * opens quoted mode at the start of a field; mid-field quotes are literal
+ * (also matching spreadsheet behavior). Drops exactly one trailing empty
+ * line — pasting from Excel/Sheets always ends the copied block with a line
+ * terminator, which would otherwise show up as one extra, entirely-empty row.
  */
 export function parseTsv(text: string): string[][] {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n")
-  if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop()
-  return lines.map((line) => line.split("\t"))
+  const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+  const rows: string[][] = [[]]
+  let field = ""
+  let fieldStarted = false // distinguishes "" (empty so far) from content beginning with a literal quote
+  let inQuotes = false
+  let i = 0
+  while (i < normalized.length) {
+    const ch = normalized[i]
+    if (inQuotes) {
+      if (ch === '"') {
+        if (normalized[i + 1] === '"') {
+          field += '"'
+          i += 2
+          continue
+        }
+        inQuotes = false
+        i++
+        continue
+      }
+      field += ch
+      i++
+      continue
+    }
+    if (ch === '"' && !fieldStarted && field === "") {
+      inQuotes = true
+      fieldStarted = true
+      i++
+      continue
+    }
+    if (ch === "\t") {
+      rows[rows.length - 1].push(field)
+      field = ""
+      fieldStarted = false
+      i++
+      continue
+    }
+    if (ch === "\n") {
+      rows[rows.length - 1].push(field)
+      rows.push([])
+      field = ""
+      fieldStarted = false
+      i++
+      continue
+    }
+    field += ch
+    fieldStarted = true
+    i++
+  }
+  rows[rows.length - 1].push(field)
+  const last = rows[rows.length - 1]
+  if (rows.length > 1 && last.length === 1 && last[0] === "") rows.pop()
+  return rows
+}
+
+/** Quote-wraps a TSV field when it contains a tab, newline, or quote (doubling embedded quotes), as Excel/Sheets do — so a multi-line longText cell survives a copy→paste round-trip intact. */
+function encodeTsvField(text: string): string {
+  return /[\t\n\r"]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
 }
 
 /**
@@ -26,7 +85,9 @@ export function parseTsv(text: string): string[][] {
  */
 export function gridToTsv(grid: unknown[][], columns: ClipboardColumn[]): string {
   return grid
-    .map((row) => row.map((value, i) => columns[i]?.toClipboard(value) ?? "").join("\t"))
+    .map((row) =>
+      row.map((value, i) => encodeTsvField(columns[i]?.toClipboard(value) ?? "")).join("\t"),
+    )
     .join("\n")
 }
 

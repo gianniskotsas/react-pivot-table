@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 
+import { useDataTableRuntime } from "./data-table-runtime-context"
 import { PopoverButtonTrigger } from "./primitives"
 import type { DataTableAction } from "./types"
 
@@ -15,11 +16,13 @@ export function ActionsMenuContent<TData>({
   actions,
   rowIds,
   rows,
+  allMatching,
   onActionClick,
 }: {
   actions: DataTableAction<TData>[]
   rowIds: string[]
   rows: TData[]
+  allMatching: boolean
   onActionClick: () => void
 }) {
   return (
@@ -36,7 +39,7 @@ export function ActionsMenuContent<TData>({
               action.variant === "destructive" && "text-destructive hover:bg-destructive/10",
             )}
             onClick={() => {
-              action.onClick({ rowIds, rows })
+              action.onClick({ rowIds, rows, allMatching })
               onActionClick()
             }}
           >
@@ -59,15 +62,27 @@ export function ActionsMenu<TData>({
   // Controlled (unlike ColumnsMenu's checkboxes, which stay open for
   // multi-toggle) so a one-shot action click can close the popover.
   const [open, setOpen] = React.useState(false)
+  const runtime = useDataTableRuntime()
   const selectedRows = table.getSelectedRowModel().rows
   const rowIds = React.useMemo(() => selectedRows.map((r) => r.id), [selectedRows])
   const rows = React.useMemo(() => selectedRows.map((r) => r.original), [selectedRows])
 
+  // Under manual pagination, the select-all cycle can advance to a logical
+  // "every matching row" selection that exceeds what's loaded client-side.
+  // getSelectedRowModel() only ever contains loaded rows, so without this the
+  // badge would claim (say) 50 while the header checkbox claims "all 10,000
+  // matching" — and the action itself couldn't tell the two scopes apart.
+  const allMatching = runtime?.isAllMatchingSelected ?? false
+  const badgeCount =
+    allMatching && runtime?.totalRowCount !== undefined
+      ? Math.max(runtime.totalRowCount, rowIds.length)
+      : rowIds.length
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverButtonTrigger className="gap-2" disabled={rowIds.length === 0}>
+      <PopoverButtonTrigger className="gap-2" disabled={rowIds.length === 0 && !allMatching}>
         Actions
-        {rowIds.length > 0 && <Badge variant="secondary">{rowIds.length}</Badge>}
+        {badgeCount > 0 && <Badge variant="secondary">{badgeCount}</Badge>}
         <ChevronDown className="size-4" aria-hidden="true" />
       </PopoverButtonTrigger>
       <PopoverContent align="start" className="w-56">
@@ -75,6 +90,7 @@ export function ActionsMenu<TData>({
           actions={actions}
           rowIds={rowIds}
           rows={rows}
+          allMatching={allMatching}
           onActionClick={() => setOpen(false)}
         />
       </PopoverContent>

@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils"
 import { ActionsMenu } from "./actions-menu"
 import { ColumnHeader } from "./column-header"
 import { ColumnsMenu } from "./columns-menu"
-import { DataTableRuntimeContext } from "./data-table-runtime-context"
+import { DataTableRuntimeContext, useDataTableRuntime } from "./data-table-runtime-context"
 import { downloadCsv, exportCsv } from "./export-csv"
 import { FilterPopover } from "./filter-builder"
 import { DataTableFooter } from "./footer-aggregation"
@@ -120,8 +120,13 @@ function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
 // CSV matches what's on screen rather than the original unsorted `data`. When
 // rows are selected, the export narrows to just those — filtering the sorted
 // model (not the selection model) so the selected rows keep their on-screen
-// order.
+// order. Under manual pagination, an "all matching" selection can logically
+// cover rows the client never loaded; only loaded rows can be serialized, so
+// the toast says exactly how many of the matching total made it into the file
+// rather than letting a silently-truncated CSV pass as complete.
 function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
+  const runtime = useDataTableRuntime()
+
   function handleExport() {
     const columns = table
       .getVisibleLeafColumns()
@@ -135,10 +140,14 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
         }
       })
     const sortedRows = table.getSortedRowModel().rows
+    const allMatching = runtime?.isAllMatchingSelected ?? false
     const hasSelection = table.getSelectedRowModel().rows.length > 0
-    const sourceRows = hasSelection
-      ? sortedRows.filter((row) => row.getIsSelected())
-      : sortedRows
+    // "All matching" means the whole view, so no narrowing — every loaded row
+    // is in scope (they're all selected anyway, plus rows not yet loaded).
+    const sourceRows =
+      hasSelection && !allMatching
+        ? sortedRows.filter((row) => row.getIsSelected())
+        : sortedRows
     const rows = sourceRows.map((row) => {
       const values: Record<string, unknown> = {}
       for (const column of columns) values[column.id] = row.getValue(column.id)
@@ -146,7 +155,14 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
     })
     const csv = exportCsv(rows, columns)
     downloadCsv("export.csv", csv)
-    toast(`Exported ${rows.length} row${rows.length === 1 ? "" : "s"} to CSV`)
+    const totalRowCount = runtime?.totalRowCount
+    if (allMatching && totalRowCount !== undefined && totalRowCount > rows.length) {
+      toast(
+        `Exported ${rows.length} of ${totalRowCount} matching rows to CSV — only loaded rows can be exported`,
+      )
+    } else {
+      toast(`Exported ${rows.length} row${rows.length === 1 ? "" : "s"} to CSV`)
+    }
   }
 
   return (

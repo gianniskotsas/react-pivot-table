@@ -4,6 +4,7 @@ import { ComponentPreview } from "@/components/site/component-preview"
 import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { InstallTabs } from "@/components/site/install-tabs"
 import { PageHeader, Section } from "@/components/site/page-header"
+import { ToasterCallout, TOASTER_MARKDOWN } from "@/components/site/toaster-callout"
 import { WorksWith } from "@/components/site/works-with"
 import { ExportDataTableDemo } from "@/components/site/data-table-demos"
 
@@ -41,6 +42,7 @@ Set enableExport={false} to hide it. Works with: Data Table.
 \`\`\`
 npx shadcn@latest add @kotsas-ui/data-table
 \`\`\`
+${TOASTER_MARKDOWN}
 
 ## Usage
 \`\`\`tsx
@@ -72,6 +74,7 @@ export default function ExportDataPage() {
       >
         <WorksWith components={["data-table"]} />
         <InstallTabs package="@kotsas-ui/data-table" />
+        <ToasterCallout />
       </Section>
 
       <Section

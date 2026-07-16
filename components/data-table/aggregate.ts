@@ -18,7 +18,10 @@ export function aggregate(
 ): number {
   if (method === "count") return values.length
 
-  const nums = values.filter((v): v is number => v != null && !Number.isNaN(v))
+  // typeof check matters: Number.isNaN alone lets non-number values (e.g. a
+  // string, when calculableColumns points at a text column) slip through the
+  // type predicate untouched — and `0 + "abc"` concatenates instead of adding.
+  const nums = values.filter((v): v is number => typeof v === "number" && !Number.isNaN(v))
   switch (method) {
     case "sum":
       return nums.reduce((a, b) => a + b, 0)

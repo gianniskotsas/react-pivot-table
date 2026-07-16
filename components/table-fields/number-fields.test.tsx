@@ -111,3 +111,31 @@ describe("number field edit renderers", () => {
     expect(setValue).toHaveBeenCalledWith(-5)
   })
 })
+
+describe("percentField clipboard", () => {
+  const f = percentField()
+
+  it('parses spreadsheet-style "42%" as the fraction 0.42 (regression: used to store 42 and render "4,200%")', () => {
+    expect(f.fromClipboard!("42%")).toBe(0.42)
+    expect(f.fromClipboard!("7.5%")).toBe(0.075)
+  })
+
+  it("parses a bare number as the raw fraction (our own pre-fix copy format)", () => {
+    expect(f.fromClipboard!("0.42")).toBe(0.42)
+  })
+
+  it("returns undefined for unparseable text", () => {
+    expect(f.fromClipboard!("nope")).toBeUndefined()
+  })
+
+  it('serializes the stored fraction in display form ("42%"), with float noise stripped', () => {
+    expect(f.toClipboard(0.42)).toBe("42%")
+    // 0.1 * 100 === 10.000000000000002 in raw float math — must emit "10%"
+    expect(f.toClipboard(0.1)).toBe("10%")
+    expect(f.toClipboard(Number.NaN)).toBe("")
+  })
+
+  it("copy → paste round-trips exactly", () => {
+    expect(f.fromClipboard!(f.toClipboard(0.425))).toBe(0.425)
+  })
+})

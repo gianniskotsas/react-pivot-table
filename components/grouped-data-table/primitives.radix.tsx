@@ -68,6 +68,7 @@ export type PopoverButtonTriggerProps = {
   size?: React.ComponentProps<typeof Button>["size"]
   className?: string
   ariaLabel?: string
+  disabled?: boolean
 }
 
 /** Radix build of the PopoverButtonTrigger shim — see primitives.tsx for the base-ui build. */
@@ -77,6 +78,7 @@ export function PopoverButtonTrigger({
   size = "sm",
   className,
   ariaLabel,
+  disabled,
 }: PopoverButtonTriggerProps) {
   return (
     <PopoverTrigger asChild>
@@ -86,6 +88,7 @@ export function PopoverButtonTrigger({
         size={size}
         aria-label={ariaLabel}
         className={className}
+        disabled={disabled}
       >
         {children}
       </Button>
