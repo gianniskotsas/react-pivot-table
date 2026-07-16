@@ -141,6 +141,7 @@ export function ExportDataTableDemo() {
         getRowId={(row) => row.id}
         editable
         onUpdateData={handleUpdateData}
+        enableRowSelection
         enablePagination={false}
       />
     </div>

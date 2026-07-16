@@ -114,7 +114,12 @@ describe("DataTable", () => {
     // ancestor <tr> directly — no `group` marker class needed on TableRow,
     // so a pinned cell still tracks the row's hover/selected state without
     // requiring registry consumers to have a modified components/ui/table.tsx.
-    expect(cell.className).toContain("[tr:hover_&]:bg-muted/50")
+    // The hover tint is an OPAQUE color-mix (not TableRow's translucent
+    // bg-muted/50) so scrolled-away columns can't bleed through the sticky
+    // pinned cell on hover.
+    expect(cell.className).toContain(
+      "[tr:hover_&]:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))]",
+    )
     expect(cell.className).toContain("[tr[data-state=selected]_&]:bg-muted")
     expect(cell.style.background).toBe("")
     expect(cell.style.position).toBe("sticky")
@@ -326,6 +331,30 @@ describe("DataTable — export CSV", () => {
     // "__row-gutter__" as an extra header column via meta?.label ?? column.id
     // — is actually caught, not silently accepted by a looser substring check.
     expect(csv.split("\r\n")[0]).toBe("Name,Age")
+    downloadSpy.mockRestore()
+  })
+
+  it("exports only the selected rows when a selection exists", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
+    // checkbox[0] is the header select-all; [1] = Bailey, [2] = Ada (DOM/row
+    // order). Select only Ada, so the export must narrow to that one row.
+    fireEvent.click(screen.getAllByRole("checkbox")[2])
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    expect(downloadSpy).toHaveBeenCalled()
+    const [, csv] = downloadSpy.mock.calls[0]
+    expect(csv).toContain("Ada")
+    expect(csv).not.toContain("Bailey")
+    downloadSpy.mockRestore()
+  })
+
+  it("exports every row when nothing is selected, even with selection enabled", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(<DataTable data={DATA} columns={columns()} getRowId={(r) => r.id} enableRowSelection />)
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    const [, csv] = downloadSpy.mock.calls[0]
+    expect(csv).toContain("Bailey")
+    expect(csv).toContain("Ada")
     downloadSpy.mockRestore()
   })
 })

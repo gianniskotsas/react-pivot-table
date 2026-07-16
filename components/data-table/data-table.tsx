@@ -88,6 +88,13 @@ type PinnedCellStyle = { style: React.CSSProperties; className?: string }
 // repo. The ancestor-selector form has no such dependency. Sticky
 // positioning, zIndex, and the box-shadow divider stay inline since they
 // aren't state-dependent.
+//
+// Every one of these backgrounds must be fully opaque, or the scrolled-away
+// columns show THROUGH the sticky pinned cell. TableRow's hover is
+// `bg-muted/50` — muted composited at 50% over the row's background — which is
+// translucent, so the pinned cell can't reuse it directly. The `color-mix`
+// reproduces that exact tint as a solid color (muted 50% over background),
+// keeping the pinned column opaque while matching the rest of the hovered row.
 function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
   const pinned = column.getIsPinned()
   if (!pinned) return { style: {} }
@@ -102,14 +109,18 @@ function pinnedStyle<TData>(column: Column<TData, unknown>): PinnedCellStyle {
           ? "1px 0 0 0 var(--border) inset"
           : "-1px 0 0 0 var(--border) inset",
     },
-    className: "bg-background [tr:hover_&]:bg-muted/50 [tr[data-state=selected]_&]:bg-muted",
+    className:
+      "bg-background [tr:hover_&]:bg-[color-mix(in_srgb,var(--muted)_50%,var(--background))] [tr[data-state=selected]_&]:bg-muted",
   }
 }
 
 // Exports the current sorted/filtered/visible view: visible leaf columns
 // (minus the structural row-gutter column, which has no DataTableColumnMeta
 // and nothing meaningful to export) run through the sorted row model, so the
-// CSV matches what's on screen rather than the original unsorted `data`.
+// CSV matches what's on screen rather than the original unsorted `data`. When
+// rows are selected, the export narrows to just those — filtering the sorted
+// model (not the selection model) so the selected rows keep their on-screen
+// order.
 function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
   function handleExport() {
     const columns = table
@@ -123,7 +134,12 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
           toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")),
         }
       })
-    const rows = table.getSortedRowModel().rows.map((row) => {
+    const sortedRows = table.getSortedRowModel().rows
+    const hasSelection = table.getSelectedRowModel().rows.length > 0
+    const sourceRows = hasSelection
+      ? sortedRows.filter((row) => row.getIsSelected())
+      : sortedRows
+    const rows = sourceRows.map((row) => {
       const values: Record<string, unknown> = {}
       for (const column of columns) values[column.id] = row.getValue(column.id)
       return values
