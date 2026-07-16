@@ -14,7 +14,9 @@ export function PageHeader({
   return (
     <header className="space-y-3 border-b pb-8">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight md:text-4xl">
+          {title}
+        </h1>
         {actions ? <div className="shrink-0 pt-1">{actions}</div> : null}
       </div>
       <p className="max-w-2xl text-muted-foreground">{description}</p>

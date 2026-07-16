@@ -45,15 +45,25 @@ export default function HomePage() {
       <main className="mx-auto max-w-5xl px-6">
         {/* Hero */}
         <section className="relative flex flex-col items-center gap-6 py-24 text-center md:py-32">
+          {/* Atmosphere: a teal glow anchored to the top edge plus a faint
+              grain wash — the hero otherwise sits on a large flat void. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_50%_50%_at_50%_0%,color-mix(in_oklch,var(--primary),transparent_88%),transparent)]"
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--primary),transparent_82%),transparent)]"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.05] dark:opacity-[0.07]"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
+            }}
           />
           <Badge variant="secondary" className="rounded-full font-normal">
             Open source · shadcn registry
           </Badge>
-          <h1 className="max-w-2xl text-4xl font-semibold tracking-tight text-balance md:text-5xl">
-            Data tables for shadcn/ui.
+          <h1 className="max-w-2xl font-display text-5xl font-medium tracking-tight text-balance md:text-6xl">
+            Data tables for <em className="italic">shadcn/ui</em>.
           </h1>
           <p className="max-w-lg text-balance text-muted-foreground md:text-lg">
             Copy-paste, typed table components built on TanStack Table —

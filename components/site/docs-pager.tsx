@@ -7,8 +7,13 @@ import { ArrowLeft, ArrowRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { DOCS_GROUPS } from "@/components/site/docs-links"
 
-// Flatten the grouped nav into the reading order used for prev/next paging.
-const ORDERED = DOCS_GROUPS.flatMap((group) => group.items)
+// Flatten the grouped nav into the reading order used for prev/next paging,
+// keeping each item's group title: two pages can share a label ("Overview"
+// exists under both Getting Started and Blocks), so a card reading just
+// "Next → Overview" is ambiguous without its group.
+const ORDERED = DOCS_GROUPS.flatMap((group) =>
+  group.items.map((item) => ({ ...item, group: group.title })),
+)
 
 export function DocsPager() {
   const pathname = usePathname()
@@ -56,6 +61,8 @@ function PagerLink({
           <ArrowLeft className="size-3 transition-transform group-hover:-translate-x-0.5" />
         )}
         {isNext ? "Next" : "Previous"}
+        <span aria-hidden="true">·</span>
+        {item.group}
         {isNext && (
           <ArrowRight className="size-3 transition-transform group-hover:translate-x-0.5" />
         )}

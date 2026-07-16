@@ -6,7 +6,11 @@
 
 @theme inline {
   --font-heading: var(--font-sans);
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  /* Resolved from the next/font variables the root layout injects — never a
+     hardcoded family name, so the loaded font and the theme can't disagree. */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  /* Editorial serif for page-level display headings (hero, PageHeader h1). */
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -72,11 +76,16 @@
   --chart-4: oklch(0.371 0.01 75);
   --chart-5: oklch(0.269 0.01 75);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0.003 75);
+  /* One visible step darker than --background (0.99): the docs sidebar uses
+     the "inset" variant, whose whole effect — content floating as a rounded
+     card above the sidebar canvas — only exists if canvas and card actually
+     differ. (They used to be near-identical, rendering the variant invisible.) */
+  --sidebar: oklch(0.965 0.006 75);
   --sidebar-foreground: oklch(0.17 0.006 75);
   --sidebar-primary: oklch(0.5 0.11 175);
   --sidebar-primary-foreground: oklch(0.99 0.005 175);
-  --sidebar-accent: oklch(0.96 0.006 75);
+  /* Active/hover item pill — must stay distinguishable from the darker canvas. */
+  --sidebar-accent: oklch(0.92 0.009 75);
   --sidebar-accent-foreground: oklch(0.22 0.008 75);
   --sidebar-border: oklch(0.9 0.007 75);
   --sidebar-ring: oklch(0.5 0.11 175);
@@ -106,7 +115,9 @@
   --chart-3: oklch(0.439 0.01 75);
   --chart-4: oklch(0.371 0.01 75);
   --chart-5: oklch(0.269 0.01 75);
-  --sidebar: oklch(0.11 0.004 70);
+  /* One step DARKER than --background (0.11) so the inset content card reads
+     as lifted above the sidebar canvas in dark mode too. */
+  --sidebar: oklch(0.085 0.004 70);
   --sidebar-foreground: oklch(0.96 0.004 75);
   --sidebar-primary: oklch(0.72 0.13 175);
   --sidebar-primary-foreground: oklch(0.12 0.02 175);

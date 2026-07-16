@@ -13,7 +13,10 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
       {/* min-w-0 lets the inset shrink to the space left of the sidebar; without
           it a wide table (e.g. a frozen-column demo) forces the inset past the
           viewport and scrolls the whole page instead of its own container. */}
-      <SidebarInset className="min-w-0">
+      {/* The hairline border finishes the inset-card edge where the canvas is
+          only one tint step away; md+ only, since the inset is full-bleed on
+          mobile (no card to outline). */}
+      <SidebarInset className="min-w-0 md:border md:border-border/60">
         <DocsHeader />
         <div className="mx-auto flex w-full max-w-6xl gap-10 px-6 lg:px-8">
           <main id="docs-content" className="min-w-0 flex-1 py-10 md:py-14">
