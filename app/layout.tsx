@@ -1,28 +1,22 @@
-import { Geist, Geist_Mono, Newsreader } from "next/font/google"
+import { JetBrains_Mono, Outfit, Raleway } from "next/font/google"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
-// Loaded under its own variable name (not --font-sans directly): globals.css's
-// @theme inline owns --font-sans and resolves it from this variable, so the
-// two can't silently disagree. (They used to: the theme said "Geist" while the
-// layout loaded Inter — Geist was never loaded, so the whole site rendered in
-// the OS fallback font and Inter downloaded as dead weight.)
-const fontSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
+// Font trio from the Kotsas design system (claude.ai/design): Raleway (body/
+// UI), Outfit (display — every heading level, per the system's base.css),
+// JetBrains Mono (code/table values/ids). Loaded under their own variable
+// names — globals.css's @theme inline resolves --font-sans/--font-display
+// from these, so the loaded font and the theme can't silently disagree.
+const fontSans = Raleway({ subsets: ["latin"], variable: "--font-raleway" })
 
-const fontMono = Geist_Mono({
+const fontDisplay = Outfit({ subsets: ["latin"], variable: "--font-outfit" })
+
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
-})
-
-// Editorial display serif for page-level headings only (hero, PageHeader h1) —
-// UI-level headings (dialogs, sheets, section titles) stay on the sans.
-const fontDisplay = Newsreader({
-  subsets: ["latin"],
-  style: ["normal", "italic"],
-  variable: "--font-newsreader",
 })
 
 export default function RootLayout({

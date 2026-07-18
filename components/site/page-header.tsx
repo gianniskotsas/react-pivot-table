@@ -39,7 +39,7 @@ export function Section({
   return (
     <section id={id} className="scroll-mt-20 space-y-4">
       <div className="space-y-1">
-        <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+        <h2 className="font-display text-xl font-medium tracking-tight">{title}</h2>
         {description ? (
           <p className="max-w-2xl text-sm text-muted-foreground">
             {description}

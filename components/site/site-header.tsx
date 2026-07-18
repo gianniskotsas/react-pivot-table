@@ -33,7 +33,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="flex items-center gap-2 text-sm font-semibold tracking-tight"
+            className="flex items-center gap-2 font-display text-sm font-medium tracking-tight"
           >
             <span
               aria-hidden

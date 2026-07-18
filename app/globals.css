@@ -5,12 +5,18 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-heading: var(--font-sans);
+  /* Kotsas design system (claude.ai/design/p/cd0a912f…): Outfit is the
+     display face for EVERY heading level (h1-h4, dialog/sheet titles), not
+     just page-level hero text — so --font-heading resolves from --font-display
+     instead of --font-sans, matching the system's base.css h1-h4 rule. */
+  --font-heading: var(--font-display);
   /* Resolved from the next/font variables the root layout injects — never a
      hardcoded family name, so the loaded font and the theme can't disagree. */
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
-  /* Editorial serif for page-level display headings (hero, PageHeader h1). */
-  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-sans: var(--font-raleway), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-outfit), ui-sans-serif, system-ui, sans-serif;
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -51,84 +57,160 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/*
+ * Color palette from the Kotsas design system (claude.ai/design), ported
+ * from tokens/colors.css: near-monochrome grays carrying almost everything
+ * (backgrounds, borders, text, table chrome), with violet as the single
+ * accent reserved for primary actions, focus rings, links, and selection.
+ * Dark mode is the primary/default mode (see components/theme-provider.tsx).
+ */
 :root {
-  --background: oklch(0.99 0.003 75);
-  --foreground: oklch(0.17 0.006 75);
-  --card: oklch(1 0.002 75);
-  --card-foreground: oklch(0.17 0.006 75);
-  --popover: oklch(1 0.002 75);
-  --popover-foreground: oklch(0.17 0.006 75);
-  --primary: oklch(0.5 0.11 175);
-  --primary-foreground: oklch(0.99 0.005 175);
-  --secondary: oklch(0.96 0.006 75);
-  --secondary-foreground: oklch(0.22 0.008 75);
-  --muted: oklch(0.96 0.006 75);
-  --muted-foreground: oklch(0.52 0.014 75);
-  --accent: oklch(0.94 0.01 75);
-  --accent-foreground: oklch(0.22 0.008 75);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.9 0.007 75);
-  --input: oklch(0.9 0.007 75);
-  --ring: oklch(0.5 0.11 175);
-  --chart-1: oklch(0.87 0.01 75);
-  --chart-2: oklch(0.556 0.01 75);
-  --chart-3: oklch(0.439 0.01 75);
-  --chart-4: oklch(0.371 0.01 75);
-  --chart-5: oklch(0.269 0.01 75);
+  --gray-0: #ffffff;
+  --gray-50: #fafafa;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-500: #71717a;
+  --gray-600: #52525b;
+  --gray-700: #3f3f46;
+  --gray-800: #27272a;
+  --gray-900: #18181b;
+  --gray-950: #0a0a0b;
+  --violet-100: #f2effe;
+  --violet-200: #e1d9fc;
+  --violet-300: #c4b3fb;
+  --violet-400: #a78bfa;
+  --violet-500: #8b5cf6;
+  --violet-600: #7c3aed;
+  --violet-950: #1c1533;
+  --red-400: #f87171;
+  --red-600: #dc2626;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --amber-400: #fbbf24;
+  --amber-500: #f59e0b;
+
+  --background: var(--gray-0);
+  --foreground: var(--gray-950);
+  --card: var(--gray-0);
+  --card-foreground: var(--gray-950);
+  --popover: var(--gray-0);
+  --popover-foreground: var(--gray-950);
+  --primary: var(--violet-600);
+  --primary-foreground: var(--gray-0);
+  --secondary: var(--gray-100);
+  --secondary-foreground: var(--gray-950);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-500);
+  --accent: var(--violet-400);
+  --accent-foreground: var(--violet-950);
+  --destructive: var(--red-600);
+  --destructive-foreground: var(--gray-0);
+  --success: var(--green-500);
+  --warning: var(--amber-500);
+  --border: var(--gray-200);
+  --input: var(--gray-200);
+  --ring: var(--violet-400);
+  --chart-1: var(--violet-400);
+  --chart-2: var(--gray-600);
+  --chart-3: var(--gray-500);
+  --chart-4: var(--gray-400);
+  --chart-5: var(--gray-300);
   --radius: 0.625rem;
-  /* One visible step darker than --background (0.99): the docs sidebar uses
-     the "inset" variant, whose whole effect — content floating as a rounded
-     card above the sidebar canvas — only exists if canvas and card actually
-     differ. (They used to be near-identical, rendering the variant invisible.) */
-  --sidebar: oklch(0.965 0.006 75);
-  --sidebar-foreground: oklch(0.17 0.006 75);
-  --sidebar-primary: oklch(0.5 0.11 175);
-  --sidebar-primary-foreground: oklch(0.99 0.005 175);
-  /* Active/hover item pill — must stay distinguishable from the darker canvas. */
-  --sidebar-accent: oklch(0.92 0.009 75);
-  --sidebar-accent-foreground: oklch(0.22 0.008 75);
-  --sidebar-border: oklch(0.9 0.007 75);
-  --sidebar-ring: oklch(0.5 0.11 175);
+  /* One visible step darker than --background: the docs sidebar uses the
+     "inset" variant, whose whole effect — content floating as a rounded card
+     above the sidebar canvas — only exists if canvas and card actually
+     differ. */
+  --sidebar: var(--gray-50);
+  --sidebar-foreground: var(--gray-950);
+  --sidebar-primary: var(--violet-600);
+  --sidebar-primary-foreground: var(--gray-0);
+  --sidebar-accent: var(--gray-100);
+  --sidebar-accent-foreground: var(--gray-950);
+  --sidebar-border: var(--gray-200);
+  --sidebar-ring: var(--violet-400);
 }
 
 .dark {
-  --background: oklch(0.11 0.004 70);
-  --foreground: oklch(0.96 0.004 75);
-  --card: oklch(0.15 0.006 75);
-  --card-foreground: oklch(0.96 0.004 75);
-  --popover: oklch(0.15 0.006 75);
-  --popover-foreground: oklch(0.96 0.004 75);
-  --primary: oklch(0.72 0.13 175);
-  --primary-foreground: oklch(0.12 0.02 175);
-  --secondary: oklch(0.19 0.007 75);
-  --secondary-foreground: oklch(0.96 0.004 75);
-  --muted: oklch(0.18 0.007 75);
-  --muted-foreground: oklch(0.64 0.012 75);
-  --accent: oklch(0.21 0.009 75);
-  --accent-foreground: oklch(0.96 0.004 75);
-  --destructive: oklch(0.704 0.191 22.216);
-  /* 10% white over a near-black background was borderline invisible — table
-     outlines and card edges disappeared entirely in dark mode. 16/20% keeps
-     them hairline-subtle but actually present. */
-  --border: oklch(1 0.01 75 / 16%);
-  --input: oklch(1 0.01 75 / 20%);
-  --ring: oklch(0.72 0.13 175);
-  --chart-1: oklch(0.87 0.01 75);
-  --chart-2: oklch(0.556 0.01 75);
-  --chart-3: oklch(0.439 0.01 75);
-  --chart-4: oklch(0.371 0.01 75);
-  --chart-5: oklch(0.269 0.01 75);
-  /* Clearly darker than --background (0.11) so the inset content card reads
-     as lifted above the sidebar canvas — perceptual differences compress near
+  --background: var(--gray-950);
+  --foreground: var(--gray-50);
+  --card: #131316;
+  --card-foreground: var(--gray-50);
+  --popover: #18181c;
+  --popover-foreground: var(--gray-50);
+  --primary: var(--violet-400);
+  --primary-foreground: #1e1633;
+  --secondary: #1c1c20;
+  --secondary-foreground: var(--gray-50);
+  --muted: #1c1c20;
+  --muted-foreground: var(--gray-400);
+  --accent: var(--violet-400);
+  --accent-foreground: var(--violet-100);
+  --destructive: var(--red-400);
+  --destructive-foreground: #2a0e0e;
+  --success: var(--green-400);
+  --warning: var(--amber-400);
+  /* Translucent white (not a flat gray) so hairlines read correctly against
+     whatever surface sits underneath — a flat #333-ish gray would look wrong
+     over the popover's lighter #18181c vs. the page's #0a0a0b. */
+  --border: rgb(255 255 255 / 12%);
+  --input: rgb(255 255 255 / 14%);
+  --ring: var(--violet-400);
+  --chart-1: var(--violet-400);
+  --chart-2: var(--gray-400);
+  --chart-3: var(--gray-500);
+  --chart-4: var(--gray-600);
+  --chart-5: var(--gray-700);
+  /* Clearly darker than --background so the inset content card reads as
+     lifted above the sidebar canvas — perceptual differences compress near
      black, so the gap needs to be bigger than light mode's. */
-  --sidebar: oklch(0.065 0.004 70);
-  --sidebar-foreground: oklch(0.96 0.004 75);
-  --sidebar-primary: oklch(0.72 0.13 175);
-  --sidebar-primary-foreground: oklch(0.12 0.02 175);
-  --sidebar-accent: oklch(0.19 0.007 75);
-  --sidebar-accent-foreground: oklch(0.96 0.004 75);
-  --sidebar-border: oklch(1 0.01 75 / 16%);
-  --sidebar-ring: oklch(0.72 0.13 175);
+  --sidebar: #0d0d0f;
+  --sidebar-foreground: var(--gray-50);
+  --sidebar-primary: var(--violet-400);
+  --sidebar-primary-foreground: #1e1633;
+  --sidebar-accent: #1c1c20;
+  --sidebar-accent-foreground: var(--gray-50);
+  --sidebar-border: rgb(255 255 255 / 10%);
+  --sidebar-ring: var(--violet-400);
+}
+
+/*
+ * Extra surface/effect tokens from the design system, not wired into
+ * @theme inline (no Tailwind utility needs them yet) but available as raw
+ * CSS custom properties for component-level use — e.g. --shadow-md on a
+ * floating layer, --duration-fast on a transition.
+ */
+:root {
+  --border-strong: var(--gray-300);
+  --surface: var(--gray-0);
+  --surface-secondary: var(--gray-50);
+  --surface-hover: var(--gray-100);
+  --accent-tint: var(--violet-100);
+  --destructive-tint: #fef2f2;
+  --shadow-color: 0deg 0% 0%;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.06);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.06), 0 1px 1px hsl(var(--shadow-color) / 0.04);
+  --shadow-md: 0 4px 10px hsl(var(--shadow-color) / 0.08), 0 1px 2px hsl(var(--shadow-color) / 0.05);
+  --shadow-lg: 0 12px 28px hsl(var(--shadow-color) / 0.12), 0 2px 6px hsl(var(--shadow-color) / 0.06);
+  --shadow-ring: 0 0 0 3px rgb(167 139 250 / 0.35);
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-slow: 280ms;
+}
+
+.dark {
+  --border-strong: rgb(255 255 255 / 20%);
+  --surface: #131316;
+  --surface-secondary: #1a1a1e;
+  --surface-hover: #202024;
+  --accent-tint: rgb(167 139 250 / 14%);
+  --destructive-tint: rgb(248 113 113 / 12%);
+  --shadow-xs: 0 1px 2px hsl(0 0% 0% / 0.5);
+  --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.5);
+  --shadow-md: 0 6px 16px hsl(0 0% 0% / 0.55);
+  --shadow-lg: 0 16px 36px hsl(0 0% 0% / 0.6);
 }
 
 @layer base {

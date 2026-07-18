@@ -45,19 +45,13 @@ export default function HomePage() {
       <main className="mx-auto max-w-5xl px-6">
         {/* Hero */}
         <section className="relative flex flex-col items-center gap-6 py-24 text-center md:py-32">
-          {/* Atmosphere: a teal glow anchored to the top edge plus a faint
-              grain wash — the hero otherwise sits on a large flat void. */}
+          {/* Kotsas design system guideline: flat solid surfaces, no photography
+              /illustration/gradient base layers — the only atmosphere effect is
+              a very faint accent-tinted radial glow, used sparingly and never on
+              component surfaces or tables. Accent (not primary) at ~8% peak. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--primary),transparent_82%),transparent)]"
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 -z-10 opacity-[0.05] dark:opacity-[0.07]"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>\")",
-            }}
+            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--accent),transparent_92%),transparent)]"
           />
           <Badge variant="secondary" className="rounded-full font-normal">
             Open source · shadcn registry
