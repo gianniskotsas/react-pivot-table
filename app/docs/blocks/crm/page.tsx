@@ -194,8 +194,8 @@ const columns = [
   col.text("name", { header: "Person" }),
   col.text("organization", { header: "Organization" }),
   col.phone("phone", { header: "Phone" }),
-  col.email("email", { header: "Email" }),
-  col.url("website", { header: "URL" }),
+  col.email("email", { header: "Email", size: 220 }),
+  col.url("website", { header: "URL", size: 200 }),
 ]
 
 const actions: DataTableAction<Contact>[] = [

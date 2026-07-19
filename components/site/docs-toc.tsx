@@ -60,7 +60,11 @@ export function DocsToc() {
   if (items.length === 0) return null
 
   return (
-    <aside className="sticky top-14 hidden h-[calc(100svh-3.5rem)] w-56 shrink-0 overflow-y-auto py-12 xl:block">
+    // Sticky against the content wrapper's own scroll (docs/layout.tsx),
+    // which already starts below the fixed DocsHeader — top-0/h-full here
+    // (not top-14/100svh-3.5rem) since there's no header inside this
+    // scroll container to offset for.
+    <aside className="sticky top-0 hidden h-full w-56 shrink-0 overflow-y-auto py-12 xl:block">
       <p className="mb-3 text-xs font-medium tracking-wide text-muted-foreground/70 uppercase">
         On this page
       </p>

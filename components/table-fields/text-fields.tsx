@@ -135,6 +135,7 @@ export function urlField(): FieldType<string> {
           target="_blank"
           label={hostname(v)}
           copyValue={v}
+          maxWidthClassName="max-w-full"
           trailing={
             <HugeiconsIcon
               icon={ArrowUpRight01Icon}
@@ -156,7 +157,14 @@ export function emailField(): FieldType<string> {
     icon: FIELD_ICONS.email,
     display: (ctx) => {
       const v = ctx.getValue()
-      return v ? <ChipCell href={`mailto:${v}`} label={v} copyValue={v} /> : null
+      return v ? (
+        <ChipCell
+          href={`mailto:${v}`}
+          label={v}
+          copyValue={v}
+          maxWidthClassName="max-w-full"
+        />
+      ) : null
     },
     edit: textEdit,
     ...identityClipboard,
@@ -173,7 +181,14 @@ export function phoneField(): FieldType<string> {
       const parsed = parsePhoneNumber(v)
       if (!parsed) {
         // Unparseable: fall back to a raw tel: link so nothing is lost.
-        return <ChipCell href={`tel:${v}`} label={v} copyValue={v} />
+        return (
+          <ChipCell
+            href={`tel:${v}`}
+            label={v}
+            copyValue={v}
+            maxWidthClassName="max-w-full"
+          />
+        )
       }
       const flag = parsed.country ? flagEmoji(parsed.country) : null
       return (
@@ -181,6 +196,7 @@ export function phoneField(): FieldType<string> {
           href={parsed.getURI()}
           label={parsed.formatInternational()}
           copyValue={parsed.number ?? parsed.formatInternational()}
+          maxWidthClassName="max-w-full"
           leading={
             flag ? (
               <span aria-hidden="true" className="mr-1 text-[1.15rem] leading-none">

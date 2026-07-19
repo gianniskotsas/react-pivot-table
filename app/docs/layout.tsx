@@ -2,13 +2,20 @@ import type { ReactNode } from "react"
 
 import { DocsHeader } from "@/components/site/docs-header"
 import { DocsPager } from "@/components/site/docs-pager"
+import { DocsScrollContainer } from "@/components/site/docs-scroll-container"
 import { DocsSidebar } from "@/components/site/docs-sidebar"
 import { DocsToc } from "@/components/site/docs-toc"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 
 export default function DocsLayout({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider>
+    // h-svh (overriding SidebarProvider's own min-h-svh) + overflow-hidden
+    // pin the whole docs route to exactly one viewport tall, so the outer
+    // page never grows past it and never scrolls itself — flexbox's default
+    // align-items: stretch then sizes the sidebar and inset below to fill
+    // that fixed height exactly (margins and all, e.g. the inset's own
+    // variant="inset" spacing), without hardcoding svh math a second time.
+    <SidebarProvider className="h-svh overflow-hidden">
       <DocsSidebar />
       {/* min-w-0 lets the inset shrink to the space left of the sidebar; without
           it a wide table (e.g. a frozen-column demo) forces the inset past the
@@ -16,18 +23,22 @@ export default function DocsLayout({ children }: { children: ReactNode }) {
       {/* The hairline border finishes the inset-card edge where the canvas is
           only one tint step away; md+ only, since the inset is full-bleed on
           mobile (no card to outline). */}
-      <SidebarInset className="min-w-0 md:border md:border-border/60">
+      {/* overflow-hidden is a safety net: the inset's own height comes from
+          the stretch above, and its children (header + the scroll container
+          below) should sum to exactly that — this just stops any rounding
+          slop from leaking a second scrollbar on the inset itself. */}
+      <SidebarInset className="min-w-0 overflow-hidden md:border md:border-border/60">
         <DocsHeader />
         {/* Full-width (no mx-auto/max-w cap) with the same horizontal padding
             as DocsHeader, so the page title's left edge lines up with the
             header's breadcrumb instead of floating in a centered column. */}
-        <div className="flex w-full gap-10 px-6 lg:px-8">
+        <DocsScrollContainer className="flex w-full min-h-0 flex-1 gap-10 px-6 lg:px-8">
           <main id="docs-content" className="min-w-0 flex-1 py-10 md:py-14">
             {children}
             <DocsPager />
           </main>
           <DocsToc />
-        </div>
+        </DocsScrollContainer>
       </SidebarInset>
     </SidebarProvider>
   )
