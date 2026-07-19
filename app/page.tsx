@@ -1,14 +1,28 @@
 import Link from "next/link"
-import { ArrowRight, Rows3, SquareStack, Table2 } from "lucide-react"
+import {
+  ArrowRight,
+  Columns3,
+  Rows3,
+  SquareStack,
+  Table2,
+  Undo2,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { SiteHeader } from "@/components/site/site-header"
+import { GITHUB_URL } from "@/components/site/github-stars"
+import { HeroCopyCommand } from "@/components/site/hero-copy-command"
 import { HomeGroupedPreview } from "@/components/site/home-grouped-preview"
 import { HomeDataTablePreview } from "@/components/site/home-datatable-preview"
 import { HomeFieldsPreview } from "@/components/site/home-fields-preview"
 
-const GITHUB_URL = "https://github.com/gianniskotsas/react-pivot-table"
+const HERO_STATS = [
+  { icon: SquareStack, label: "15 typed field types" },
+  { icon: Rows3, label: "AG-Grid-style row grouping" },
+  { icon: Undo2, label: "Undo/redo & clipboard" },
+  { icon: Columns3, label: "Freeze, hide, resize columns" },
+]
 
 const SHOWCASE = [
   {
@@ -42,18 +56,23 @@ export default function HomePage() {
     <div className="min-h-svh">
       <SiteHeader />
 
-      <main className="mx-auto max-w-5xl px-6">
-        {/* Hero */}
-        <section className="relative flex flex-col items-center gap-6 py-24 text-center md:py-32">
-          {/* Kotsas design system guideline: flat solid surfaces, no photography
-              /illustration/gradient base layers — the only atmosphere effect is
-              a very faint accent-tinted radial glow, used sparingly and never on
-              component surfaces or tables. Accent (not primary) at ~8% peak. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[28rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--accent),transparent_92%),transparent)]"
-          />
-          <Badge variant="secondary" className="rounded-full font-normal">
+      {/* Hero */}
+      <section className="relative overflow-hidden">
+        {/* Kotsas design system guideline: flat solid surfaces, no photography
+            /illustration/gradient base layers — the only atmosphere effect is
+            a very faint accent-tinted radial glow, used sparingly and never on
+            component surfaces or tables. Accent (not primary) at ~8% peak. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--accent),transparent_92%),transparent)]"
+        />
+
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 pt-20 pb-12 text-center md:pt-28">
+          <Badge
+            variant="secondary"
+            className="rounded-full font-normal"
+            render={<a href={GITHUB_URL} target="_blank" rel="noreferrer" />}
+          >
             Open source · shadcn registry
           </Badge>
           <h1 className="max-w-2xl font-display text-5xl font-medium tracking-tight text-balance md:text-6xl">
@@ -81,8 +100,46 @@ export default function HomePage() {
               GitHub
             </Button>
           </div>
-        </section>
+          <HeroCopyCommand
+            command="npx shadcn@latest add @kotsas-ui/data-table"
+            className="mt-1"
+          />
+        </div>
 
+        {/* Hero visual — the grouped table is the flagship feature (row
+            grouping, drag-and-drop dimensions, per-group aggregation), so it
+            leads; the showcase grid below covers all three surfaces. Framed
+            like ComponentPreview's canvas (dot grid, pointer-events-none,
+            scaled) so it reads as a live product shot, not an interactive
+            widget competing with the page for clicks/scroll. */}
+        <div className="mx-auto max-w-5xl px-6 pb-24">
+          <div className="relative overflow-hidden rounded-2xl border bg-card shadow-lg ring-1 ring-foreground/5">
+            <div className="pointer-events-none h-[22rem] overflow-hidden bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_93%)_1px,transparent_1px)] bg-[size:16px_16px] p-6 md:h-[26rem] md:p-10">
+              <div className="origin-top scale-[0.92] md:scale-100">
+                <HomeGroupedPreview />
+              </div>
+            </div>
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-card to-transparent"
+            />
+          </div>
+
+          <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+            {HERO_STATS.map(({ icon: Icon, label }) => (
+              <li
+                key={label}
+                className="flex items-center gap-2 text-sm text-muted-foreground"
+              >
+                <Icon className="size-4 shrink-0 text-muted-foreground/70" />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      <main className="mx-auto max-w-5xl px-6">
         {/* Showcase */}
         <section className="grid gap-6 pb-24 md:grid-cols-3">
           {SHOWCASE.map(({ href, icon: Icon, name, description, preview }) => (
