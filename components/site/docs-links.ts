@@ -4,7 +4,6 @@ import {
   Columns3,
   Download,
   Filter,
-  LayoutGrid,
   Megaphone,
   MousePointerClick,
   MoveHorizontal,
@@ -36,7 +35,6 @@ export const DOCS_GROUPS: DocsGroup[] = [
   {
     title: "Blocks",
     items: [
-      { href: "/docs/blocks", label: "Overview", icon: LayoutGrid, keywords: ["blocks", "templates"] },
       { href: "/docs/blocks/financials", label: "Financials", icon: Wallet, keywords: ["transactions", "money", "banking"] },
       { href: "/docs/blocks/crm", label: "CRM", icon: Users, keywords: ["deals", "pipeline", "sales", "contacts"] },
       {
