@@ -1,6 +1,7 @@
 import type * as React from "react"
 import type { CellContext } from "@tanstack/react-table"
-import { ExternalLink } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react"
+import { ArrowUpRight01Icon } from "@hugeicons/core-free-icons"
 import parsePhoneNumber from "libphonenumber-js"
 
 import { Input } from "@/components/ui/input"
@@ -135,7 +136,11 @@ export function urlField(): FieldType<string> {
           label={hostname(v)}
           copyValue={v}
           trailing={
-            <ExternalLink className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+            <HugeiconsIcon
+              icon={ArrowUpRight01Icon}
+              className="size-3 shrink-0 opacity-60"
+              aria-hidden="true"
+            />
           }
         />
       )

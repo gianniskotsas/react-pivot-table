@@ -16,6 +16,8 @@ type ComponentPreviewProps = {
   align?: "center" | "start"
   /** Minimum height of the preview canvas. Defaults to 220px. */
   minHeight?: number
+  /** Maximum height of the preview canvas before it scrolls internally. Defaults to 560px. */
+  maxHeight?: number
   className?: string
 }
 
@@ -25,6 +27,7 @@ export function ComponentPreview({
   filename,
   align = "center",
   minHeight = 220,
+  maxHeight = 560,
   className,
 }: ComponentPreviewProps) {
   const [view, setView] = React.useState<"preview" | "code">("preview")
@@ -90,7 +93,7 @@ export function ComponentPreview({
 
       {view === "preview" ? (
         <div
-          style={{ minHeight }}
+          style={{ minHeight, maxHeight }}
           className={cn(
             "flex w-full overflow-auto bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_92%)_1px,transparent_1px)] bg-[size:16px_16px] p-8",
             align === "center"
