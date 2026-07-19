@@ -38,7 +38,7 @@ export const DOCS_GROUPS: DocsGroup[] = [
     items: [
       { href: "/docs/blocks", label: "Overview", icon: LayoutGrid, keywords: ["blocks", "templates"] },
       { href: "/docs/blocks/financials", label: "Financials", icon: Wallet, keywords: ["transactions", "money", "banking"] },
-      { href: "/docs/blocks/crm", label: "CRM", icon: Users, keywords: ["deals", "pipeline", "sales"] },
+      { href: "/docs/blocks/crm", label: "CRM", icon: Users, keywords: ["deals", "pipeline", "sales", "contacts"] },
       {
         href: "/docs/blocks/marketing-campaigns",
         label: "Marketing Campaigns",

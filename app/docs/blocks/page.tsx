@@ -16,7 +16,7 @@ const BLOCKS = [
     href: "/docs/blocks/crm",
     icon: Users,
     name: "CRM",
-    description: "Deals pipeline grouped by stage, with owner filters.",
+    description: "Deals pipeline grouped by stage, plus a contacts list with phone/email/URL chips.",
   },
   {
     href: "/docs/blocks/reservations",

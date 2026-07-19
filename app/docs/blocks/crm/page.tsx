@@ -3,8 +3,9 @@ import { CopyPageMenu } from "@/components/site/copy-page-menu"
 import { PageHeader, Section } from "@/components/site/page-header"
 import { WorksWith } from "@/components/site/works-with"
 import { CrmBlock } from "@/components/site/crm-block"
+import { ContactsBlock } from "@/components/site/contacts-block"
 
-const CODE = `"use client"
+const PIPELINE_CODE = `"use client"
 
 import type { ColumnDef } from "@tanstack/react-table"
 import { Building2 } from "lucide-react"
@@ -155,14 +156,120 @@ export function CrmBlock() {
   )
 }`
 
+const CONTACTS_CODE = `"use client"
+
+import * as React from "react"
+import { Mail, Trash2 } from "lucide-react"
+import { toast } from "sonner"
+
+import {
+  DataTable,
+  defineColumns,
+  type DataTableAction,
+} from "@/components/data-table"
+
+type Contact = {
+  id: string
+  name: string
+  organization: string
+  phone: string
+  email: string
+  website: string
+}
+
+// Same people/companies as the Pipeline block's deals — one contact per
+// open or closed deal.
+const CONTACTS: Contact[] = [
+  { id: "1", name: "Jordan Lee", organization: "Acme Robotics", phone: "+14155550132", email: "jordan.lee@acmerobotics.com", website: "https://www.acmerobotics.com" },
+  // ...more rows
+]
+
+const ORGANIZATIONS = Array.from(new Set(CONTACTS.map((c) => c.organization))).map((org) => ({
+  label: org,
+  value: org,
+}))
+
+const col = defineColumns<Contact>()
+const columns = [
+  col.text("name", { header: "Person" }),
+  col.text("organization", { header: "Organization" }),
+  col.phone("phone", { header: "Phone" }),
+  col.email("email", { header: "Email" }),
+  col.url("website", { header: "URL" }),
+]
+
+const actions: DataTableAction<Contact>[] = [
+  {
+    id: "sequence",
+    label: "Add to sequence",
+    icon: Mail,
+    onClick: ({ rows }) =>
+      toast(\`Added \${rows.length} contact\${rows.length === 1 ? "" : "s"} to sequence\`),
+  },
+  {
+    id: "delete",
+    label: "Delete",
+    icon: Trash2,
+    variant: "destructive",
+    onClick: ({ rows }) =>
+      toast(\`Deleted \${rows.length} contact\${rows.length === 1 ? "" : "s"}\`),
+  },
+]
+
+export function ContactsBlock() {
+  const [data, setData] = React.useState(CONTACTS)
+
+  const handleUpdateData = React.useCallback(
+    (rowId: string, columnId: string, value: unknown) => {
+      setData((prev) =>
+        prev.map((row) => (row.id === rowId ? { ...row, [columnId]: value } : row))
+      )
+    },
+    []
+  )
+
+  return (
+    <div className="w-full space-y-4 rounded-xl border bg-card p-4 shadow-sm ring-1 ring-foreground/5">
+      <div>
+        <h3 className="font-semibold">Contacts</h3>
+        <p className="text-sm text-muted-foreground">
+          One contact per deal in the pipeline — organization, phone, email, and site.
+        </p>
+      </div>
+
+      <DataTable<Contact>
+        data={data}
+        columns={columns}
+        getRowId={(row) => row.id}
+        editable
+        onUpdateData={handleUpdateData}
+        enableRowSelection
+        enablePagination={false}
+        actions={actions}
+        filterableColumns={[
+          { id: "organization", label: "Organization", type: "select", options: ORGANIZATIONS },
+        ]}
+      />
+    </div>
+  )
+}`
+
 const PAGE_MARKDOWN = `# CRM Block
 
-A ready-to-copy deals pipeline: grouped by stage (drag to regroup by owner
-instead), with stage/owner filters, a per-group value subtotal, and a
-company/contact leaf label. Works with: Grouped Data Table.
+Two ready-to-copy blocks for a CRM: a deals pipeline grouped by stage (drag
+to regroup by owner instead), with stage/owner filters and a per-group value
+subtotal; and a contacts list with organization, phone, email, and URL —
+each of the latter's fields render as clickable chips (tel:/mailto:/https:)
+via Table Fields. Works with: Grouped Data Table, Data Table.
 
+## Pipeline
 \`\`\`tsx
-${CODE}
+${PIPELINE_CODE}
+\`\`\`
+
+## Contacts
+\`\`\`tsx
+${CONTACTS_CODE}
 \`\`\`
 `
 
@@ -174,20 +281,34 @@ export default function CrmBlockPage() {
         actions={
           <CopyPageMenu markdown={PAGE_MARKDOWN} url="/docs/blocks/crm" />
         }
-        description="A deals pipeline grouped by stage — drag Owner in front of Stage to regroup, or filter down to one rep."
+        description="A deals pipeline and a contacts list — drag Owner in front of Stage to regroup the pipeline, or filter contacts down to one organization."
       />
 
       <Section
-        id="preview"
-        title="Preview"
+        id="pipeline"
+        title="Pipeline"
         description="Built on Grouped Data Table: stage/owner use table-fields' *Cell helpers directly, and Value sums per group automatically via aggregationFn."
       >
         <WorksWith components={["grouped-data-table"]} />
         <ComponentPreview
           align="start"
           preview={<CrmBlock />}
-          code={CODE}
+          code={PIPELINE_CODE}
           filename="crm-block.tsx"
+        />
+      </Section>
+
+      <Section
+        id="contacts"
+        title="Contacts"
+        description="Built on Data Table with defineColumns: phone, email, and URL each render as a clickable chip (tel:/mailto:/https:) and copy their raw value, via Table Fields' phone/email/url field types."
+      >
+        <WorksWith components={["data-table", "table-fields"]} />
+        <ComponentPreview
+          align="start"
+          preview={<ContactsBlock />}
+          code={CONTACTS_CODE}
+          filename="contacts-block.tsx"
         />
       </Section>
     </div>

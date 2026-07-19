@@ -185,7 +185,11 @@ function makeFieldCell<TData, V>(
           else runtime.setActiveCell(pos)
         }}
         onFocus={() => runtime.setActiveCell(pos)}
-        className="overflow-hidden text-ellipsis whitespace-nowrap rounded-sm px-2 py-1 outline-none data-[active=true]:ring-2 data-[active=true]:ring-ring data-[active=true]:ring-inset"
+        // py-3 (not the tighter py-1 this used to be) makes the default row
+        // height match GroupedDataTable's, which relies on ui/table.tsx's own
+        // TableCell p-3 default — the two table families read as one product
+        // instead of DataTable's grid feeling cramped next to it.
+        className="overflow-hidden text-ellipsis whitespace-nowrap rounded-sm px-2 py-3 outline-none data-[active=true]:ring-2 data-[active=true]:ring-ring data-[active=true]:ring-inset"
       >
         {field.display(ctx as CellContext<unknown, V>)}
       </div>

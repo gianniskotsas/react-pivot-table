@@ -38,7 +38,7 @@ const BLOCKS = [
     href: "/docs/blocks/crm",
     icon: Users,
     name: "CRM",
-    description: "Deals grouped by pipeline stage, with owner filters.",
+    description: "Deals grouped by pipeline stage, plus a contacts list.",
   },
   {
     href: "/docs/blocks/marketing-campaigns",
