@@ -37,9 +37,17 @@ export function useGrouping<TData>(
   // an inline `grouping={{ ... }}` literal, which is a fresh object every
   // render. Memoizing on its identity would hand a new `setGrouping` and a new
   // `derivedVisibility` to the table on every render.
+  //
+  // `allowedKey` is a joined string used ONLY as the memo's change-detection
+  // dependency — it must never be parsed back into ids. `DimensionDef.id` is
+  // an unrestricted string, so a delimiter join/split round-trip is lossy
+  // (e.g. ids "a b" and "c" join to "a b c", which splits back into three
+  // ids). The actual ids are always read straight from `config.dimensions`.
   const allowedKey = config ? config.dimensions.map((d) => d.id).join(" ") : ""
   const allowedIds = React.useMemo(
-    () => (allowedKey === "" ? EMPTY_GROUPING : allowedKey.split(" ")),
+    () =>
+      config ? config.dimensions.map((d) => d.id) : EMPTY_GROUPING,
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- allowedKey (derived from the same dimension ids) is the intended dependency, not config: config is a fresh object literal every render for most consumers, and memoizing on it would defeat the identity-stability this hook exists to provide.
     [allowedKey],
   )
 

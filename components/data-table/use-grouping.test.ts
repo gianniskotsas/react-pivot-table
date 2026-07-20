@@ -43,4 +43,60 @@ describe("useGrouping", () => {
     const { result } = renderHook(() => useGrouping(CONFIG))
     expect(result.current.derivedVisibility).toEqual({ stage: false })
   })
+
+  it("keeps setGrouping and derivedVisibility referentially stable across renders when a fresh config literal (same dimension ids) is passed each time", () => {
+    const { result, rerender } = renderHook(
+      () =>
+        useGrouping({
+          // Fresh object literal every render, mirroring real consumers who
+          // write `grouping={{ ... }}` inline. Only identity differs; the
+          // dimension ids are the same each time.
+          dimensions: [
+            { id: "stage", label: "Stage" },
+            { id: "owner", label: "Owner" },
+          ],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }),
+      { initialProps: undefined },
+    )
+
+    const firstSetGrouping = result.current.setGrouping
+    const firstDerivedVisibility = result.current.derivedVisibility
+
+    rerender()
+    rerender()
+    rerender()
+
+    expect(Object.is(result.current.setGrouping, firstSetGrouping)).toBe(true)
+    expect(
+      Object.is(result.current.derivedVisibility, firstDerivedVisibility),
+    ).toBe(true)
+  })
+
+  it("does not corrupt allowedIds when a dimension id contains the join delimiter (space)", () => {
+    const { result } = renderHook(() =>
+      useGrouping({
+        dimensions: [
+          { id: "a b", label: "A B" },
+          { id: "c", label: "C" },
+        ],
+        initial: [],
+        column: { header: "Deal" },
+      }),
+    )
+
+    // "a" was never declared as a dimension id (only "a b" and "c" were), so
+    // a naive join(" ")/split(" ") round-trip would wrongly accept it.
+    act(() => result.current.setGrouping(["a", "a b", "c"]))
+    expect(result.current.grouping).toEqual(["a b", "c"])
+  })
+
+  it("starts expanded as {} and updates via setExpanded", () => {
+    const { result } = renderHook(() => useGrouping(CONFIG))
+    expect(result.current.expanded).toEqual({})
+
+    act(() => result.current.setExpanded({ stage: true }))
+    expect(result.current.expanded).toEqual({ stage: true })
+  })
 })
