@@ -12,6 +12,7 @@ import {
   type ColumnPinningState,
   type ColumnSizingState,
   type PaginationState,
+  type Row,
   type RowSelectionState,
   type SortingState,
   type Table,
@@ -26,13 +27,14 @@ import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
 import { gridToTsv, parseTsv, planPaste } from "./clipboard"
 import { evaluateFilterState, normalizeFilterState, emptyFilterState } from "./filter-utils"
-import type {
-  CellPos,
-  DataTableColumnMeta,
-  DataTableGroupingConfig,
-  DataTableRuntime,
-  FilterDef,
-  FilterState,
+import {
+  GROUP_COLUMN_ID,
+  type CellPos,
+  type DataTableColumnMeta,
+  type DataTableGroupingConfig,
+  type DataTableRuntime,
+  type FilterDef,
+  type FilterState,
 } from "./types"
 
 // Stable empty default so omitting `filterableColumns` doesn't create a new
@@ -49,6 +51,21 @@ const EMPTY_FILTER_COLUMNS: FilterDef[] = []
 // page size (10) and would silently truncate the table. This stable,
 // effectively-unbounded page state avoids that while never actually
 // paginating — a fresh object here would defeat useReactTable's own memo.
+//
+// An alternative was considered and rejected: `paginateExpandedRows:
+// !enablePagination`. TanStack's RowPagination feature defines
+// `getPrePaginationRowModel` as a plain alias for `getExpandedRowModel()`,
+// and getExpandedRowModel's own memo does its OWN flatten
+// (`expandRows(rowModel)`) whenever `paginateExpandedRows` is true — even
+// with no `getPaginationRowModel` utility registered at all. That would let
+// the enablePagination-off branch skip both this sentinel and the extra
+// `getPaginationRowModel: getPaginationRowModel()` registration below.
+// Rejected because `paginateExpandedRows` would then need to flip between
+// true and false depending on `enablePagination`, changing what "expanded"
+// means for `getPageCount`/`getRowCount` (both defined off
+// `getPrePaginationRowModel().rows.length`) between the two modes — a second
+// behavioral axis to keep in sync, for a case (grouping + pagination
+// disabled) that's already exercised and green under this approach.
 const UNBOUNDED_PAGINATION: PaginationState = { pageIndex: 0, pageSize: Number.MAX_SAFE_INTEGER }
 
 export type UseDataTableOptions<TData> = {
@@ -91,6 +108,32 @@ export type UseDataTableResult<TData> = {
   setGrouping: (next: string[]) => void
   /** True when `rowId` refers to a synthesized group row rather than a data row. */
   isGroupRow: (rowId: string) => boolean
+}
+
+/**
+ * Recursively collects every LEAF row's id under `rows` (which may be
+ * top-level group rows, or already leaves for a flat table), in DFS order,
+ * exactly once — regardless of current expand/collapse state. Deliberately
+ * walks each row's own `.subRows` rather than reading TanStack's `.flatRows`
+ * off the row model: `.flatRows` from a grouped row model contains each leaf
+ * row TWICE (see the call site's comment for how this was verified), which
+ * would corrupt `indexOf`-based paste-target lookups downstream. Used by
+ * `pasteRowIds` below; not needed anywhere else in this file because
+ * `table.getRowModel().rows` (used for on-screen navigation) is produced by
+ * TanStack's own `getPaginationRowModel`, whose expansion step does its own
+ * correct, dedup'd flatten.
+ */
+function collectLeafRowIds<TData>(rows: Row<TData>[]): string[] {
+  const ids: string[] = []
+  const visit = (row: Row<TData>) => {
+    if (row.getIsGrouped()) {
+      row.subRows.forEach(visit)
+    } else {
+      ids.push(row.id)
+    }
+  }
+  rows.forEach(visit)
+  return ids
 }
 
 export function useDataTable<TData>({
@@ -170,6 +213,14 @@ export function useDataTable<TData>({
     // `groupColumnHeader` is the only field buildGroupColumn reads; depending on
     // the whole config object would rebuild this array on every render for
     // consumers passing an inline literal.
+    //
+    // Caveat: `header` is typed `React.ReactNode`, so this only actually
+    // avoids churn when the consumer passes a stable reference (a string, or
+    // a module-level/memoized element) — a consumer writing an inline
+    // `column={{ header: <span>Deal</span>, ... }}` still hands a fresh
+    // ReactNode every render, and this memo churns anyway. `useGrouping`'s
+    // sibling memo (`allowedKey`) sidesteps this entirely by keying on a
+    // joined string of dimension ids rather than anything consumer-supplied.
   }, [enableRowSelection, columns, groupingEnabled, groupColumnHeader])
 
   // Grouped dimension columns must stay hidden regardless of what the user
@@ -397,14 +448,26 @@ export function useDataTable<TData>({
   // getRowModel() is post-pagination, so using `rowIds` here would treat a
   // page boundary as the end of the dataset and spuriously create new rows
   // instead of writing into real rows that live on the next page.
-  // getPrePaginationRowModel() falls back to the sorted/filtered model
-  // (unaffected by pagination) whenever row expanding isn't configured,
-  // which this table never does.
+  // getPrePaginationRowModel() is TanStack's own alias for
+  // getExpandedRowModel() (see RowPagination.ts), which — with
+  // paginateExpandedRows: false, as this table sets whenever grouping is on
+  // — does NOT flatten: its `.rows` are top-level rows only (group rows when
+  // grouping is active, leaf rows for a flat table), unaffected by
+  // pagination either way.
+  //
+  // Leaf rows only: a paste block must never target a synthesized group row.
+  // `collectLeafRowIds` below walks each top-level row's own `.subRows` (not
+  // `.flatRows` — verified empirically that TanStack's getGroupedRowModel
+  // pushes every leaf row into `.flatRows` TWICE, once from its base-case
+  // recursion and again from the grouping branch's own bookkeeping loop, so
+  // naively filtering `.flatRows` produces duplicate ids and breaks
+  // `indexOf`-based lookups below) to collect every leaf id exactly once, in
+  // DFS order, regardless of current expand/collapse state. With grouping
+  // off, every row is already a leaf with no subRows, so this returns
+  // exactly `rows.map(r => r.id)` — identical to before.
   const prePaginationRows = table.getPrePaginationRowModel().rows
   const pasteRowIds = React.useMemo(
-    // Leaf rows only: a paste block must never target a synthesized group row.
-    // With grouping off, every row is a leaf, so this is identical to before.
-    () => prePaginationRows.filter((r) => !r.getIsGrouped()).map((r) => r.id),
+    () => collectLeafRowIds(prePaginationRows),
     [prePaginationRows],
   )
 
@@ -425,8 +488,21 @@ export function useDataTable<TData>({
   }, [rowIds, isAllMatchingSelected, table])
 
   const visibleColumns = table.getVisibleLeafColumns()
+  // Both ROW_GUTTER_COLUMN_ID and GROUP_COLUMN_ID are structural, table-owned
+  // columns with no TData accessor — neither is real data, so neither may be
+  // a stop in keyboard navigation, a clipboard column, or a bulk-clear
+  // target. ROW_GUTTER_COLUMN_ID was already filtered here; GROUP_COLUMN_ID
+  // (the synthesized "__group__" auto group column, present whenever
+  // grouping is configured) previously wasn't, which let it be navigated to,
+  // copied/pasted into, and bulk-cleared like a real editable column — see
+  // buildGroupColumn's own `meta: { editable: false }` for the second half
+  // of this fix (isColumnEditable's own resolution, independent of whether a
+  // caller reaches it through this list at all).
   const columnIds = React.useMemo(
-    () => visibleColumns.filter((c) => c.id !== ROW_GUTTER_COLUMN_ID).map((c) => c.id),
+    () =>
+      visibleColumns
+        .filter((c) => c.id !== ROW_GUTTER_COLUMN_ID && c.id !== GROUP_COLUMN_ID)
+        .map((c) => c.id),
     [visibleColumns],
   )
 
@@ -561,8 +637,21 @@ export function useDataTable<TData>({
   // tie-break as `copy` above: a row selection always takes priority over
   // the active cell, even when the active cell sits outside the selection,
   // matching Excel/Sheets' Delete-key behavior.
+  //
+  // Both branches must be incapable of ever emitting a synthesized group
+  // row's id to onUpdateData: the active-cell branch is gated through
+  // `isCellEditable` (column-level override AND not a group row), not just
+  // `isColumnEditable` — a group row can carry an editable column (e.g.
+  // "amount" is editable on leaves), so the column-only check alone would
+  // let Delete on an active group-row cell straight through. The
+  // selection branch is gated by filtering out grouped rows before mapping:
+  // with `enableSubRowSelection: true` (set whenever grouping is on),
+  // selecting a group row's checkbox also selects its leaf subRows, so
+  // `getSelectedRowModel().rows` can contain both the group row AND its
+  // (real, filterable) leaves in the same selection — this drops only the
+  // group row entries, still clearing the leaves.
   const clearSelectedOrActiveCells = React.useCallback(() => {
-    const selectedRows = table.getSelectedRowModel().rows
+    const selectedRows = table.getSelectedRowModel().rows.filter((row) => !row.getIsGrouped())
     const editableColumnIds = columnIds.filter((id) => isColumnEditable(id))
     let ops: { rowId: string; columnId: string; value: unknown }[] = []
 
@@ -570,14 +659,14 @@ export function useDataTable<TData>({
       ops = selectedRows.flatMap((row) =>
         editableColumnIds.map((columnId) => ({ rowId: row.id, columnId, value: undefined })),
       )
-    } else if (nav.activeCell && isColumnEditable(nav.activeCell.columnId)) {
+    } else if (nav.activeCell && isCellEditable(nav.activeCell)) {
       ops = [{ rowId: nav.activeCell.rowId, columnId: nav.activeCell.columnId, value: undefined }]
     }
 
     if (ops.length === 0) return
     commitBatch(ops)
     toast(`Cleared ${ops.length} cell${ops.length === 1 ? "" : "s"}`)
-  }, [table, columnIds, isColumnEditable, nav.activeCell, commitBatch])
+  }, [table, columnIds, isColumnEditable, isCellEditable, nav.activeCell, commitBatch])
 
   // Revalidate activeCell when rowIds/columnIds change out from under it.
   //

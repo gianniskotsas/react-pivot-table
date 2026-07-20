@@ -1265,4 +1265,219 @@ describe("grouping", () => {
       expect(result.current.isGroupRow(id)).toBe(true)
     }
   })
+
+  // C1 regression: clearSelectedOrActiveCells previously gated its
+  // active-cell branch on isColumnEditable (column-level only), not
+  // isCellEditable (column-level AND not a group row). Measured repro from
+  // the review: active cell on group row "stage:won", press Delete ->
+  // onUpdateData("stage:won", "amount", undefined) fired even though
+  // "stage:won" is not a TData id.
+  it("Delete with the active cell on a group row never calls onUpdateData (C1 regression)", () => {
+    const onUpdateData = vi.fn()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        editable: true,
+        enablePagination: false,
+        grouping: groupingConfig,
+        onUpdateData,
+      }),
+    )
+    const groupRow = result.current.table.getRowModel().rows[0]
+    expect(result.current.isGroupRow(groupRow.id)).toBe(true)
+
+    act(() =>
+      result.current.runtime.setActiveCell({ rowId: groupRow.id, columnId: "amount" }),
+    )
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Delete",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+      } as unknown as React.KeyboardEvent),
+    )
+    expect(onUpdateData).not.toHaveBeenCalled()
+  })
+
+  // C1 fix, selection branch (defensive coverage): the review's required fix
+  // was to filter grouped rows out of BOTH the active-cell branch (the
+  // sibling test above, which does reproduce onUpdateData("stage:won", ...)
+  // pre-fix) and the selected-rows branch, "so neither path can emit a group
+  // row id." Empirically, TanStack's own getSelectedRowModel().rows already
+  // excludes the group row itself here even pre-fix (only its leaf subRows
+  // end up selected) — this test doesn't fail against the unpatched code,
+  // but it locks in the required defensive filter so a future TanStack
+  // version, or a different selection entry point, can't silently reopen
+  // this path.
+  it("Delete with a selected group row clears only its real-id leaf rows, never the group row itself (C1 defensive coverage)", () => {
+    const onUpdateData = vi.fn()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        editable: true,
+        enablePagination: false,
+        enableRowSelection: true,
+        grouping: groupingConfig,
+        onUpdateData,
+      }),
+    )
+    const groupRow = result.current.table.getRowModel().rows[0] // "stage:won", leaves "1" and "2"
+    act(() => result.current.runtime.toggleRowSelected(groupRow.id, true, false))
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Delete",
+        ctrlKey: false,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+      } as unknown as React.KeyboardEvent),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "amount", undefined)
+    expect(onUpdateData).toHaveBeenCalledWith("2", "amount", undefined)
+    for (const call of onUpdateData.mock.calls) {
+      expect(call[0]).not.toBe(groupRow.id)
+      expect(result.current.isGroupRow(call[0] as string)).toBe(false)
+    }
+  })
+
+  // C2 regression: isColumnEditable("__group__") previously fell back to the
+  // table-level `editable` default (true here) because buildGroupColumn set
+  // no `meta` at all. Now buildGroupColumn sets `meta: { editable: false }`
+  // directly, so this must resolve to false regardless of the table default,
+  // and beginEdit on "__group__" must fail even for a real leaf row (not
+  // just a group row, which is already refused for an unrelated reason).
+  it("isColumnEditable(\"__group__\") is false regardless of the table default, and beginEdit on it fails for a leaf row (C2 regression)", () => {
+    const { result } = setupGrouped()
+    expect(result.current.runtime.isColumnEditable("__group__")).toBe(false)
+
+    act(() => result.current.table.getRowModel().rows[0].toggleExpanded(true))
+    const leaf = result.current.table.getRowModel().rows.find((r) => !r.getIsGrouped())
+    expect(leaf).toBeDefined()
+
+    act(() =>
+      result.current.runtime.beginEdit({ rowId: leaf!.id, columnId: "__group__" }),
+    )
+    expect(result.current.runtime.editingCell).toBeNull()
+  })
+
+  // C2 regression: columnIds (which back keyboard navigation, copy, paste,
+  // and bulk-clear) previously only filtered out ROW_GUTTER_COLUMN_ID, so
+  // "__group__" was a first-class navigable/clipboard column even though it
+  // has no TData accessor. copy() with a row selection uses columnIds
+  // directly to build the clipboard grid, so this is directly observable: if
+  // "__group__" leaked through, the copied TSV would carry an extra
+  // (empty/undefined) field ahead of "amount".
+  it("excludes __group__ from copy's visible columns (C2 regression)", async () => {
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        editable: true,
+        enablePagination: false,
+        enableRowSelection: true,
+        grouping: groupingConfig,
+      }),
+    )
+    act(() => result.current.table.getRowModel().rows[0].toggleExpanded(true))
+    const leaf = result.current.table.getRowModel().rows.find((r) => !r.getIsGrouped())!
+    act(() => result.current.runtime.toggleRowSelected(leaf.id, true, false))
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "c",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+      } as unknown as React.KeyboardEvent),
+    )
+    // "stage" is grouped (hidden), "__group__" must be excluded too, so only
+    // "amount"'s value is copied — a single TSV field, not two.
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(String(leaf.getValue("amount")))
+  })
+
+  // I1 regression: pasteRowIds was previously derived from
+  // getPrePaginationRowModel().rows filtered to non-grouped rows. Under
+  // grouping, that row model's `.rows` are the UNEXPANDED top-level group
+  // rows only ("stage:won"/"stage:lost" — never leaves), so the filter left
+  // pasteRowIds === [], startRowIndex === -1, and paste silently no-op'd
+  // even into a visible, editable leaf cell. The fix (collectLeafRowIds,
+  // walking each group row's own .subRows) must make paste actually write,
+  // with the real TData row id — never a group row's synthesized id — via
+  // onUpdateData. defineColumns' col.number is used here (rather than the
+  // shared `groupedColumns` fixture) so the pasted text is actually parsed
+  // via a real fromClipboard.
+  it("Ctrl+V pastes into a leaf cell under grouping, writing via onUpdateData with the real row id (I1 regression)", async () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<{ id: string; stage: string; amount: number }>()
+    const pasteColumns = [
+      { id: "stage", accessorKey: "stage", header: "Stage", enableGrouping: true },
+      col.number("amount"),
+    ]
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: pasteColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        editable: true,
+        enablePagination: false,
+        grouping: groupingConfig,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.table.getRowModel().rows[0].toggleExpanded(true)) // expand "stage:won"
+    const leaf = result.current.table.getRowModel().rows.find((r) => !r.getIsGrouped())!
+    expect(result.current.isGroupRow(leaf.id)).toBe(false)
+
+    act(() => result.current.runtime.setActiveCell({ rowId: leaf.id, columnId: "amount" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("999")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+      } as unknown as React.KeyboardEvent),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith(leaf.id, "amount", 999)
+    for (const call of onUpdateData.mock.calls) {
+      expect(result.current.isGroupRow(call[0] as string)).toBe(false)
+    }
+  })
+
+  // Flat-table guarantee: with grouping omitted, paste's row-target
+  // resolution must remain byte-identical to before this fix.
+  it("paste still works for a flat (non-grouped) table exactly as before", async () => {
+    const onUpdateData = vi.fn()
+    const col = defineColumns<Row>()
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: DATA,
+        columns: [col.text("name"), col.number("age")],
+        getRowId: (r) => r.id,
+        editable: true,
+        onUpdateData,
+      }),
+    )
+    act(() => result.current.runtime.setActiveCell({ rowId: "1", columnId: "name" }))
+    vi.mocked(navigator.clipboard.readText).mockResolvedValueOnce("Baily\t45")
+    await act(async () =>
+      result.current.runtime.handleKeyDown({
+        key: "v",
+        ctrlKey: true,
+        metaKey: false,
+        shiftKey: false,
+        preventDefault: () => {},
+      } as unknown as React.KeyboardEvent),
+    )
+    expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
+    expect(onUpdateData).toHaveBeenCalledWith("1", "age", 45)
+  })
 })
