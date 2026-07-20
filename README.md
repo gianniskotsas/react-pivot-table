@@ -5,7 +5,7 @@ A type-safe, editable data table for React, built on
 **shadcn registry** component. Grouping/drill-down is an opt-in `grouping` prop — no separate
 component required.
 
-**Live demo:** https://react-pivot-table.vercel.app/accounts
+**Live demo:** https://kotsas-ui.vercel.app/accounts
 
 ## Features
 
@@ -29,7 +29,7 @@ component required.
 npx shadcn@latest add https://ui.kotsas.com/r/data-table.json
 
 # …or from GitHub raw
-npx shadcn@latest add https://raw.githubusercontent.com/gianniskotsas/react-pivot-table/main/public/r/data-table.json
+npx shadcn@latest add https://raw.githubusercontent.com/gianniskotsas/kotsas-ui/main/public/r/data-table.json
 ```
 
 Or add the namespace to your `components.json` and install by alias:

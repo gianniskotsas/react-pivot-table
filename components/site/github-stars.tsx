@@ -4,10 +4,10 @@ import * as React from "react"
 
 import { Button } from "@/components/ui/button"
 
-export const GITHUB_URL = "https://github.com/gianniskotsas/react-pivot-table"
+export const GITHUB_URL = "https://github.com/gianniskotsas/kotsas-ui"
 
 const GITHUB_API_URL =
-  "https://api.github.com/repos/gianniskotsas/react-pivot-table"
+  "https://api.github.com/repos/gianniskotsas/kotsas-ui"
 
 function GithubMark() {
   return (
