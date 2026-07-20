@@ -4,12 +4,13 @@ import type { ColumnDef } from "@tanstack/react-table"
 import { Building2 } from "lucide-react"
 import { singleSelectCell, dateCell, percentCell } from "@/components/table-fields"
 
-import { GroupedDataTable } from "@/components/grouped-data-table"
+import { DataTable } from "@/components/data-table"
 import type {
   DimensionDef,
   FilterDef,
   GroupColumnConfig,
-} from "@/components/grouped-data-table"
+} from "@/components/data-table"
+import { DimensionPicker } from "@/components/dimension-picker"
 
 type Deal = {
   id: string
@@ -57,9 +58,9 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
 })
 
 // Stage/Owner columns use table-fields' *Cell helpers directly (the raw
-// ColumnDef escape hatch) rather than defineColumns — GroupedDataTable, unlike
-// DataTable, has no DataTableRuntimeContext for the col.*-built cell wrapper
-// to read from. See Field Types' "Display-only usage" section.
+// ColumnDef escape hatch) rather than defineColumns — grouped columns render
+// through the auto group column, not through the col.*-built cell wrapper.
+// See Field Types' "Display-only usage" section.
 const columns: ColumnDef<Deal, unknown>[] = [
   {
     id: "stage",
@@ -147,13 +148,23 @@ export function CrmBlock() {
         </p>
       </div>
 
-      <GroupedDataTable<Deal>
+      <DataTable<Deal>
         data={DEALS}
         columns={columns}
-        groupableDimensions={groupableDimensions}
-        initialGrouping={["stage"]}
-        groupColumn={groupColumn}
+        enableExport={false}
         filterableColumns={filterableColumns}
+        grouping={{
+          dimensions: groupableDimensions,
+          initial: ["stage"],
+          column: groupColumn,
+          renderControl: ({ dimensions, grouping, setGrouping }) => (
+            <DimensionPicker
+              dimensions={dimensions}
+              grouping={grouping}
+              onGroupingChange={setGrouping}
+            />
+          ),
+        }}
       />
     </div>
   )

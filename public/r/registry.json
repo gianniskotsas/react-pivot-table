@@ -7,24 +7,9 @@
       "name": "grouped-data-table",
       "type": "registry:block",
       "title": "Grouped Data Table",
-      "description": "AG-Grid-style row grouping/drill-down table built on TanStack Table v8: a single auto group column with indented hierarchy and counts, a drag-and-drop dimension picker, and AND/OR filter groups. Requires a base-ui shadcn setup.",
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/sortable",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/utilities",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "table",
-        "button",
-        "badge",
-        "checkbox",
-        "popover",
-        "select",
-        "input"
-      ],
+      "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. AG-Grid-style row grouping/drill-down table built on TanStack Table v8: a single auto group column with indented hierarchy and counts, a drag-and-drop dimension picker, and AND/OR filter groups. Requires a base-ui shadcn setup.",
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "registryDependencies": ["@kotsas-ui/data-table", "@kotsas-ui/dimension-picker"],
       "files": [
         {
           "path": "components/grouped-data-table/types.ts",
@@ -32,44 +17,9 @@
           "target": "components/grouped-data-table/types.ts"
         },
         {
-          "path": "components/grouped-data-table/grouping-utils.ts",
-          "type": "registry:lib",
-          "target": "components/grouped-data-table/grouping-utils.ts"
-        },
-        {
-          "path": "components/grouped-data-table/filter-utils.ts",
-          "type": "registry:lib",
-          "target": "components/grouped-data-table/filter-utils.ts"
-        },
-        {
           "path": "components/grouped-data-table/use-grouped-table.ts",
           "type": "registry:hook",
           "target": "components/grouped-data-table/use-grouped-table.ts"
-        },
-        {
-          "path": "components/grouped-data-table/primitives.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/primitives.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/multi-select.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/multi-select.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/group-cell.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/group-cell.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/dimension-picker.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/dimension-picker.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/filter-builder.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/filter-builder.tsx"
         },
         {
           "path": "components/grouped-data-table/grouped-data-table.tsx",
@@ -87,24 +37,9 @@
       "name": "grouped-data-table-radix",
       "type": "registry:block",
       "title": "Grouped Data Table (Radix)",
-      "description": "Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses Radix UI primitives; install grouped-data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
-      "dependencies": [
-        "@tanstack/react-table",
-        "@dnd-kit/core",
-        "@dnd-kit/sortable",
-        "@dnd-kit/modifiers",
-        "@dnd-kit/utilities",
-        "lucide-react"
-      ],
-      "registryDependencies": [
-        "table",
-        "button",
-        "badge",
-        "checkbox",
-        "popover",
-        "select",
-        "input"
-      ],
+      "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses Radix UI primitives; install grouped-data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
+      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "registryDependencies": ["@kotsas-ui/data-table-radix", "@kotsas-ui/dimension-picker-radix"],
       "files": [
         {
           "path": "components/grouped-data-table/types.ts",
@@ -112,44 +47,9 @@
           "target": "components/grouped-data-table/types.ts"
         },
         {
-          "path": "components/grouped-data-table/grouping-utils.ts",
-          "type": "registry:lib",
-          "target": "components/grouped-data-table/grouping-utils.ts"
-        },
-        {
-          "path": "components/grouped-data-table/filter-utils.ts",
-          "type": "registry:lib",
-          "target": "components/grouped-data-table/filter-utils.ts"
-        },
-        {
           "path": "components/grouped-data-table/use-grouped-table.ts",
           "type": "registry:hook",
           "target": "components/grouped-data-table/use-grouped-table.ts"
-        },
-        {
-          "path": "components/grouped-data-table/primitives.radix.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/primitives.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/multi-select.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/multi-select.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/group-cell.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/group-cell.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/dimension-picker.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/dimension-picker.tsx"
-        },
-        {
-          "path": "components/grouped-data-table/filter-builder.tsx",
-          "type": "registry:component",
-          "target": "components/grouped-data-table/filter-builder.tsx"
         },
         {
           "path": "components/grouped-data-table/grouped-data-table.tsx",
@@ -206,8 +106,10 @@
         { "path": "components/data-table/clipboard.ts", "type": "registry:lib", "target": "components/data-table/clipboard.ts" },
         { "path": "components/data-table/export-csv.ts", "type": "registry:lib", "target": "components/data-table/export-csv.ts" },
         { "path": "components/data-table/filter-utils.ts", "type": "registry:lib", "target": "components/data-table/filter-utils.ts" },
+        { "path": "components/data-table/grouping-utils.ts", "type": "registry:lib", "target": "components/data-table/grouping-utils.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
         { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
+        { "path": "components/data-table/use-grouping.ts", "type": "registry:hook", "target": "components/data-table/use-grouping.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
         { "path": "components/data-table/define-columns.tsx", "type": "registry:lib", "target": "components/data-table/define-columns.tsx" },
         { "path": "components/data-table/primitives.tsx", "type": "registry:component", "target": "components/data-table/primitives.tsx" },
@@ -218,6 +120,8 @@
         { "path": "components/data-table/filter-builder.tsx", "type": "registry:component", "target": "components/data-table/filter-builder.tsx" },
         { "path": "components/data-table/actions-menu.tsx", "type": "registry:component", "target": "components/data-table/actions-menu.tsx" },
         { "path": "components/data-table/footer-aggregation.tsx", "type": "registry:component", "target": "components/data-table/footer-aggregation.tsx" },
+        { "path": "components/data-table/group-column.tsx", "type": "registry:component", "target": "components/data-table/group-column.tsx" },
+        { "path": "components/data-table/group-cell.tsx", "type": "registry:component", "target": "components/data-table/group-cell.tsx" },
         { "path": "components/data-table/use-data-table.ts", "type": "registry:hook", "target": "components/data-table/use-data-table.ts" },
         { "path": "components/data-table/data-table.tsx", "type": "registry:component", "target": "components/data-table/data-table.tsx" },
         { "path": "components/data-table/index.ts", "type": "registry:lib", "target": "components/data-table/index.ts" }
@@ -247,8 +151,10 @@
         { "path": "components/data-table/clipboard.ts", "type": "registry:lib", "target": "components/data-table/clipboard.ts" },
         { "path": "components/data-table/export-csv.ts", "type": "registry:lib", "target": "components/data-table/export-csv.ts" },
         { "path": "components/data-table/filter-utils.ts", "type": "registry:lib", "target": "components/data-table/filter-utils.ts" },
+        { "path": "components/data-table/grouping-utils.ts", "type": "registry:lib", "target": "components/data-table/grouping-utils.ts" },
         { "path": "components/data-table/use-grid-navigation.ts", "type": "registry:hook", "target": "components/data-table/use-grid-navigation.ts" },
         { "path": "components/data-table/use-footer-aggregation.ts", "type": "registry:hook", "target": "components/data-table/use-footer-aggregation.ts" },
+        { "path": "components/data-table/use-grouping.ts", "type": "registry:hook", "target": "components/data-table/use-grouping.ts" },
         { "path": "components/data-table/data-table-runtime-context.ts", "type": "registry:lib", "target": "components/data-table/data-table-runtime-context.ts" },
         { "path": "components/data-table/define-columns.tsx", "type": "registry:lib", "target": "components/data-table/define-columns.tsx" },
         { "path": "components/data-table/primitives.radix.tsx", "type": "registry:component", "target": "components/data-table/primitives.tsx" },
@@ -259,9 +165,63 @@
         { "path": "components/data-table/filter-builder.tsx", "type": "registry:component", "target": "components/data-table/filter-builder.tsx" },
         { "path": "components/data-table/actions-menu.tsx", "type": "registry:component", "target": "components/data-table/actions-menu.tsx" },
         { "path": "components/data-table/footer-aggregation.radix.tsx", "type": "registry:component", "target": "components/data-table/footer-aggregation.tsx" },
+        { "path": "components/data-table/group-column.tsx", "type": "registry:component", "target": "components/data-table/group-column.tsx" },
+        { "path": "components/data-table/group-cell.tsx", "type": "registry:component", "target": "components/data-table/group-cell.tsx" },
         { "path": "components/data-table/use-data-table.ts", "type": "registry:hook", "target": "components/data-table/use-data-table.ts" },
         { "path": "components/data-table/data-table.tsx", "type": "registry:component", "target": "components/data-table/data-table.tsx" },
         { "path": "components/data-table/index.ts", "type": "registry:lib", "target": "components/data-table/index.ts" }
+      ]
+    },
+    {
+      "name": "dimension-picker",
+      "type": "registry:block",
+      "title": "Dimension Picker",
+      "description": "Drag-and-drop grouping hierarchy picker for Data Table's `grouping.renderControl` slot. Optional — install only if you want users to change grouping at runtime.",
+      "dependencies": [
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/utilities",
+        "lucide-react"
+      ],
+      "registryDependencies": ["@kotsas-ui/data-table", "badge", "popover"],
+      "files": [
+        {
+          "path": "components/dimension-picker/dimension-picker.tsx",
+          "type": "registry:component",
+          "target": "components/dimension-picker/dimension-picker.tsx"
+        },
+        {
+          "path": "components/dimension-picker/index.ts",
+          "type": "registry:lib",
+          "target": "components/dimension-picker/index.ts"
+        }
+      ]
+    },
+    {
+      "name": "dimension-picker-radix",
+      "type": "registry:block",
+      "title": "Dimension Picker (Radix)",
+      "description": "Radix-UI build of the Dimension Picker — same component and API as dimension-picker. Install this if your shadcn/ui project uses Radix UI primitives; install dimension-picker if it uses Base UI. Not sure? Check the base your project's components.json was initialized with. Drag-and-drop grouping hierarchy picker for Data Table's `grouping.renderControl` slot. Optional — install only if you want users to change grouping at runtime.",
+      "dependencies": [
+        "@dnd-kit/core",
+        "@dnd-kit/sortable",
+        "@dnd-kit/modifiers",
+        "@dnd-kit/utilities",
+        "lucide-react"
+      ],
+      "registryDependencies": ["@kotsas-ui/data-table-radix", "badge", "popover"],
+      "files": [
+        {
+          "path": "components/dimension-picker/dimension-picker.tsx",
+          "type": "registry:component",
+          "target": "components/dimension-picker/dimension-picker.tsx"
+        },
+        {
+          "path": "components/dimension-picker/index.ts",
+          "type": "registry:lib",
+          "target": "components/dimension-picker/index.ts"
+        }
       ]
     }
   ]

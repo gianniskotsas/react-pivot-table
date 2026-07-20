@@ -8,7 +8,8 @@ import { SimpleDemo } from "@/components/site/simple-demo"
 import { AccountsTable } from "@/app/(examples)/accounts/accounts-table"
 import { accounts } from "@/app/(examples)/accounts/data"
 
-const USAGE_CODE = `import { GroupedDataTable } from "@/components/grouped-data-table"
+const USAGE_CODE = `import { DataTable } from "@/components/data-table"
+import { DimensionPicker } from "@/components/dimension-picker"
 import type { ColumnDef } from "@tanstack/react-table"
 
 type Account = { id: string; entity: string; bank: string; balance: number }
@@ -21,73 +22,97 @@ const columns: ColumnDef<Account, unknown>[] = [
 
 export function Demo({ data }: { data: Account[] }) {
   return (
-    <GroupedDataTable<Account>
+    <DataTable<Account>
       data={data}
       columns={columns}
-      groupableDimensions={[
-        { id: "entity", label: "Entity" },
-        { id: "bank", label: "Bank" },
-      ]}
-      initialGrouping={["entity"]}
-      groupColumn={{
-        header: "Account",
+      grouping={{
+        dimensions: [
+          { id: "entity", label: "Entity" },
+          { id: "bank", label: "Bank" },
+        ],
+        initial: ["entity"],
         // name-only leaf — no icon or secondary line
-        leaf: { primary: (row) => row.original.accountName },
+        column: {
+          header: "Account",
+          leaf: { primary: (row) => row.original.accountName },
+        },
+        renderControl: ({ dimensions, grouping, setGrouping }) => (
+          <DimensionPicker
+            dimensions={dimensions}
+            grouping={grouping}
+            onGroupingChange={setGrouping}
+          />
+        ),
       }}
     />
   )
 }`
 
-const RICH_CODE = `<GroupedDataTable<Account>
+const RICH_CODE = `<DataTable<Account>
   data={accounts}
   columns={columns}
-  groupableDimensions={[
-    { id: "entity", label: "Entity" },
-    { id: "bank", label: "Bank" },
-  ]}
-  initialGrouping={["entity", "bank"]}
-  groupColumn={{
-    header: "Account",
-    leaf: {
-      icon: () => <Landmark className="size-4 text-muted-foreground" />,
-      primary: (row) => row.original.accountName,
-      secondary: (row) => row.original.iban,
+  grouping={{
+    dimensions: [
+      { id: "entity", label: "Entity" },
+      { id: "bank", label: "Bank" },
+    ],
+    initial: ["entity", "bank"],
+    column: {
+      header: "Account",
+      leaf: {
+        icon: () => <Landmark className="size-4 text-muted-foreground" />,
+        primary: (row) => row.original.accountName,
+        secondary: (row) => row.original.iban,
+      },
     },
+    renderControl: ({ dimensions, grouping, setGrouping }) => (
+      <DimensionPicker
+        dimensions={dimensions}
+        grouping={grouping}
+        onGroupingChange={setGrouping}
+      />
+    ),
   }}
 />`
 
 const API_ROWS: ApiRow[] = [
   {
-    name: "groupableDimensions",
+    name: "grouping.dimensions",
     type: "{ id; label }[]",
     description:
       "Which columns the Group-by picker offers. Each id must match a column with enableGrouping: true.",
   },
   {
-    name: "initialGrouping?",
+    name: "grouping.initial?",
     type: "string[]",
     defaultValue: "[]",
     description:
-      "Hierarchy order at mount, e.g. [\"entity\", \"bank\"]. Users reorder by dragging chips in the Group-by popover.",
+      "Hierarchy order at mount, e.g. [\"entity\", \"bank\"]. Applied once — use the renderControl slot's setGrouping to change it after mount.",
   },
   {
-    name: "groupColumn.header?",
+    name: "grouping.renderControl?",
+    type: "(ctx) => ReactNode",
+    description:
+      "Toolbar control for changing the hierarchy at runtime. Pass Dimension Picker's <DimensionPicker /> here, or omit for a fixed hierarchy.",
+  },
+  {
+    name: "grouping.column.header?",
     type: "ReactNode",
     description: "Header text for the synthesized group column.",
   },
   {
-    name: "groupColumn.leaf?",
+    name: "grouping.column.leaf?",
     type: "{ primary; secondary?; icon? }",
     description:
       "Declarative leaf rendering — a primary label with optional icon and muted secondary line.",
   },
   {
-    name: "groupColumn.renderLeaf?",
+    name: "grouping.column.renderLeaf?",
     type: "(row) => ReactNode",
     description: "Full-control leaf renderer; takes precedence over leaf.",
   },
   {
-    name: "groupColumn.countMode?",
+    name: "grouping.column.countMode?",
     type: '"leaf" | "immediate"',
     defaultValue: '"leaf"',
     description:
@@ -105,11 +130,16 @@ const PAGE_MARKDOWN = `# Grouping & Hierarchy
 
 AG-Grid-style row grouping and drill-down: a single auto group column with
 indented hierarchy, expand/collapse, drag-and-drop dimension reordering, and
-per-group counts/aggregation. Works with: Grouped Data Table.
+per-group counts/aggregation. Works with: Data Table, Dimension Picker.
 
 ## Installation
 \`\`\`
-npx shadcn@latest add @kotsas-ui/grouped-data-table
+npx shadcn@latest add @kotsas-ui/data-table
+\`\`\`
+
+Optional — install this too if you want users to change grouping at runtime:
+\`\`\`
+npx shadcn@latest add @kotsas-ui/dimension-picker
 \`\`\`
 
 ## Usage
@@ -138,10 +168,11 @@ export default function GroupingPage() {
       <Section
         id="installation"
         title="Installation"
-        description="Grouping is the heart of Grouped Data Table. Two builds — grouped-data-table for Base UI shadcn projects, grouped-data-table-radix for Radix UI projects."
+        description="Grouping is an opt-in prop on Data Table — pass grouping and get an auto group column, expand/collapse, and per-group aggregation. Dimension Picker adds a drag-and-drop control for changing the hierarchy at runtime; it's optional and the only piece that depends on dnd-kit."
       >
-        <WorksWith components={["grouped-data-table"]} />
-        <InstallTabs package="@kotsas-ui/grouped-data-table" />
+        <WorksWith components={["data-table", "dimension-picker"]} />
+        <InstallTabs package="@kotsas-ui/data-table" />
+        <InstallTabs package="@kotsas-ui/dimension-picker" className="mt-3" />
       </Section>
 
       <Section

@@ -1,8 +1,9 @@
-import { Rows3, SquareStack, Table2 } from "lucide-react"
+import { GripVertical, Rows3, SquareStack, Table2 } from "lucide-react"
 
 export type WorksWithComponent =
   | "data-table"
   | "grouped-data-table"
+  | "dimension-picker"
   | "table-fields"
 
 const COMPONENTS: Record<
@@ -14,6 +15,7 @@ const COMPONENTS: Record<
 > = {
   "data-table": { label: "Data Table", icon: Table2 },
   "grouped-data-table": { label: "Grouped Data Table", icon: Rows3 },
+  "dimension-picker": { label: "Dimension Picker", icon: GripVertical },
   "table-fields": { label: "Table Fields", icon: SquareStack },
 }
 
