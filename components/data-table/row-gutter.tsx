@@ -81,7 +81,12 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   // shiftKey-capture logic is identical in row-gutter.tsx and
   // row-gutter.radix.tsx — onPointerDown is a plain DOM prop both
   // primitives forward to their underlying element unchanged; only
-  // SelectAllHeader's checked/indeterminate wiring differs between the two.
+  // SelectAllHeader's and RowGutterCell's checked/indeterminate wiring
+  // differ between the two: base-ui takes a separate `indeterminate` boolean
+  // prop alongside `checked` (used below); Radix has no such prop and
+  // instead folds the mixed state into `checked="indeterminate"` (see
+  // row-gutter.radix.tsx). That's a legitimate, permanent divergence — do
+  // not "fix" it back to a byte-identical RowGutterCell.
   const shiftKeyRef = React.useRef(false)
   // `pagination` is an unconditional built-in TanStack feature — the state
   // key always exists (default `{pageIndex: 0, pageSize: 10}`) even when
@@ -130,10 +135,15 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   const numberHiddenClass = selected ? "hidden" : "[tr:hover_&]:hidden group-focus-within:hidden"
   // Keep a group row's checkbox always visible — there is no number to swap
   // with, since group rows never render one.
-  const checkboxWrapperClass =
+  const checkboxWrapperClass = cn(
+    // `relative` + centering only matters for a group row's Minus overlay
+    // below — added conditionally rather than unconditionally so a plain
+    // leaf row's wrapper class stays exactly what it was.
+    isGroupRow && "relative items-center justify-center",
     selected || isGroupRow
       ? "inline-flex"
-      : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex"
+      : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex",
+  )
 
   return (
     <div
@@ -148,6 +158,15 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
         <Checkbox
           checked={selected}
           indeterminate={groupIndeterminate}
+          // base-ui's CheckboxIndicator mounts its CheckIcon whenever
+          // `checked || indeterminate` — ARIA already reports the mixed
+          // state correctly (aria-checked="mixed"), but left alone the
+          // group row would draw the SAME full check icon for "partially
+          // selected" as for "fully selected". Same fix SelectAllHeader
+          // above already applies for the header's own tri-state checkbox:
+          // opacity-hide the check icon and overlay a dedicated Minus glyph
+          // so the two states read as visually distinct.
+          className={groupIndeterminate ? "[&_svg]:opacity-0" : undefined}
           onPointerDown={(e) => {
             shiftKeyRef.current = e.shiftKey
           }}
@@ -171,6 +190,9 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
                 : `Select row ${rowNumber}`
           }
         />
+        {groupIndeterminate ? (
+          <Minus className="pointer-events-none absolute size-3" aria-hidden="true" />
+        ) : null}
       </span>
     </div>
   )

@@ -14,5 +14,15 @@ describe("buildGroupColumn", () => {
     expect(column.enableSorting).toBe(false)
     expect(column.enableHiding).toBe(false)
     expect(column.enablePinning).toBe(false)
+    // This is the auto-generated grouping column itself — grouping BY it
+    // makes no sense (there's nothing to group), so it must not offer itself
+    // up as a groupable dimension.
+    expect(column.enableGrouping).toBe(false)
+    // Defense in depth: nothing on the real nav/clipboard/bulk-clear paths
+    // ever consults this today (they already exclude GROUP_COLUMN_ID
+    // upstream), but meta.editable === false is what stops a structural,
+    // no-accessor column from being misreported as editable to any caller
+    // that asks isColumnEditable(GROUP_COLUMN_ID) directly.
+    expect(column.meta).toMatchObject({ editable: false })
   })
 })

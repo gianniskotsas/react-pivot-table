@@ -697,4 +697,43 @@ describe("grouping", () => {
     expect(csv).toContain("5")
     downloadSpy.mockRestore()
   })
+
+  // Regression: the synthesized group column ("Deal") has no TData accessor
+  // — GroupAwareCell renders its label straight from the row model, not from
+  // `row.getValue(GROUP_COLUMN_ID)` — so ExportCsvButton used to still
+  // include it among the exported columns and emit a permanently blank
+  // "Deal" field on every row. It must be filtered out entirely, exactly
+  // like the structural row-gutter column already is.
+  it("excludes the synthesized group column (no accessor, nothing to export) from the exported CSV when grouping is on", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }}
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    const [, csv] = downloadSpy.mock.calls[0]
+    const lines = csv.trim().split("\r\n")
+    // "stage" is the grouped dimension column, so useDataTable's own
+    // derivedVisibility already hides it (see the "omits the grouped Stage
+    // column from the Columns menu" test above) — the only real column left
+    // visible is "amount". Before the fix the synthesized group column
+    // ("Deal") rode along as an extra, permanently-blank field on every row;
+    // now it must be dropped entirely, leaving exactly one field per line.
+    expect(lines[0]).toBe("amount")
+    expect(csv).not.toContain("Deal")
+    for (const line of lines) expect(line.split(",")).toHaveLength(1)
+    expect(csv).toContain("10")
+    expect(csv).toContain("20")
+    expect(csv).toContain("5")
+    downloadSpy.mockRestore()
+  })
 })

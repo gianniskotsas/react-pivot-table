@@ -347,4 +347,46 @@ describe("buildRowGutterColumn", () => {
     // ("header renders aria-checked=mixed…"), so reuse that query here too.
     expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "mixed")
   })
+
+  // Regression: base-ui's CheckboxIndicator mounts its CheckIcon whenever
+  // `checked || indeterminate` — ARIA is correct either way (asserted
+  // above), but left alone the DOM would draw the exact same full check
+  // icon for "partially selected" as for "fully selected". RowGutterCell
+  // must apply the same opacity-hide-and-overlay-a-Minus treatment
+  // SelectAllHeader already uses for its own tri-state checkbox, so the two
+  // group states are visually distinguishable, not just ARIA-distinguishable.
+  it("visually distinguishes a partially-selected group from a fully-selected one", () => {
+    const column = buildRowGutterColumn<{ id: string }>()
+    const table = mockTable({ rows: [{ id: "g1", getIsGrouped: () => true }] })
+
+    const indeterminateRow = {
+      ...mockRow({ id: "g1", grouped: true }),
+      getIsSomeSelected: () => true,
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const indeterminateCtx = { table, row: indeterminateRow, column } as any
+    const indeterminate = render(
+      <DataTableRuntimeContext.Provider value={stubRuntime()}>
+        {flexRender(column.cell, indeterminateCtx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    expect(indeterminate.container.querySelector('[data-slot="checkbox"]')).toHaveClass(
+      "[&_svg]:opacity-0",
+    )
+    expect(indeterminate.container.querySelector(".lucide-minus")).toBeInTheDocument()
+    indeterminate.unmount()
+
+    const selectedRow = mockRow({ id: "g1", grouped: true, selected: true })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const selectedCtx = { table, row: selectedRow, column } as any
+    const selectedResult = render(
+      <DataTableRuntimeContext.Provider value={stubRuntime()}>
+        {flexRender(column.cell, selectedCtx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    expect(selectedResult.container.querySelector('[data-slot="checkbox"]')).not.toHaveClass(
+      "[&_svg]:opacity-0",
+    )
+    expect(selectedResult.container.querySelector(".lucide-minus")).toBeNull()
+  })
 })

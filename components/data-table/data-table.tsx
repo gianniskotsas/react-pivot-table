@@ -34,14 +34,15 @@ import { collectLeafRows } from "./grouping-utils"
 import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { useDataTable } from "./use-data-table"
 import { useFooterAggregation } from "./use-footer-aggregation"
-import type {
-  CalculableColumn,
-  ComputeAggregateArgs,
-  DataTableAction,
-  DataTableColumnMeta,
-  DataTableGroupingConfig,
-  FilterDef,
-  FilterState,
+import {
+  GROUP_COLUMN_ID,
+  type CalculableColumn,
+  type ComputeAggregateArgs,
+  type DataTableAction,
+  type DataTableColumnMeta,
+  type DataTableGroupingConfig,
+  type FilterDef,
+  type FilterState,
 } from "./types"
 
 export type DataTableProps<TData> = {
@@ -130,9 +131,12 @@ function pinnedStyle<TData>(
 }
 
 // Exports the current sorted/filtered/visible view: visible leaf columns
-// (minus the structural row-gutter column, which has no DataTableColumnMeta
-// and nothing meaningful to export) run through the sorted row model, so the
-// CSV matches what's on screen rather than the original unsorted `data`. When
+// (minus the structural row-gutter and group columns — neither has a TData
+// accessor or anything meaningful to export; the group column would
+// otherwise emit a permanently blank column, since GroupAwareCell renders its
+// label from the row model, not from `row.getValue(GROUP_COLUMN_ID)`) run
+// through the sorted row model, so the CSV matches what's on screen rather
+// than the original unsorted `data`. When
 // rows are selected, the export narrows to just those — filtering the sorted
 // model (not the selection model) so the selected rows keep their on-screen
 // order. Under manual pagination, an "all matching" selection can logically
@@ -145,7 +149,7 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
   function handleExport() {
     const columns = table
       .getVisibleLeafColumns()
-      .filter((column) => column.id !== ROW_GUTTER_COLUMN_ID)
+      .filter((column) => column.id !== ROW_GUTTER_COLUMN_ID && column.id !== GROUP_COLUMN_ID)
       .map((column) => {
         const meta = column.columnDef.meta as DataTableColumnMeta | undefined
         return {

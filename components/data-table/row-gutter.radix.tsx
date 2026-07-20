@@ -1,13 +1,15 @@
 "use client"
 
 // Radix build of the row-gutter shim. Keep the EXPORTED API identical to its
-// base-ui twin, row-gutter.tsx — only SelectAllHeader's checked/indeterminate
-// wiring differs (Radix expresses the mixed state as `checked="indeterminate"`
-// on the same boolean|"indeterminate" prop; base-ui exposes it as a separate
-// `indeterminate` boolean prop alongside `checked`). This file is
-// distribution-only: it is excluded from this repo's typecheck (tsconfig
-// `**/*.radix.tsx`) and is never imported here — it is validated against real
-// Radix primitives in a consumer project.
+// base-ui twin, row-gutter.tsx — only SelectAllHeader's AND RowGutterCell's
+// checked/indeterminate wiring differ (Radix expresses the mixed state as
+// `checked="indeterminate"` on the same boolean|"indeterminate" prop; base-ui
+// exposes it as a separate `indeterminate` boolean prop alongside `checked`).
+// The Radix `Checkbox` has no `indeterminate` prop at all — passing one is a
+// silent no-op (an unknown prop spread onto the DOM) that never surfaces here
+// because this file is distribution-only: it is excluded from this repo's
+// typecheck (tsconfig `**/*.radix.tsx`) and is never imported here — it is
+// validated against real Radix primitives in a consumer project.
 
 import type { CellContext, ColumnDef, HeaderContext } from "@tanstack/react-table"
 import { Minus } from "lucide-react"
@@ -89,7 +91,12 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   // shiftKey-capture logic is identical in row-gutter.tsx and
   // row-gutter.radix.tsx — onPointerDown is a plain DOM prop both
   // primitives forward to their underlying element unchanged; only
-  // SelectAllHeader's checked/indeterminate wiring differs between the two.
+  // SelectAllHeader's and RowGutterCell's checked/indeterminate wiring
+  // differ between the two: base-ui takes a separate `indeterminate` boolean
+  // prop alongside `checked`; Radix has no such prop (it's a silent no-op if
+  // passed) and instead folds the mixed state into `checked="indeterminate"`
+  // below. That's a legitimate, permanent divergence — do not "fix" it back
+  // to a byte-identical RowGutterCell.
   const shiftKeyRef = React.useRef(false)
   // `pagination` is an unconditional built-in TanStack feature — the state
   // key always exists (default `{pageIndex: 0, pageSize: 10}`) even when
@@ -154,8 +161,7 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
       )}
       <span className={checkboxWrapperClass}>
         <Checkbox
-          checked={selected}
-          indeterminate={groupIndeterminate}
+          checked={selected ? true : groupIndeterminate ? "indeterminate" : false}
           onPointerDown={(e) => {
             shiftKeyRef.current = e.shiftKey
           }}
