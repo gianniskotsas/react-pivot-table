@@ -289,7 +289,7 @@ export default function CrmBlockPage() {
         title="Pipeline"
         description="Built on Grouped Data Table: stage/owner use table-fields' *Cell helpers directly, and Value sums per group automatically via aggregationFn."
       >
-        <WorksWith components={["grouped-data-table"]} />
+        <WorksWith components={["grouped-data-table", "table-fields"]} />
         <ComponentPreview
           align="start"
           preview={<CrmBlock />}
