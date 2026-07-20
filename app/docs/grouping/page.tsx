@@ -51,6 +51,7 @@ export function Demo({ data }: { data: Account[] }) {
 const RICH_CODE = `<DataTable<Account>
   data={accounts}
   columns={columns}
+  filterableColumns={filterableColumns}
   grouping={{
     dimensions: [
       { id: "entity", label: "Entity" },
@@ -59,8 +60,9 @@ const RICH_CODE = `<DataTable<Account>
     initial: ["entity", "bank"],
     column: {
       header: "Account",
+      countMode: "leaf",
       leaf: {
-        icon: () => <Landmark className="size-4 text-muted-foreground" />,
+        icon: () => <Landmark className="size-4 shrink-0 text-muted-foreground" />,
         primary: (row) => row.original.accountName,
         secondary: (row) => row.original.iban,
       },

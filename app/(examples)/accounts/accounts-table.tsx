@@ -2,8 +2,9 @@
 
 import { Landmark } from "lucide-react"
 
-import { GroupedDataTable } from "@/components/grouped-data-table"
-import type { GroupColumnConfig, DimensionDef, FilterDef } from "@/components/grouped-data-table"
+import { DataTable } from "@/components/data-table"
+import type { GroupColumnConfig, DimensionDef, FilterDef } from "@/components/data-table"
+import { DimensionPicker } from "@/components/dimension-picker"
 
 import { columns } from "./columns"
 import { accounts } from "./data"
@@ -39,13 +40,22 @@ const groupColumn: GroupColumnConfig<Account> = {
 
 export function AccountsTable({ data }: { data: Account[] }) {
   return (
-    <GroupedDataTable<Account>
+    <DataTable<Account>
       data={data}
       columns={columns}
-      groupableDimensions={groupableDimensions}
-      initialGrouping={["entity", "bank"]}
-      groupColumn={groupColumn}
       filterableColumns={filterableColumns}
+      grouping={{
+        dimensions: groupableDimensions,
+        initial: ["entity", "bank"],
+        column: groupColumn,
+        renderControl: ({ dimensions, grouping, setGrouping }) => (
+          <DimensionPicker
+            dimensions={dimensions}
+            grouping={grouping}
+            onGroupingChange={setGrouping}
+          />
+        ),
+      }}
     />
   )
 }

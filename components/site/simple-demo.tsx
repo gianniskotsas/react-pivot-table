@@ -1,6 +1,7 @@
 "use client"
 
-import { GroupedDataTable } from "@/components/grouped-data-table"
+import { DataTable } from "@/components/data-table"
+import { DimensionPicker } from "@/components/dimension-picker"
 import { columns } from "@/app/(examples)/accounts/columns"
 import { accounts, type Account } from "@/app/(examples)/accounts/data"
 
@@ -10,17 +11,26 @@ import { accounts, type Account } from "@/app/(examples)/accounts/data"
  */
 export function SimpleDemo() {
   return (
-    <GroupedDataTable<Account>
+    <DataTable<Account>
       data={accounts}
       columns={columns}
-      groupableDimensions={[
-        { id: "entity", label: "Entity" },
-        { id: "bank", label: "Bank" },
-      ]}
-      initialGrouping={["entity"]}
-      groupColumn={{
-        header: "Account",
-        leaf: { primary: (row) => row.original.accountName },
+      grouping={{
+        dimensions: [
+          { id: "entity", label: "Entity" },
+          { id: "bank", label: "Bank" },
+        ],
+        initial: ["entity"],
+        column: {
+          header: "Account",
+          leaf: { primary: (row) => row.original.accountName },
+        },
+        renderControl: ({ dimensions, grouping, setGrouping }) => (
+          <DimensionPicker
+            dimensions={dimensions}
+            grouping={grouping}
+            onGroupingChange={setGrouping}
+          />
+        ),
       }}
     />
   )
