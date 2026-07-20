@@ -207,22 +207,35 @@ export type DimensionDef = {
 
 /**
  * Declarative leaf rendering: a primary label, with an optional leading icon and
- * an optional muted secondary line below it.
+ * an optional muted secondary line below it. Each accessor returns whatever you
+ * want to show (or you can omit `icon`/`secondary` entirely).
  */
 export type GroupLeafConfig<TData> = {
+  /** Main label for the leaf row. */
   primary: (row: Row<TData>) => React.ReactNode
+  /** Optional muted line shown beneath the primary label. Omit to show none. */
   secondary?: (row: Row<TData>) => React.ReactNode
+  /** Optional leading icon. Omit to show none. */
   icon?: (row: Row<TData>) => React.ReactNode
 }
 
 export type GroupColumnConfig<TData> = {
   /** Header text for the auto group column, e.g. "Account". */
   header?: React.ReactNode
-  /** Declarative leaf rendering. Ignored if `renderLeaf` is provided. */
+  /**
+   * Declarative leaf rendering (primary + optional icon/secondary). Use this for
+   * the common case. Ignored if `renderLeaf` is provided.
+   */
   leaf?: GroupLeafConfig<TData>
-  /** Full-control leaf renderer. Takes precedence over `leaf`. */
+  /**
+   * Full-control leaf renderer — return any node. Takes precedence over `leaf`.
+   * Provide either `leaf` or `renderLeaf`; if neither is set, leaf rows render blank.
+   */
   renderLeaf?: (row: Row<TData>) => React.ReactNode
-  /** "leaf" = total leaf descendants (default), "immediate" = direct sub-rows. */
+  /**
+   * How the `(count)` next to a group label is computed.
+   * "leaf" = total leaf descendants (default), "immediate" = direct sub-rows.
+   */
   countMode?: "leaf" | "immediate"
   /** Pixels of indentation per depth level. Default 24. */
   indentSize?: number

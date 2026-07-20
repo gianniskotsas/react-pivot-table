@@ -1,54 +1,31 @@
 export { GroupedDataTable } from "./grouped-data-table"
 export { useGroupedTable, type UseGroupedTableResult } from "./use-grouped-table"
-export { GroupCell, type GroupCellProps } from "./group-cell"
+
+// Re-exported from their new homes so existing imports from this barrel keep working.
 export {
-  DimensionPicker,
-  DimensionPickerContent,
-  reorderGrouping,
-} from "@/components/dimension-picker"
-export {
+  GroupAwareCell as GroupCell,
+  type GroupAwareCellProps as GroupCellProps,
   GROUP_COLUMN_ID,
-  type DimensionDef,
-  type GroupColumnConfig,
-  type GroupLeafConfig,
-  type GroupedDataTableProps,
-} from "./types"
-export { FilterPopover, FilterBuilderContent } from "./filter-builder"
-export { MultiSelect, MultiSelectContent, multiSelectLabel } from "./multi-select"
-export {
-  type FilterType,
-  type FilterOperator,
-  type FilterDef,
-  type FilterCondition,
-  type FilterValue,
-  type Combinator,
-  type FilterGroup,
-  type FilterState,
-} from "./types"
-// Pure filter helpers — for custom UIs and for a future MCP tool that emits or
-// describes filter config/conditions.
-export {
+  MultiSelect,
+  MultiSelectContent,
+  multiSelectLabel,
+  FilterPopover,
+  FilterBuilderContent,
   OPERATOR_LABELS,
   createCondition,
   defaultOperatorsFor,
   describeCondition,
   evaluateCondition,
   operatorsForDef,
-  withColumn,
-  withOperator,
-  withValue,
-  evaluateFilterState,
-  evaluateGroup,
-  emptyFilterState,
-  countActiveConditions,
-  isConditionComplete,
-  newGroup,
-  addGroup,
-  addConditionToGroup,
-  updateConditionInGroup,
-  removeConditionFromGroup,
-  removeGroup,
-  setGroupCombinator,
-  setTopCombinator,
-  normalizeFilterState,
-} from "./filter-utils"
+  type DimensionDef,
+  type GroupColumnConfig,
+  type GroupLeafConfig,
+  type FilterType,
+  type FilterOperator,
+  type FilterDef,
+  type FilterCondition,
+  type FilterValue,
+  type Combinator,
+} from "@/components/data-table"
+export { DimensionPicker, DimensionPickerContent, reorderGrouping } from "@/components/dimension-picker"
+export type { GroupedDataTableProps } from "./types"

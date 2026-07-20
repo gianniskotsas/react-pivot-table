@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import type { Cell, Row } from "@tanstack/react-table"
 
-import { GroupCell } from "./group-cell"
+import { GroupAwareCell as GroupCell } from "@/components/data-table"
 import { GROUP_COLUMN_ID, type GroupColumnConfig } from "./types"
 
 type Acct = { id: string; name: string }

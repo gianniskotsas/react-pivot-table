@@ -26,6 +26,7 @@ export { exportCsv, downloadCsv, type CsvColumn } from "./export-csv"
 export { FilterPopover, FilterBuilderContent } from "./filter-builder"
 export { MultiSelect, MultiSelectContent, multiSelectLabel } from "./multi-select"
 export { ActionsMenu, ActionsMenuContent } from "./actions-menu"
+export { GroupAwareCell, type GroupAwareCellProps } from "./group-cell"
 export type {
   CellPos,
   DataTableColumnMeta,
