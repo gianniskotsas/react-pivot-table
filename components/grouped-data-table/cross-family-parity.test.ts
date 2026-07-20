@@ -38,3 +38,25 @@ describe("cross-family duplicated-file parity (data-table ↔ grouped-data-table
     },
   )
 })
+
+/**
+ * types.ts as a whole legitimately differs (each family's props differ), but the
+ * FilterType→FilterState block inside it is duplicated verbatim. Compare just
+ * that region so a divergence in filter types fails as loudly as one in
+ * filter-utils.ts.
+ */
+function extractFilterTypeBlock(src: string): string {
+  const start = src.indexOf("export type FilterType")
+  const endMarker = "export type FilterState"
+  const end = src.indexOf("\n", src.indexOf(endMarker) + endMarker.length)
+  if (start === -1 || end === -1) throw new Error("filter type block not found")
+  return src.slice(start, end).trim()
+}
+
+describe("cross-family filter type parity (data-table ↔ grouped-data-table)", () => {
+  it("declares an identical FilterType→FilterState block in both families", () => {
+    const ours = readFileSync(resolve(here, "types.ts"), "utf8")
+    const theirs = readFileSync(resolve(sibling, "types.ts"), "utf8")
+    expect(extractFilterTypeBlock(ours)).toBe(extractFilterTypeBlock(theirs))
+  })
+})
