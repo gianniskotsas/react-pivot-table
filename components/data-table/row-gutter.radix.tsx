@@ -145,10 +145,15 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   const numberHiddenClass = selected ? "hidden" : "[tr:hover_&]:hidden group-focus-within:hidden"
   // Keep a group row's checkbox always visible — there is no number to swap
   // with, since group rows never render one.
-  const checkboxWrapperClass =
+  const checkboxWrapperClass = cn(
+    // `relative` + centering only matters for a group row's Minus overlay
+    // below — added conditionally rather than unconditionally so a plain
+    // leaf row's wrapper class stays exactly what it was.
+    isGroupRow && "relative items-center justify-center",
     selected || isGroupRow
       ? "inline-flex"
-      : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex"
+      : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex",
+  )
 
   return (
     <div
@@ -162,6 +167,16 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
       <span className={checkboxWrapperClass}>
         <Checkbox
           checked={selected ? true : groupIndeterminate ? "indeterminate" : false}
+          // Radix's CheckboxIndicator mounts its CheckIcon whenever
+          // `checked || checked === "indeterminate"` — ARIA already reports
+          // the mixed state correctly (aria-checked="mixed"), but left alone
+          // the group row would draw the SAME full check icon for
+          // "partially selected" as for "fully selected". Same fix
+          // SelectAllHeader above already applies for the header's own
+          // tri-state checkbox: opacity-hide the check icon and overlay a
+          // dedicated Minus glyph so the two states read as visually
+          // distinct.
+          className={groupIndeterminate ? "[&_svg]:opacity-0" : undefined}
           onPointerDown={(e) => {
             shiftKeyRef.current = e.shiftKey
           }}
@@ -185,6 +200,9 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
                 : `Select row ${rowNumber}`
           }
         />
+        {groupIndeterminate ? (
+          <Minus className="pointer-events-none absolute size-3" aria-hidden="true" />
+        ) : null}
       </span>
     </div>
   )
