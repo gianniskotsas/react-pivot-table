@@ -4,6 +4,7 @@ import * as React from "react"
 import type { Table } from "@tanstack/react-table"
 
 import { aggregate } from "./aggregate"
+import { collectLeafRows } from "./grouping-utils"
 import type {
   AggregateCellState,
   AggregationMethod,
@@ -56,11 +57,20 @@ export function useFooterAggregation<TData>({
     setMethods((prev) => ({ ...prev, [columnId]: method }))
   }, [])
 
-  const selectedRows = table.getSelectedRowModel().rows
+  // Leaf rows only, on every scope. TanStack's pipeline puts grouping BEFORE
+  // sorting, so both the selected and the sorted models surface group rows at
+  // top level — and a group row's getValue() is the rolled-up aggregate of the
+  // very children sitting beside it, so counting both double-counts.
+  // `collectLeafRows` (see its own comment in grouping-utils.ts) rather than a
+  // naive `.flatRows` filter: `getSortedRowModel().flatRows` was verified to
+  // duplicate every leaf whenever grouping is on and no sort is active. Flat
+  // tables have no sub-rows, so this is a no-op there.
+  const selectedRows = collectLeafRows(table.getSelectedRowModel().rows)
   const scopeIsSelection = isAllMatchingSelected || selectedRows.length > 0
-  const scopeRows = scopeIsSelection ? selectedRows : table.getSortedRowModel().rows
+  const sortedLeafRows = collectLeafRows(table.getSortedRowModel().rows)
+  const scopeRows = scopeIsSelection ? selectedRows : sortedLeafRows
 
-  const loadedRowCount = table.getSortedRowModel().rows.length
+  const loadedRowCount = sortedLeafRows.length
   // Only the all-matching selection can ever exceed what's loaded — a
   // hand-picked selection of specific rows is, by definition, a selection of
   // rows the user could see (and therefore rows already loaded).

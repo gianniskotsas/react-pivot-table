@@ -30,6 +30,7 @@ import { downloadCsv, exportCsv } from "./export-csv"
 import { FilterPopover } from "./filter-builder"
 import { DataTableFooter } from "./footer-aggregation"
 import { GroupAwareCell } from "./group-cell"
+import { collectLeafRows } from "./grouping-utils"
 import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { useDataTable } from "./use-data-table"
 import { useFooterAggregation } from "./use-footer-aggregation"
@@ -153,9 +154,15 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
           toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")),
         }
       })
-    const sortedRows = table.getSortedRowModel().rows
+    // Leaf rows only: with grouping on, both row models surface group rows
+    // (whose getValue() is a rolled-up aggregate of the very children sitting
+    // beside them) — exporting those would emit bogus subtotal rows alongside
+    // their own parts. See grouping-utils.ts's `collectLeafRows` for why this
+    // isn't a naive `.flatRows` filter. Flat tables have no sub-rows, so this
+    // is a no-op there.
+    const sortedRows = collectLeafRows(table.getSortedRowModel().rows)
     const allMatching = runtime?.isAllMatchingSelected ?? false
-    const hasSelection = table.getSelectedRowModel().rows.length > 0
+    const hasSelection = collectLeafRows(table.getSelectedRowModel().rows).length > 0
     // "All matching" means the whole view, so no narrowing — every loaded row
     // is in scope (they're all selected anyway, plus rows not yet loaded).
     const sourceRows =

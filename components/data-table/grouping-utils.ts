@@ -19,6 +19,40 @@ export function getGroupRowCount<TData>(
     : row.getLeafRows().filter((leaf) => !leaf.getIsGrouped()).length
 }
 
+/**
+ * Flattens a set of top-level rows (which may be group rows, or already
+ * leaves for a flat table) down to their underlying LEAF rows, exactly once
+ * each, in DFS order — regardless of current expand/collapse state.
+ *
+ * Deliberately walks each row's own subtree via TanStack's `row.getLeafRows()`
+ * (which recurses through `.subRows`) rather than reading a row MODEL's own
+ * `.flatRows` off `getSortedRowModel()`/`getGroupedRowModel()`: verified
+ * empirically that `getSortedRowModel().flatRows` inherits a duplication bug
+ * whenever no sort is active and grouping is on — its memo short-circuits by
+ * returning `getGroupedRowModel()` unchanged, and THAT model's own `.flatRows`
+ * bookkeeping pushes every leaf row in twice (once from its base-case
+ * recursion, once from the grouping branch's own loop). Filtering that array
+ * by "not a group row" still leaves every leaf duplicated and silently
+ * doubles any sum/count built from it. `row.getLeafRows()` itself uses a
+ * correct, non-duplicating flatten and is a per-ROW method, not a row MODEL's
+ * memoized field, so it isn't affected by that bug — but for a leaf row (no
+ * grouping, or an already-leaf top-level row) it returns an empty array (a
+ * leaf has no subRows to flatten), so leaf rows must be collected directly
+ * rather than through `getLeafRows()`. With grouping off, every row passed in
+ * is already a leaf and this returns them unchanged, one-for-one.
+ */
+export function collectLeafRows<TData>(rows: Row<TData>[]): Row<TData>[] {
+  const leaves: Row<TData>[] = []
+  for (const row of rows) {
+    if (row.getIsGrouped()) {
+      leaves.push(...row.getLeafRows().filter((leaf) => !leaf.getIsGrouped()))
+    } else {
+      leaves.push(row)
+    }
+  }
+  return leaves
+}
+
 /** Keep only allowed ids, preserve order, dedupe. */
 export function normalizeGrouping(
   grouping: string[],

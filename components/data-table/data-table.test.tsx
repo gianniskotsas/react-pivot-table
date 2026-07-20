@@ -665,4 +665,36 @@ describe("grouping", () => {
     expect(screen.queryByText("30")).toBeNull()
     expect(screen.queryByText("10")).toBeNull()
   })
+
+  // Regression: ExportCsvButton used to source rows straight from
+  // `table.getSortedRowModel().rows` — under grouping that's the TOP-LEVEL
+  // array only (the 2 group rows "won"/"lost"), never flattened down to the 3
+  // real deals, so the export would have emitted 2 rows carrying each group's
+  // rolled-up subtotal instead of the 3 underlying leaf records.
+  it("exports the underlying leaf rows (not the group rows) when grouping is on", () => {
+    const downloadSpy = vi.spyOn(ExportCsvModule, "downloadCsv").mockImplementation(() => {})
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }}
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Export" }))
+    expect(downloadSpy).toHaveBeenCalled()
+    const [, csv] = downloadSpy.mock.calls[0]
+    const lines = csv.trim().split("\r\n")
+    // Header + exactly 3 leaf rows (deals 1, 2, 3) — not header + 2 group rows.
+    expect(lines).toHaveLength(4)
+    expect(csv).toContain("10")
+    expect(csv).toContain("20")
+    expect(csv).toContain("5")
+    downloadSpy.mockRestore()
+  })
 })

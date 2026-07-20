@@ -1,5 +1,12 @@
 import { act, renderHook } from "@testing-library/react"
-import { getCoreRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table"
+import {
+  getCoreRowModel,
+  getExpandedRowModel,
+  getGroupedRowModel,
+  getSortedRowModel,
+  useReactTable,
+  type ExpandedState,
+} from "@tanstack/react-table"
 import * as React from "react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -28,6 +35,60 @@ function useTestTable(data: Row[] = DATA) {
     onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
   })
+}
+
+type GroupableRow = { id: string; category: string; amount: number }
+
+// "category" is deliberately NOT unique per row — group "x" holds TWO leaves
+// (rows 1 and 2) and group "y" holds one (row 3). Grouping by something
+// unique per row (e.g. "name" in DATA above) would make every group a
+// single-leaf group, which can't actually exercise double-counting: a
+// single-leaf group's rolled-up value and its one leaf's value are the same
+// number, so a bug that adds the group row's value on top of its own leaf
+// would still coincidentally look "sum-shaped" for that group in isolation
+// (2x a single value looks like it could just be a different, plausible
+// total) — a multi-leaf group makes the doubled total unambiguous.
+const GROUPED_DATA: GroupableRow[] = [
+  { id: "1", category: "x", amount: 10 },
+  { id: "2", category: "x", amount: 20 },
+  { id: "3", category: "y", amount: 30 },
+]
+
+// Groups by "category" — per Task 6, TanStack's pipeline puts grouping
+// BEFORE sorting, so the group rows and their leaves both surface at top
+// level of the sorted model once expanded. `selectAll` defaults to true (the
+// "everything selected" scenario the double-counting test below exercises);
+// pass false to exercise the default, nothing-selected scope instead.
+function useTestTableWithGrouping(data: GroupableRow[] = GROUPED_DATA, selectAll = true) {
+  const [rowSelection, setRowSelection] = React.useState({})
+  const [grouping, setGrouping] = React.useState<string[]>(["category"])
+  const [expanded, setExpanded] = React.useState<ExpandedState>(true)
+  const table = useReactTable<GroupableRow>({
+    data,
+    columns: [
+      { id: "category", accessorKey: "category", enableGrouping: true },
+      { id: "amount", accessorKey: "amount" },
+    ],
+    getRowId: (row) => row.id,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getGroupedRowModel: getGroupedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    state: { rowSelection, grouping, expanded },
+    onRowSelectionChange: setRowSelection,
+    onGroupingChange: setGrouping,
+    onExpandedChange: setExpanded,
+    enableRowSelection: true,
+    enableSubRowSelection: true,
+    paginateExpandedRows: false,
+  })
+
+  React.useEffect(() => {
+    if (selectAll) table.toggleAllRowsSelected(true)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return table
 }
 
 describe("useFooterAggregation — scope + client aggregation", () => {
@@ -288,5 +349,53 @@ describe("useFooterAggregation — in-flight invalidation", () => {
     // NOT committed as a fresh value under the "avg" label.
     await act(async () => resolveFirst(999))
     expect(result.current.stateFor("amount")).toEqual({ status: "idle" })
+  })
+})
+
+describe("useFooterAggregation — grouping", () => {
+  // Empirically measured (see task-8-report.md): with nothing selected, the
+  // unfixed hook's `scopeRows` was `table.getSortedRowModel().rows` — the
+  // TOP-LEVEL row array, which under grouping holds only the 2 GROUP rows
+  // ("x", "y"), never flattened down to the 3 real leaves. Aggregating "sum"
+  // over just [group-x.getValue()=30, group-y.getValue()=30] happens to still
+  // equal the true leaf sum (60) — sum is distributive over a partition, so
+  // that method can't tell group-level rows from leaf-level ones. "avg" has
+  // no such coincidence: avg([30, 30]) = 30, but the true leaf average is
+  // (10+20+30)/3 = 20 — an unambiguous, non-coincidental mismatch that proves
+  // the scope was resolving to group rows instead of their leaves.
+  it("aggregates over the underlying leaf rows, not the group rows sitting beside them", () => {
+    const { result } = renderHook(() => {
+      const table = useTestTableWithGrouping(GROUPED_DATA, false)
+      return useFooterAggregation({
+        table,
+        calculableColumns: [{ columnId: "amount", default: "avg" }],
+        isAllMatchingSelected: false,
+      })
+    })
+    const leafAvg =
+      GROUPED_DATA.reduce((n, r) => n + r.amount, 0) / GROUPED_DATA.length
+    expect(leafAvg).toBe(20)
+    expect(result.current.scopeIsSelection).toBe(false)
+    expect(result.current.stateFor("amount")).toEqual({ status: "value", value: leafAvg })
+  })
+
+  it("excludes group rows from a grouped selection so it is not double-counted", () => {
+    // Selecting every row (leaves AND groups, via toggleAllRowsSelected)
+    // switches scope to the selection. Assert the total leaf sum here too so
+    // a regression that starts flattening `getSelectedRowModel()` incorrectly
+    // (re-including group rows) would be caught: group "x"'s rolled-up value
+    // (30) sitting beside its own two leaves (10, 20) would double it.
+    const { result } = renderHook(() => {
+      const table = useTestTableWithGrouping()
+      return useFooterAggregation({
+        table,
+        calculableColumns: [{ columnId: "amount", default: "sum" }],
+        isAllMatchingSelected: false,
+      })
+    })
+    const leafSum = GROUPED_DATA.reduce((n, r) => n + r.amount, 0)
+    expect(leafSum).toBe(60)
+    expect(result.current.scopeIsSelection).toBe(true)
+    expect(result.current.stateFor("amount")).toEqual({ status: "value", value: leafSum })
   })
 })

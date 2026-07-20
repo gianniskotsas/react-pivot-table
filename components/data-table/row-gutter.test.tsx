@@ -55,17 +55,27 @@ function mockTable({
     toggleAllRowsSelected: vi.fn(),
     toggleAllPageRowsSelected: vi.fn(),
     getFilteredRowModel: () => ({ flatRows: Array.from({ length: filteredCount }) }),
-    getRowModel: () => ({ rows }),
+    // Rows are stubbed as bare objects by most callers; normalise them so the
+    // production leaf filter (`!r.getIsGrouped()`) can run against them.
+    getRowModel: () => ({
+      rows: (rows as Record<string, unknown>[]).map((r) => ({
+        getIsGrouped: () => false,
+        ...r,
+      })),
+    }),
     getState: () => ({ pagination: { pageIndex: 0, pageSize: 10 } }),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 }
 
-function mockRow({ id = "r0", index = 0, selected = false } = {}) {
+function mockRow({ id = "r0", index = 0, selected = false, grouped = false } = {}) {
   return {
     id,
     index,
     getIsSelected: () => selected,
+    getIsSomeSelected: () => false,
+    getIsAllSubRowsSelected: () => false,
+    getIsGrouped: () => grouped,
     toggleSelected: vi.fn(),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
@@ -273,5 +283,68 @@ describe("buildRowGutterColumn", () => {
     fireEvent.click(screen.getByRole("checkbox"))
     expect(setAllMatchingSelected).toHaveBeenCalledWith(false)
     expect(table.toggleAllRowsSelected).toHaveBeenCalledWith(false)
+  })
+
+  it("numbers leaf rows by their position among leaves, skipping group rows", () => {
+    const column = buildRowGutterColumn<{ id: string }>()
+    // Model: [group, leaf, leaf("r2")] — "r2" is the 2nd LEAF, so it renders "2",
+    // not "3" (its raw index in the row model).
+    const row = mockRow({ id: "r2", index: 99 })
+    const table = mockTable({
+      rows: [
+        { id: "g1", getIsGrouped: () => true },
+        { id: "r1", getIsGrouped: () => false },
+        { id: "r2", getIsGrouped: () => false },
+      ],
+    })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = { table, row, column } as any
+
+    render(
+      <DataTableRuntimeContext.Provider value={stubRuntime()}>
+        {flexRender(column.cell, ctx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    expect(screen.getByText("2")).toBeInTheDocument()
+    expect(screen.queryByText("3")).toBeNull()
+  })
+
+  it("renders no row number on a group row", () => {
+    const column = buildRowGutterColumn<{ id: string }>()
+    const row = mockRow({ id: "g1", grouped: true })
+    const table = mockTable({ rows: [{ id: "g1", getIsGrouped: () => true }] })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = { table, row, column } as any
+
+    const { container } = render(
+      <DataTableRuntimeContext.Provider value={stubRuntime()}>
+        {flexRender(column.cell, ctx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    expect(container.querySelector(".tabular-nums")).toBeNull()
+    expect(screen.getByRole("checkbox")).toBeInTheDocument()
+  })
+
+  it("shows a group row's checkbox as indeterminate when only some descendants are selected", () => {
+    const column = buildRowGutterColumn<{ id: string }>()
+    const row = {
+      ...mockRow({ id: "g1", grouped: true }),
+      getIsSomeSelected: () => true,
+      getIsAllSubRowsSelected: () => false,
+    }
+    const table = mockTable({ rows: [{ id: "g1", getIsGrouped: () => true }] })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ctx = { table, row, column } as any
+
+    render(
+      <DataTableRuntimeContext.Provider value={stubRuntime()}>
+        {flexRender(column.cell, ctx)}
+      </DataTableRuntimeContext.Provider>,
+    )
+    // The shared Checkbox (base-ui) sets `data-indeterminate` but leaves it an
+    // empty-string attribute rather than `"true"` — the same indeterminate
+    // signal the existing SelectAllHeader test above asserts on instead
+    // ("header renders aria-checked=mixed…"), so reuse that query here too.
+    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-checked", "mixed")
   })
 })

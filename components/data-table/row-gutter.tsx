@@ -98,8 +98,17 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   // are logically the same row but NOT the same object (getSortedRowModel
   // rebuilds a fresh `{...row}` copy per row on each recomputation), so
   // `indexOf(row)` always misses and silently returns -1.
-  const displayIndex = table.getRowModel().rows.findIndex((r) => r.id === row.id)
+  // Number leaf rows by their position among LEAF rows: with grouping on the
+  // row model interleaves group rows, so counting raw model position would
+  // skip numbers. With grouping off every row is a leaf and this is unchanged.
+  const isGroupRow = row.getIsGrouped()
+  const leafRows = table.getRowModel().rows.filter((r) => !r.getIsGrouped())
+  const displayIndex = leafRows.findIndex((r) => r.id === row.id)
   const rowNumber = pageIndex * pageSize + displayIndex + 1
+
+  // A group row summarises its descendants: checked only when all of them are
+  // selected, indeterminate while only some are.
+  const groupIndeterminate = isGroupRow && !selected && row.getIsSomeSelected()
 
   // Both the number and the checkbox are always mounted; only their CSS
   // visibility toggles. An earlier version tracked hover via onMouseEnter/
@@ -119,20 +128,26 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
   // `group-focus-within` keep it keyboard-reachable: tabbing onto this
   // cell's div reveals the checkbox so a second Tab can land on it.
   const numberHiddenClass = selected ? "hidden" : "[tr:hover_&]:hidden group-focus-within:hidden"
-  const checkboxWrapperClass = selected
-    ? "inline-flex"
-    : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex"
+  // Keep a group row's checkbox always visible — there is no number to swap
+  // with, since group rows never render one.
+  const checkboxWrapperClass =
+    selected || isGroupRow
+      ? "inline-flex"
+      : "hidden [tr:hover_&]:inline-flex group-focus-within:inline-flex"
 
   return (
     <div
       className="group flex h-full items-center justify-center px-2 py-1 text-xs text-muted-foreground"
       tabIndex={0}
-      aria-label={selected ? undefined : `Row ${rowNumber}`}
+      aria-label={selected || isGroupRow ? undefined : `Row ${rowNumber}`}
     >
-      <span className={cn("tabular-nums", numberHiddenClass)}>{rowNumber}</span>
+      {isGroupRow ? null : (
+        <span className={cn("tabular-nums", numberHiddenClass)}>{rowNumber}</span>
+      )}
       <span className={checkboxWrapperClass}>
         <Checkbox
           checked={selected}
+          indeterminate={groupIndeterminate}
           onPointerDown={(e) => {
             shiftKeyRef.current = e.shiftKey
           }}
@@ -146,7 +161,15 @@ function RowGutterCell<TData>({ row, table }: CellContext<TData, unknown>) {
           onCheckedChange={(checked) => {
             runtime?.toggleRowSelected(row.id, checked === true, shiftKeyRef.current)
           }}
-          aria-label={selected ? `Deselect row ${rowNumber}` : `Select row ${rowNumber}`}
+          aria-label={
+            isGroupRow
+              ? selected
+                ? "Deselect group"
+                : "Select group"
+              : selected
+                ? `Deselect row ${rowNumber}`
+                : `Select row ${rowNumber}`
+          }
         />
       </span>
     </div>
