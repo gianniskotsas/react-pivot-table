@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from "@testing-library/react"
+import { act, fireEvent, render, screen, within } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("sonner", () => ({
@@ -735,5 +735,143 @@ describe("grouping", () => {
     expect(csv).toContain("20")
     expect(csv).toContain("5")
     downloadSpy.mockRestore()
+  })
+})
+
+// Regression coverage for a real bug caught in final pre-merge review:
+// GroupAwareCell's `cell.getIsAggregated()` branch used to run for EVERY
+// non-group column of a group row, including the structural row-gutter
+// column — TanStack's ColumnGrouping feature reports `getIsAggregated()` as
+// true there too (it depends only on `row.subRows.length`, not on whether
+// the column has a real accessor), and always merges a default
+// `aggregatedCell` onto every column def, so the gutter's own `cell`
+// (row-gutter.tsx's tri-state checkbox) was never reached — a group row
+// rendered a blank gutter cell, with no way to select it or its
+// descendants at all. Exercised through a real rendered <DataTable>, not a
+// hand-built Cell/Row stub: the previous coverage for the gutter's
+// group-row behavior (row-gutter.test.tsx) called `flexRender(column.cell,
+// ctx)` directly against RowGutterCell, entirely bypassing GroupAwareCell's
+// branching — which is exactly why it never caught this.
+describe("grouping — row selection", () => {
+  const DEALS = [
+    { id: "1", stage: "won", amount: 10 },
+    { id: "2", stage: "won", amount: 20 },
+    { id: "3", stage: "lost", amount: 5 },
+  ]
+  const cols = [
+    { id: "stage", accessorKey: "stage", header: "Stage", enableGrouping: true },
+    { id: "amount", accessorKey: "amount", header: "Amount" },
+  ]
+
+  function renderGrouped() {
+    return render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        enableRowSelection
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }}
+      />,
+    )
+  }
+
+  it("a group row shows a selection checkbox and no row number", () => {
+    renderGrouped()
+    const groupRow = screen.getByText("won").closest("tr") as HTMLTableRowElement
+    expect(within(groupRow).getByRole("checkbox")).toBeInTheDocument()
+    expect(groupRow.querySelector(".tabular-nums")).toBeNull()
+  })
+
+  it("places the row-gutter column before the group column when both are enabled", () => {
+    renderGrouped()
+    const headerCells = screen.getAllByRole("columnheader")
+    expect(within(headerCells[0]).getByRole("checkbox")).toBeInTheDocument()
+    expect(headerCells[1]).toHaveTextContent("Deal")
+  })
+
+  it("selecting a group row's checkbox cascades selection to its leaf descendants", () => {
+    renderGrouped()
+    const groupRow = screen.getByText("won").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(groupRow).getByRole("checkbox"))
+    fireEvent.click(within(groupRow).getByRole("button", { name: "Expand group" }))
+
+    const leafRow1 = screen.getByText("10").closest("tr") as HTMLTableRowElement
+    const leafRow2 = screen.getByText("20").closest("tr") as HTMLTableRowElement
+    expect(leafRow1).toHaveAttribute("data-state", "selected")
+    expect(leafRow2).toHaveAttribute("data-state", "selected")
+    expect(within(leafRow1).getByRole("checkbox")).toBeChecked()
+    expect(within(leafRow2).getByRole("checkbox")).toBeChecked()
+
+    // The "lost" group's own deal (amount 5) must be untouched.
+    const leafRow3 = screen.getByText("5").closest("tr") as HTMLTableRowElement
+    expect(leafRow3).not.toHaveAttribute("data-state", "selected")
+  })
+
+  it("selecting only some descendants shows the group row's checkbox as indeterminate, not fully checked", () => {
+    renderGrouped()
+    const groupRow = screen.getByText("won").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(groupRow).getByRole("button", { name: "Expand group" }))
+
+    const leafRow1 = screen.getByText("10").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(leafRow1).getByRole("checkbox"))
+
+    // Re-query: expanding/selecting re-renders the row model, and jsdom
+    // elements from before a re-render can go stale.
+    const groupRowAfter = screen.getByText("won").closest("tr") as HTMLTableRowElement
+    const groupCheckbox = within(groupRowAfter).getByRole("checkbox")
+    expect(groupCheckbox).toHaveAttribute("aria-checked", "mixed")
+    expect(groupRowAfter).not.toHaveAttribute("data-state", "selected")
+
+    // Its sibling leaf (amount 20), never clicked, must stay unselected.
+    const leafRow2 = screen.getByText("20").closest("tr") as HTMLTableRowElement
+    expect(within(leafRow2).getByRole("checkbox")).not.toBeChecked()
+  })
+
+  // Regression: shift-range selection used to write `next[r.id] = checked`
+  // for every ON-SCREEN row in the range, including a group row caught
+  // mid-range — bypassing the sub-row cascade a plain (non-shift) click on
+  // that same row gets via TanStack's own `row.toggleSelected`. That made a
+  // group header report as fully checked (its own id was written directly)
+  // while its real leaf rows never got selected — most visibly when the
+  // group was collapsed, since its leaves never appeared in the on-screen
+  // row list for the old loop to reach on its own. Only reachable once the
+  // group-row gutter checkbox itself renders at all (the #1 fix above), so
+  // this exercises both fixes together through one real table.
+  it("shift-range selection spanning a collapsed group row cascades to its hidden leaf descendants too", () => {
+    renderGrouped()
+    // Expand "won" so its two leaves (10, 20) are on-screen individual rows;
+    // leave "lost" collapsed.
+    const wonGroupRow = screen.getByText("won").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(wonGroupRow).getByRole("button", { name: "Expand group" }))
+
+    // Plain click on the first leaf sets the shift-range anchor.
+    const leaf1Row = screen.getByText("10").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(leaf1Row).getByRole("checkbox"))
+
+    // Shift-click the still-collapsed "lost" group's own checkbox. The
+    // range [leaf1 .. lostGroup] spans "won"'s two leaves plus "lost"'s
+    // group header itself — "lost"'s one leaf (amount 5) is never an
+    // on-screen row at this point.
+    const lostGroupRow = screen.getByText("lost").closest("tr") as HTMLTableRowElement
+    const lostCheckbox = within(lostGroupRow).getByRole("checkbox")
+    fireEvent.pointerDown(lostCheckbox, { shiftKey: true })
+    fireEvent.click(lostCheckbox)
+
+    // Expand "lost" — its one leaf (amount 5) must show as actually
+    // selected, not just the group header's own checkbox having been set.
+    // Located as the group row's next sibling (not by its "5" text, which
+    // the group row's OWN aggregated sum cell also happens to read, since
+    // "lost" has only that one deal) — the newly-revealed leaf row.
+    const lostGroupRowAfter = screen.getByText("lost").closest("tr") as HTMLTableRowElement
+    fireEvent.click(within(lostGroupRowAfter).getByRole("button", { name: "Expand group" }))
+    const leaf3Row = lostGroupRowAfter.nextElementSibling as HTMLTableRowElement
+    expect(within(leaf3Row).getByRole("checkbox")).toBeInTheDocument()
+    expect(leaf3Row).toHaveAttribute("data-state", "selected")
+    expect(within(leaf3Row).getByRole("checkbox")).toBeChecked()
   })
 })

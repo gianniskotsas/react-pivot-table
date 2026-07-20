@@ -58,9 +58,15 @@ export function useFooterAggregation<TData>({
   }, [])
 
   // Leaf rows only, on every scope. TanStack's pipeline puts grouping BEFORE
-  // sorting, so both the selected and the sorted models surface group rows at
-  // top level — and a group row's getValue() is the rolled-up aggregate of the
-  // very children sitting beside it, so counting both double-counts.
+  // sorting, so getSortedRowModel() surfaces group rows at top level — and a
+  // group row's getValue() is the rolled-up aggregate of the very children
+  // sitting beside it, so counting it alongside its own leaves double-counts.
+  // getSelectedRowModel() is different: it's memoized off getCoreRowModel()
+  // (table-core's RowSelection feature — `memo(() => [rowSelection,
+  // table.getCoreRowModel()], ...)`), which runs BEFORE grouping and so
+  // contains no group rows at all; filtering it here is defense-in-depth
+  // (a future TanStack version or a different selection entry point could
+  // change that), not a fix for an actual double-count on this path today.
   // `collectLeafRows` (see its own comment in grouping-utils.ts) rather than a
   // naive `.flatRows` filter: `getSortedRowModel().flatRows` was verified to
   // duplicate every leaf whenever grouping is on and no sort is active. Flat

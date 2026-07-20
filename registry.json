@@ -8,7 +8,7 @@
       "type": "registry:block",
       "title": "Grouped Data Table",
       "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. AG-Grid-style row grouping/drill-down table built on TanStack Table v8: a single auto group column with indented hierarchy and counts, a drag-and-drop dimension picker, and AND/OR filter groups. Requires a base-ui shadcn setup.",
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table"],
       "registryDependencies": ["@kotsas-ui/data-table", "@kotsas-ui/dimension-picker"],
       "files": [
         {
@@ -38,7 +38,7 @@
       "type": "registry:block",
       "title": "Grouped Data Table (Radix)",
       "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses Radix UI primitives; install grouped-data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
-      "dependencies": ["@tanstack/react-table", "lucide-react"],
+      "dependencies": ["@tanstack/react-table"],
       "registryDependencies": ["@kotsas-ui/data-table-radix", "@kotsas-ui/dimension-picker-radix"],
       "files": [
         {

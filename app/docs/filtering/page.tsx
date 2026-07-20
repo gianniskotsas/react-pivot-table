@@ -111,7 +111,7 @@ export default function FilteringPage() {
         title="Installation"
         description="Filtering ships with both table components — install whichever you're using."
       >
-        <WorksWith components={["data-table", "grouped-data-table"]} />
+        <WorksWith components={["data-table"]} />
         <InstallTabs package="@kotsas-ui/data-table" />
       </Section>
 

@@ -298,8 +298,13 @@ don't double-count their children.
 - **`columnVisibility` conflict** — merged as `{ ...userVisibility, ...deriveColumnVisibility(grouping) }`,
   the fix `use-grouped-table.ts`'s own comment already specifies. Grouped dimension columns
   stay hidden while the Columns menu keeps working for the rest.
-- **Auto group column pinning** — injected like the row gutter and pinned-left by default,
-  which is what makes drill-down usable with horizontal scroll.
+- **Auto group column pinning** — **deferred, not shipped.** The plan on this line was to
+  seed the auto group column pinned-left by default, injected like the row gutter, so
+  drill-down stays usable with horizontal scroll. The merged implementation
+  (`buildGroupColumn` in `group-column.tsx`) sets `enablePinning: false` on the column and
+  nothing seeds `columnPinning` for it — pinning the group column isn't even offered (the
+  Columns menu excludes it, matching `enablePinning: false`), let alone defaulted on. Revisit
+  as its own follow-up task rather than assuming it already happened.
 - **`defineColumns` for grouped tables** — comes free; the CRM Pipeline block's raw-`ColumnDef`
   escape hatch can become `col.*` calls.
 

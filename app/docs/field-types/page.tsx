@@ -140,7 +140,7 @@ export default function FieldTypesPage() {
           </>
         }
       >
-        <WorksWith components={["data-table", "grouped-data-table"]} />
+        <WorksWith components={["data-table"]} />
         <CodeBlock code={USAGE} filename="employee-table.tsx" />
       </Section>
 

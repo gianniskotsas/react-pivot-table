@@ -4,8 +4,7 @@
   "title": "Grouped Data Table",
   "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. AG-Grid-style row grouping/drill-down table built on TanStack Table v8: a single auto group column with indented hierarchy and counts, a drag-and-drop dimension picker, and AND/OR filter groups. Requires a base-ui shadcn setup.",
   "dependencies": [
-    "@tanstack/react-table",
-    "lucide-react"
+    "@tanstack/react-table"
   ],
   "registryDependencies": [
     "@kotsas-ui/data-table",

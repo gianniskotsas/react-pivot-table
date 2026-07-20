@@ -124,8 +124,10 @@ import { DimensionPicker } from "@/components/dimension-picker"
 a thin wrapper around `DataTable`'s `grouping` prop, kept for one migration release. New projects
 should install `@kotsas-ui/data-table` directly. One behaviour difference to note when migrating:
 the wrapper now renders a Columns menu that `GroupedDataTable` never had, because `DataTable`
-renders that menu unconditionally — it lets users unhide grouped dimension columns, and was kept
-intentionally rather than adding a new prop just to suppress it.
+renders that menu unconditionally — it lets users hide/show and pin the table's regular columns
+(the menu deliberately excludes grouped dimension columns, since toggling one's visibility would
+be a dead control while it's part of the active hierarchy), and was kept intentionally rather than
+adding a new prop just to suppress it.
 
 See `app/(examples)/accounts/` for a complete working example.
 

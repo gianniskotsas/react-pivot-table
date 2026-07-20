@@ -220,8 +220,16 @@ export type GroupLeafConfig<TData> = {
 }
 
 export type GroupColumnConfig<TData> = {
-  /** Header text for the auto group column, e.g. "Account". */
-  header?: React.ReactNode
+  /**
+   * Header text for the auto group column, e.g. "Account". Plain `string`,
+   * not `ReactNode`: data-table.tsx always renders this column's header
+   * through the same label-only path the columns menu and resize handle use
+   * (`buildGroupColumn` always attaches `meta`, so `<ColumnHeader
+   * label={meta.label} />` runs, never `columnDef.header`) — a non-string
+   * value would be silently discarded in favor of the static fallback
+   * `"Group"` rather than actually rendering.
+   */
+  header?: string
   /**
    * Declarative leaf rendering (primary + optional icon/secondary). Use this for
    * the common case. Ignored if `renderLeaf` is provided.

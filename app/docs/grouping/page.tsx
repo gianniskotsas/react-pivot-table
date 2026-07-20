@@ -99,8 +99,8 @@ const API_ROWS: ApiRow[] = [
   },
   {
     name: "grouping.column.header?",
-    type: "ReactNode",
-    description: "Header text for the synthesized group column.",
+    type: "string",
+    description: "Header text for the synthesized group column, e.g. \"Account\".",
   },
   {
     name: "grouping.column.leaf?",

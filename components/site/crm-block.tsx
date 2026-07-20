@@ -151,7 +151,6 @@ export function CrmBlock() {
       <DataTable<Deal>
         data={DEALS}
         columns={columns}
-        enableExport={false}
         filterableColumns={filterableColumns}
         grouping={{
           dimensions: groupableDimensions,

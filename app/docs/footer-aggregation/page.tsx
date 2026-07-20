@@ -84,7 +84,7 @@ ${SERVER_CODE}
 ## API Reference
 ${apiRowsToMarkdown(API_ROWS)}
 
-Grouped Data Table has a related but different mechanism: per-column
+Data Table's grouping has a related but different mechanism: per-column
 aggregationFn on the ColumnDef, computed per group rather than shown in a
 table-wide footer — see Grouping & Hierarchy.
 `
@@ -136,8 +136,8 @@ export default function FooterAggregationPage() {
       </Section>
 
       <Section
-        id="grouped-data-table"
-        title="In Grouped Data Table"
+        id="grouping"
+        title="With Grouping"
         description="A related but different mechanism: per-column aggregationFn on the ColumnDef, computed per group rather than shown in a table-wide footer."
       >
         <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">

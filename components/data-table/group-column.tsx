@@ -27,13 +27,15 @@ export function buildGroupColumn<TData>(
     // DataTableRuntime, and without this it would fall back to the
     // table-level `editable` default and misreport this structural,
     // no-accessor column as editable to any caller that asks directly.
-    // `label` is required by DataTableColumnMeta (e.g. for the columns
-    // menu); `config.header` is a ReactNode and usually a plain string in
-    // practice, so that's reused when possible, with a static fallback
-    // otherwise.
+    // `label` is required by DataTableColumnMeta (e.g. for the resize
+    // handle's aria-label — the columns menu itself never shows this column,
+    // since enableHiding/enablePinning are both false above). `header` is
+    // typed `string` (see GroupColumnConfig's own doc comment for why), so
+    // it's reused directly, with a static fallback only for the case it was
+    // omitted entirely.
     meta: {
       editable: false,
-      label: typeof config.header === "string" ? config.header : "Group",
+      label: config.header ?? "Group",
     } satisfies DataTableColumnMeta,
   }
 }

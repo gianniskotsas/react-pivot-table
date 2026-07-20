@@ -4,8 +4,7 @@
   "title": "Grouped Data Table (Radix)",
   "description": "DEPRECATED — use @kotsas-ui/data-table's grouping prop. Radix-UI build of the Grouped Data Table — same component and API as grouped-data-table. Install this if your shadcn/ui project uses Radix UI primitives; install grouped-data-table if it uses Base UI. Not sure? Check the base your project's components.json was initialized with.",
   "dependencies": [
-    "@tanstack/react-table",
-    "lucide-react"
+    "@tanstack/react-table"
   ],
   "registryDependencies": [
     "@kotsas-ui/data-table-radix",

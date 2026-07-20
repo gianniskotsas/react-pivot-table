@@ -7,6 +7,7 @@ import { flexRender, type Cell, type Row } from "@tanstack/react-table"
 import { cn } from "@/lib/utils"
 
 import { getGroupRowCount } from "./grouping-utils"
+import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { GROUP_COLUMN_ID, type GroupColumnConfig } from "./types"
 
 export type GroupAwareCellProps<TData> = {
@@ -56,6 +57,23 @@ export function GroupAwareCell<TData>({
   const isGroupColumn = column.id === GROUP_COLUMN_ID
   const indentSize = groupColumn.indentSize ?? 24
 
+  // Structural row-gutter column (row number / selection checkbox): never a
+  // real data cell, so it must be handled BEFORE the `getIsAggregated()`
+  // branch below. TanStack's ColumnGrouping feature reports
+  // `cell.getIsAggregated()` as true for EVERY column of a group row
+  // (`!isGrouped && !isPlaceholder && row.subRows.length > 0`), including
+  // this one, and always merges a default `aggregatedCell`
+  // (`props => props.getValue()?.toString?.() ?? null`) onto every column
+  // def — so falling into that branch here would call the default against a
+  // column with no accessor (`getValue()` is undefined), rendering null and
+  // leaving group rows with no checkbox at all. Delegate straight to the
+  // gutter's own `cell` renderer instead, exactly like a normal leaf cell —
+  // RowGutterCell itself already branches on `row.getIsGrouped()` to render
+  // the tri-state group checkbox instead of a row number.
+  if (column.id === ROW_GUTTER_COLUMN_ID) {
+    return flexRender(cell.column.columnDef.cell, cell.getContext())
+  }
+
   // Group row, group column: chevron + grouping value + (count).
   // Use row.getIsGrouped() (not cell.getIsGrouped()) because TanStack marks the
   // *grouping dimension* cell as grouped, never the synthesised __group__ cell.
@@ -100,12 +118,19 @@ export function GroupAwareCell<TData>({
     )
   }
 
-  // Aggregated cell (group row, non-group column).
+  // Aggregated cell (group row, non-group column). `columnDef.aggregatedCell`
+  // is NEVER undefined here: TanStack's ColumnGrouping feature merges a
+  // default (`props => props.getValue()?.toString?.() ?? null`) onto every
+  // column def via `createColumn`, so the previous `?? cell.column.columnDef.cell`
+  // fallback here was dead code — it could never run. Deliberately
+  // NOT falling back to the leaf `cell` renderer even if it somehow could: a
+  // group row's value is a synthesized rollup, and the leaf `cell` (e.g. an
+  // edit-capable field renderer) is only correct against a real per-row
+  // value. A consumer-supplied `aggregatedCell` (e.g. the CRM demo's
+  // subtotal renderer) always wins here; a column that never set one still
+  // renders correctly via TanStack's own default above.
   if (cell.getIsAggregated()) {
-    return flexRender(
-      cell.column.columnDef.aggregatedCell ?? cell.column.columnDef.cell,
-      cell.getContext(),
-    )
+    return flexRender(cell.column.columnDef.aggregatedCell, cell.getContext())
   }
 
   // Placeholder (group row spanning a non-group column with no aggregation).

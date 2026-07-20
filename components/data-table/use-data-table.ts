@@ -207,20 +207,25 @@ export function useDataTable<TData>({
   const groupColumnHeader = groupingConfig?.column.header
   const groupingEnabled = groupingConfig != null
   const resolvedColumns = React.useMemo(() => {
-    const base = enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns
-    if (!groupingEnabled) return base
-    return [buildGroupColumn<TData>({ header: groupColumnHeader }), ...base]
+    // Gutter column FIRST, group column second: the gutter is the leading
+    // structural column (row numbers / selection checkbox) and must stay in
+    // column 1 regardless of whether grouping is also on — putting the group
+    // column ahead of it (the previous order) pushed row numbers/checkboxes
+    // into column 2 for no reason tied to either column's own semantics.
+    const withGroup = groupingEnabled
+      ? [buildGroupColumn<TData>({ header: groupColumnHeader }), ...columns]
+      : columns
+    return enableRowSelection ? [buildRowGutterColumn<TData>(), ...withGroup] : withGroup
     // `groupColumnHeader` is the only field buildGroupColumn reads; depending on
     // the whole config object would rebuild this array on every render for
-    // consumers passing an inline literal.
-    //
-    // Caveat: `header` is typed `React.ReactNode`, so this only actually
-    // avoids churn when the consumer passes a stable reference (a string, or
-    // a module-level/memoized element) — a consumer writing an inline
-    // `column={{ header: <span>Deal</span>, ... }}` still hands a fresh
-    // ReactNode every render, and this memo churns anyway. `useGrouping`'s
-    // sibling memo (`allowedKey`) sidesteps this entirely by keying on a
-    // joined string of dimension ids rather than anything consumer-supplied.
+    // consumers passing an inline literal. `header` is typed `string` (see
+    // GroupColumnConfig's own doc comment), so an inline
+    // `column={{ header: "Deal", ... }}` literal is dependency-stable by
+    // value across renders even though the surrounding `column`/`grouping`
+    // object is a fresh reference each time — unlike `useGrouping`'s sibling
+    // memo (`allowedKey`), which keys on a joined string specifically
+    // because `DimensionDef[]` has no single scalar field to depend on
+    // instead.
   }, [enableRowSelection, columns, groupingEnabled, groupColumnHeader])
 
   // Grouped dimension columns must stay hidden regardless of what the user
@@ -334,7 +339,31 @@ export function useDataTable<TData>({
             const next = { ...prev }
             for (let i = start; i <= end; i++) {
               const r = currentRows[i]
-              if (r) next[r.id] = checked
+              if (!r) continue
+              // A group row caught inside the range must cascade to its own
+              // id AND every leaf descendant's id, exactly like a plain
+              // (non-shift) click on that same row does via TanStack's own
+              // `row.toggleSelected` (see the `else` branch below, and
+              // `mutateRowIsSelected` in @tanstack/table-core's
+              // RowSelection feature). Writing only `next[r.id] = checked`
+              // here — the previous behavior — set the group's OWN id
+              // directly (TanStack's `getIsSelected` checks
+              // `rowSelection[row.id]` verbatim, it does not derive a group
+              // row's checked state from its children) without touching its
+              // descendants at all, so a group header caught mid-range
+              // rendered fully checked while its real leaf rows stayed
+              // unselected underneath — most visibly when the group was
+              // collapsed, so its leaves (real or not) never appeared in
+              // `currentRows` for this loop to reach on its own.
+              // `collectLeafRowIds` walks `r.subRows` directly regardless of
+              // expand/collapse state, so this reaches every leaf descendant
+              // either way.
+              if (r.getIsGrouped()) {
+                next[r.id] = checked
+                for (const leafId of collectLeafRowIds([r])) next[leafId] = checked
+              } else {
+                next[r.id] = checked
+              }
             }
             return next
           })

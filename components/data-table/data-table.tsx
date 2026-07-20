@@ -158,12 +158,17 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
           toClipboard: meta?.toClipboard ?? ((v: unknown) => String(v ?? "")),
         }
       })
-    // Leaf rows only: with grouping on, both row models surface group rows
+    // Leaf rows only. getSortedRowModel() runs AFTER grouping in TanStack's
+    // pipeline, so with grouping on it surfaces group rows at top level
     // (whose getValue() is a rolled-up aggregate of the very children sitting
     // beside them) — exporting those would emit bogus subtotal rows alongside
-    // their own parts. See grouping-utils.ts's `collectLeafRows` for why this
-    // isn't a naive `.flatRows` filter. Flat tables have no sub-rows, so this
-    // is a no-op there.
+    // their own parts. getSelectedRowModel() is memoized off
+    // getCoreRowModel() instead (table-core's RowSelection feature), which
+    // runs BEFORE grouping and so never contains a group row to begin with;
+    // filtering it below is defense-in-depth, not a fix for a real
+    // double-count on that path. See grouping-utils.ts's `collectLeafRows`
+    // for why this isn't a naive `.flatRows` filter either way. Flat tables
+    // have no sub-rows, so this is a no-op there.
     const sortedRows = collectLeafRows(table.getSortedRowModel().rows)
     const allMatching = runtime?.isAllMatchingSelected ?? false
     const hasSelection = collectLeafRows(table.getSelectedRowModel().rows).length > 0
