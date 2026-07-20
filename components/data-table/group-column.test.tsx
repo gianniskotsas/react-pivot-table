@@ -25,4 +25,17 @@ describe("buildGroupColumn", () => {
     // that asks isColumnEditable(GROUP_COLUMN_ID) directly.
     expect(column.meta).toMatchObject({ editable: false })
   })
+
+  it("defaults to a 220px width wider than TanStack's generic 150px column default", () => {
+    // Unlike a plain text column, this one carries a chevron plus
+    // depth-dependent indentation on top of the label — 150px clips real
+    // content almost immediately.
+    const column = buildGroupColumn<{ id: string }>({ header: "Account" })
+    expect(column.size).toBe(220)
+  })
+
+  it("honors an explicit size override", () => {
+    const column = buildGroupColumn<{ id: string }>({ header: "Account", size: 320 })
+    expect(column.size).toBe(320)
+  })
 })

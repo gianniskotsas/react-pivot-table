@@ -83,6 +83,39 @@ describe("GroupAwareCell", () => {
     expect(screen.getByRole("button", { name: "Expand group" })).toBeInTheDocument()
   })
 
+  it("pads a group row's cell instead of rendering flush against the edges", () => {
+    // Regression: this branch previously had NO padding classes at all, only
+    // a dynamic paddingLeft for indentation — cramped/inconsistent row
+    // height next to sibling columns, which do carry padding.
+    render(
+      <GroupAwareCell
+        cell={makeCell({ columnId: GROUP_COLUMN_ID, isGrouped: true, groupingValue: "Acme" })}
+        groupColumn={{ header: "Account" }}
+      />,
+    )
+    expect(screen.getByText("Acme").parentElement).toHaveClass("py-3", "pr-2")
+  })
+
+  it("truncates an overlong group label instead of hard-clipping it", () => {
+    // Regression: no truncate/min-w-0 meant the cell's own overflow-hidden
+    // clipped long content with no ellipsis at all — content just vanished
+    // mid-word with no visual indication anything was cut.
+    render(
+      <GroupAwareCell
+        cell={makeCell({
+          columnId: GROUP_COLUMN_ID,
+          isGrouped: true,
+          groupingValue: "Wayne Industries Group Holdings International",
+        })}
+        groupColumn={{ header: "Account" }}
+      />,
+    )
+    expect(screen.getByText("Wayne Industries Group Holdings International")).toHaveClass(
+      "truncate",
+      "min-w-0",
+    )
+  })
+
   it("renders developer leaf content on a leaf row's group column", () => {
     render(
       <GroupAwareCell
@@ -91,6 +124,7 @@ describe("GroupAwareCell", () => {
       />,
     )
     expect(screen.getByText("Ada")).toBeInTheDocument()
+    expect(screen.getByText("Ada")).toHaveClass("truncate")
   })
 
   it("renders nothing for a placeholder cell", () => {

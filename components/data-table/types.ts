@@ -247,6 +247,14 @@ export type GroupColumnConfig<TData> = {
   countMode?: "leaf" | "immediate"
   /** Pixels of indentation per depth level. Default 24. */
   indentSize?: number
+  /**
+   * Column width in pixels. Unlike a plain text column, this one carries a
+   * chevron plus depth-dependent indentation on top of the label, so the
+   * generic 150px column default (see `buildGroupColumn`) is usually too
+   * narrow — content truncates sooner than in a same-width text column.
+   * Default 220.
+   */
+  size?: number
 }
 
 /**

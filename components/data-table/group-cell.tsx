@@ -31,12 +31,12 @@ function renderLeafContent<TData>(
   const icon = leaf.icon?.(row)
   const secondary = leaf.secondary?.(row)
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-2">
       {icon}
-      <div className="flex flex-col">
-        <span className="font-medium">{leaf.primary(row)}</span>
+      <div className="flex min-w-0 flex-col">
+        <span className="truncate font-medium">{leaf.primary(row)}</span>
         {secondary != null && (
-          <span className="text-xs text-muted-foreground">{secondary}</span>
+          <span className="truncate text-xs text-muted-foreground">{secondary}</span>
         )}
       </div>
     </div>
@@ -81,9 +81,18 @@ export function GroupAwareCell<TData>({
     const count = getGroupRowCount(row, groupColumn.countMode)
     const canExpand = row.getCanExpand()
     return (
+      // py-3/pr-2 match defineColumns' editable-cell padding (define-columns.tsx)
+      // so the group column reads as one row height with the rest of the
+      // table, not the cramped, flush-to-the-edge look of no padding at all.
+      // The base 8px left inset (matching that same px-2) is folded into the
+      // dynamic indent rather than left to a class, since indentation must
+      // fully own padding-left; min-w-0 + truncate on the label is what turns
+      // "content too wide for a narrow/deeply-indented cell" into a clean
+      // ellipsis instead of a hard, invisible clip (the cell's own
+      // overflow-hidden has no text-overflow of its own).
       <div
-        className="flex items-center gap-1"
-        style={{ paddingLeft: row.depth * indentSize }}
+        className="flex min-w-0 items-center gap-1 py-3 pr-2"
+        style={{ paddingLeft: 8 + row.depth * indentSize }}
       >
         {canExpand ? (
           <button
@@ -91,7 +100,7 @@ export function GroupAwareCell<TData>({
             aria-label={row.getIsExpanded() ? "Collapse group" : "Expand group"}
             onClick={() => row.getToggleExpandedHandler()()}
             className={cn(
-              "flex size-5 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted",
+              "flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:bg-muted",
             )}
           >
             {row.getIsExpanded() ? (
@@ -103,8 +112,10 @@ export function GroupAwareCell<TData>({
         ) : (
           <span className="size-5 shrink-0" aria-hidden="true" />
         )}
-        <span className="font-semibold">{String(row.groupingValue ?? "")}</span>
-        <span className="text-muted-foreground">({count})</span>
+        <span className="min-w-0 truncate font-semibold">
+          {String(row.groupingValue ?? "")}
+        </span>
+        <span className="shrink-0 text-muted-foreground">({count})</span>
       </div>
     )
   }
@@ -112,7 +123,10 @@ export function GroupAwareCell<TData>({
   // Leaf row, group column: developer-supplied leaf content, indented.
   if (isGroupColumn) {
     return (
-      <div style={{ paddingLeft: (row.depth + 1) * indentSize }}>
+      <div
+        className="min-w-0 py-3 pr-2"
+        style={{ paddingLeft: 8 + (row.depth + 1) * indentSize }}
+      >
         {renderLeafContent(row, groupColumn)}
       </div>
     )

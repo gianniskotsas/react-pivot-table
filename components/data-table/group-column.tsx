@@ -19,6 +19,11 @@ export function buildGroupColumn<TData>(
     enableHiding: false,
     enablePinning: false,
     enableResizing: true,
+    // TanStack's generic 150px column default assumes plain text — this
+    // column also carries a chevron and depth-dependent indentation, so it
+    // needs more room by default. Still user-overridable via `config.size`,
+    // and still resizable in the browser (enableResizing above).
+    size: config.size ?? 220,
     cell: () => null,
     // Defense in depth: use-data-table.ts's own `columnIds` memo already
     // excludes GROUP_COLUMN_ID from nav/clipboard/bulk-clear, so
