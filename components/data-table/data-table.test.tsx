@@ -529,3 +529,140 @@ describe("DataTable — column resizing", () => {
     expect(th.style.width).toBe("150px")
   })
 })
+
+describe("grouping", () => {
+  const DEALS = [
+    { id: "1", stage: "won", amount: 10 },
+    { id: "2", stage: "won", amount: 20 },
+    { id: "3", stage: "lost", amount: 5 },
+  ]
+  const cols = [
+    { id: "stage", accessorKey: "stage", header: "Stage", enableGrouping: true },
+    { id: "amount", accessorKey: "amount", header: "Amount" },
+  ]
+
+  it("renders group rows with label, count, and an expand control", () => {
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal", leaf: { primary: (r) => r.original.id } },
+        }}
+      />,
+    )
+    expect(screen.getByText("won")).toBeInTheDocument()
+    expect(screen.getByText("(2)")).toBeInTheDocument()
+    expect(screen.getAllByRole("button", { name: "Expand group" })).toHaveLength(2)
+  })
+
+  it("renders the grouping control from renderControl", () => {
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+          renderControl: ({ grouping }) => (
+            <div data-testid="control">grouped by {grouping.join(",")}</div>
+          ),
+        }}
+      />,
+    )
+    expect(screen.getByTestId("control")).toHaveTextContent("grouped by stage")
+  })
+
+  it("renders no group column for a flat table", () => {
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+      />,
+    )
+    expect(screen.queryByRole("button", { name: "Expand group" })).toBeNull()
+  })
+
+  // Regression: useDataTable forces a grouped dimension column's visibility
+  // hidden (group.derivedVisibility spread last over user visibility), so a
+  // checkbox for it in the Columns menu would toggle local state that never
+  // actually changes what's on screen — a dead control. Exercised against a
+  // real grouped DataTable/TanStack table, not a hand-built Column stub, so
+  // it actually proves useDataTable's real grouping state drives this.
+  it("omits the grouped Stage column from the Columns menu (its visibility toggle would be dead)", () => {
+    render(
+      <DataTable
+        data={DEALS}
+        columns={cols as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }}
+      />,
+    )
+    fireEvent.click(screen.getByRole("button", { name: /columns/i }))
+    // `cols` above are raw ColumnDefs with no DataTableColumnMeta, so the
+    // menu's label fallback (`meta?.label ?? column.id`) renders the column
+    // id verbatim ("amount"), not the header text ("Amount").
+    expect(screen.queryByText("stage")).toBeNull()
+    expect(screen.getByText("amount")).toBeInTheDocument()
+  })
+
+  // GroupAwareCell's `cell.getIsAggregated()` branch (aggregatedCell ??
+  // cell) is real, CRM-block-relied-on functionality (per-group subtotals
+  // via aggregationFn/aggregatedCell — see components/site/crm-block.tsx's
+  // "value"/"probability" columns) but had no coverage. Exercised through a
+  // real TanStack grouped table, not a hand-built Cell stub — this codebase
+  // has repeatedly found hand-built Row/Cell stubs unfaithful to the real
+  // grouped row model (see use-data-table.ts's collectLeafRowIds comment on
+  // `.flatRows` duplicating leaves, for one prior example).
+  it("renders the column's aggregatedCell (not the plain cell) for a group row's non-group column", () => {
+    const colsWithAggregation = [
+      { id: "stage", accessorKey: "stage", header: "Stage", enableGrouping: true },
+      {
+        id: "amount",
+        accessorKey: "amount",
+        header: "Amount",
+        aggregationFn: "sum",
+        cell: ({ getValue }: { getValue: () => unknown }) => <span>{String(getValue())}</span>,
+        aggregatedCell: ({ getValue }: { getValue: () => unknown }) => (
+          <span>Total: {String(getValue())}</span>
+        ),
+      },
+    ]
+    render(
+      <DataTable
+        data={DEALS}
+        columns={colsWithAggregation as never}
+        getRowId={(r: { id: string }) => r.id}
+        enablePagination={false}
+        grouping={{
+          dimensions: [{ id: "stage", label: "Stage" }],
+          initial: ["stage"],
+          column: { header: "Deal" },
+        }}
+      />,
+    )
+    // "won" group's members are amount 10 + 20 = 30 (default aggregationFn
+    // "sum"); group rows start collapsed, so this proves the aggregated
+    // rollup renders on the group row itself, not merely once expanded.
+    expect(screen.getByText("Total: 30")).toBeInTheDocument()
+    expect(screen.getByText("Total: 5")).toBeInTheDocument() // "lost" group: just deal 3, amount 5
+    // The plain per-leaf `cell` renderer must NOT have been used for either
+    // group row — that would mean the aggregated branch was skipped.
+    expect(screen.queryByText("30")).toBeNull()
+    expect(screen.queryByText("10")).toBeNull()
+  })
+})

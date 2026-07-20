@@ -29,6 +29,7 @@ import { DataTableRuntimeContext, useDataTableRuntime } from "./data-table-runti
 import { downloadCsv, exportCsv } from "./export-csv"
 import { FilterPopover } from "./filter-builder"
 import { DataTableFooter } from "./footer-aggregation"
+import { GroupAwareCell } from "./group-cell"
 import { ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { useDataTable } from "./use-data-table"
 import { useFooterAggregation } from "./use-footer-aggregation"
@@ -37,6 +38,7 @@ import type {
   ComputeAggregateArgs,
   DataTableAction,
   DataTableColumnMeta,
+  DataTableGroupingConfig,
   FilterDef,
   FilterState,
 } from "./types"
@@ -64,6 +66,8 @@ export type DataTableProps<TData> = {
   initialFilterState?: FilterState
   /** Developer-configured bulk actions, shown in the Actions dropdown next to Columns. */
   actions?: DataTableAction<TData>[]
+  /** Opt-in row grouping. Omit for a flat table. */
+  grouping?: DataTableGroupingConfig<TData>
 }
 
 type PinnedCellStyle = { style: React.CSSProperties; className?: string }
@@ -184,7 +188,8 @@ function ExportCsvButton<TData>({ table }: { table: ReactTable<TData> }) {
 }
 
 export function DataTable<TData>(props: DataTableProps<TData>) {
-  const { table, runtime, filterState, setFilterState } = useDataTable(props)
+  const { table, runtime, filterState, setFilterState, grouping, setGrouping } =
+    useDataTable(props)
   const enablePagination = props.enablePagination ?? true
   const columnCount = table.getVisibleFlatColumns().length
   const aggregation = useFooterAggregation({
@@ -212,6 +217,11 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
             {props.actions && props.actions.length > 0 && (
               <ActionsMenu table={table} actions={props.actions} />
             )}
+            {props.grouping?.renderControl?.({
+              dimensions: props.grouping.dimensions,
+              grouping,
+              setGrouping,
+            })}
           </div>
           {(props.enableExport ?? true) && <ExportCsvButton table={table} />}
         </div>
@@ -295,7 +305,14 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
                           style={{ width: cell.column.getSize(), ...pinned.style }}
                           className={cn("overflow-hidden p-0", pinned.className)}
                         >
-                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          {props.grouping ? (
+                            <GroupAwareCell
+                              cell={cell}
+                              groupColumn={props.grouping.column}
+                            />
+                          ) : (
+                            flexRender(cell.column.columnDef.cell, cell.getContext())
+                          )}
                         </TableCell>
                       )
                     })}

@@ -10,6 +10,7 @@ function mockColumn({
   pinned = false as false | "left" | "right",
   canHide = true,
   canPin = true,
+  grouped = false,
 }: {
   id: string
   label: string
@@ -17,6 +18,7 @@ function mockColumn({
   pinned?: false | "left" | "right"
   canHide?: boolean
   canPin?: boolean
+  grouped?: boolean
 }) {
   return {
     id,
@@ -27,6 +29,7 @@ function mockColumn({
     toggleVisibility: vi.fn(),
     getIsPinned: () => pinned,
     pin: vi.fn(),
+    getIsGrouped: () => grouped,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 }
@@ -79,6 +82,20 @@ describe("ColumnsMenuContent", () => {
     render(<ColumnsMenuContent table={table} />)
     expect(screen.queryByText("__row-gutter__")).toBeNull()
     expect(screen.getByText("Name")).toBeInTheDocument()
+  })
+
+  it("omits a currently-grouped column — useDataTable forces it hidden, so its checkbox would be a dead toggle", () => {
+    // useDataTable spreads group.derivedVisibility LAST over user-set
+    // columnVisibility, so a grouped dimension column's visibility can never
+    // actually be changed from this menu; listing it with a live-looking
+    // checkbox would misrepresent that as something the user controls.
+    const grouped = mockColumn({ id: "stage", label: "Stage", grouped: true })
+    const other = mockColumn({ id: "amount", label: "Amount" })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const table = { getAllLeafColumns: () => [grouped, other] } as any
+    render(<ColumnsMenuContent table={table} />)
+    expect(screen.queryByText("Stage")).toBeNull()
+    expect(screen.getByText("Amount")).toBeInTheDocument()
   })
 
   it("a column that can be pinned but not hidden (or vice versa) is still listed", () => {

@@ -16,7 +16,19 @@ export function ColumnsMenuContent<TData>({ table }: { table: Table<TData> }) {
   // nothing for this menu to offer — every control below is conditional on
   // one of those two capabilities, so such a column would otherwise render
   // as a bare row showing its raw internal id with no controls at all.
-  const columns = table.getAllLeafColumns().filter((column) => column.getCanHide() || column.getCanPin())
+  //
+  // A column currently used as a grouping dimension is also omitted: useDataTable
+  // forces such a column's visibility to hidden (its values show only in the
+  // group column), spreading that derived visibility over whatever the user set
+  // LAST — so a checkbox for it here would toggle local state that never takes
+  // effect, a dead control that lies about what it does. `column.getIsGrouped()`
+  // is a stock TanStack Column method that always exists (it's part of the
+  // bundled feature set `@tanstack/react-table` registers for every table) and
+  // reads `table.getState().grouping`, which is empty for every flat table — so
+  // this is a no-op filter when grouping isn't configured at all.
+  const columns = table
+    .getAllLeafColumns()
+    .filter((column) => (column.getCanHide() || column.getCanPin()) && !column.getIsGrouped())
 
   return (
     <div className="space-y-0.5">

@@ -1480,4 +1480,54 @@ describe("grouping", () => {
     expect(onUpdateData).toHaveBeenCalledWith("1", "name", "Baily")
     expect(onUpdateData).toHaveBeenCalledWith("1", "age", 45)
   })
+
+  // Review item (c): table.getRowCount() is TanStack's own
+  // getPrePaginationRowModel().rows.length. With paginateExpandedRows: false
+  // (set whenever grouping is on; see use-data-table.ts's UNBOUNDED_PAGINATION
+  // comment), that chains getExpandedRowModel() -> getSortedRowModel() ->
+  // getPreSortedRowModel() = getGroupedRowModel() — i.e. TanStack's own row
+  // model pipeline runs GROUPING BEFORE sorting/expansion/pagination (verified
+  // directly against node_modules/@tanstack/table-core: RowSorting.ts sets
+  // `table.getPreSortedRowModel = () => table.getGroupedRowModel()`). So under
+  // grouping, every stage from getSortedRowModel() onward — including
+  // getRowCount()/getPageCount() — operates on top-level GROUP rows, not leaf
+  // records, and paginates a page of *groups* (each fully expanded within its
+  // page) rather than a page of records.
+  //
+  // This is not a bug specific to this task: it is TanStack's documented row
+  // model order, and it is the exact, already-shipped, already-tested
+  // behavior of this repo's own sibling implementation —
+  // components/grouped-data-table/use-grouped-table.test.tsx's "pagination
+  // clamping" describe block asserts the identical collapse ("120 leaf rows =
+  // 3 pages of 50; grouping ... collapses to 2 top-level rows = 1 page").
+  // useDataTable's grouping was built to mirror that sibling exactly, so this
+  // test locks in the same, intentional semantics here rather than treating
+  // it as unexamined. Separately: no part of the rendered footer/pagination UI
+  // displays getRowCount() as a raw "N records" figure that this could
+  // mislabel — data-table.tsx's pagination nav only ever shows "Page X of Y".
+  it("getRowCount()/getPageCount() intentionally count top-level GROUPS, not leaf records, under grouping (matches the sibling use-grouped-table implementation)", () => {
+    // 120 leaf rows = 3 pages of 50 when flat; grouping by "stage" collapses
+    // to 2 top-level rows (won/lost) = 1 page.
+    const many = Array.from({ length: 120 }, (_, i) => ({
+      id: String(i + 1),
+      stage: i % 2 === 0 ? "won" : "lost",
+      amount: i,
+    }))
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: many,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        enablePagination: true,
+        grouping: groupingConfig,
+      }),
+    )
+    expect(result.current.table.getRowCount()).toBe(2)
+    expect(result.current.table.getPageCount()).toBe(1)
+    // The leaf record count is still recoverable — just not from
+    // getRowCount() or anything downstream of grouping in the pipeline —
+    // via getCoreRowModel(), the pre-filter/pre-group base row model built
+    // directly off `data`.
+    expect(result.current.table.getCoreRowModel().rows.length).toBe(120)
+  })
 })

@@ -17,6 +17,7 @@ export function buildGroupColumn<TData>(
     enableGrouping: false,
     enableSorting: false,
     enableHiding: false,
+    enablePinning: false,
     enableResizing: true,
     cell: () => null,
     // Defense in depth: use-data-table.ts's own `columnIds` memo already
