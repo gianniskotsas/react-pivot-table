@@ -3,6 +3,8 @@
 import * as React from "react"
 import {
   getCoreRowModel,
+  getExpandedRowModel,
+  getGroupedRowModel,
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
@@ -18,6 +20,8 @@ import {
 import { toast } from "sonner"
 
 import { useGridNavigation } from "./use-grid-navigation"
+import { useGrouping } from "./use-grouping"
+import { buildGroupColumn } from "./group-column"
 import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
 import { gridToTsv, parseTsv, planPaste } from "./clipboard"
@@ -25,6 +29,7 @@ import { evaluateFilterState, normalizeFilterState, emptyFilterState } from "./f
 import type {
   CellPos,
   DataTableColumnMeta,
+  DataTableGroupingConfig,
   DataTableRuntime,
   FilterDef,
   FilterState,
@@ -33,6 +38,18 @@ import type {
 // Stable empty default so omitting `filterableColumns` doesn't create a new
 // array reference each render (which would churn the derived memos/callbacks).
 const EMPTY_FILTER_COLUMNS: FilterDef[] = []
+
+// TanStack only flattens an expanded group row's leaves into
+// `table.getRowModel().rows` inside its real getPaginationRowModel utility —
+// getExpandedRowModel's own fallback path (used whenever that utility isn't
+// registered) unconditionally skips it. A flat table already registers the
+// utility whenever enablePagination is on; when it's off, grouping still
+// needs the utility registered so expansion works, but without a real
+// `pagination` state driving it, TanStack falls back to its own default
+// page size (10) and would silently truncate the table. This stable,
+// effectively-unbounded page state avoids that while never actually
+// paginating — a fresh object here would defeat useReactTable's own memo.
+const UNBOUNDED_PAGINATION: PaginationState = { pageIndex: 0, pageSize: Number.MAX_SAFE_INTEGER }
 
 export type UseDataTableOptions<TData> = {
   data: TData[]
@@ -59,6 +76,8 @@ export type UseDataTableOptions<TData> = {
   filterableColumns?: FilterDef[]
   /** Initial filter state (groups + AND/OR). */
   initialFilterState?: FilterState
+  /** Opt-in row grouping. Omit for a flat table (no grouping state, no group column). */
+  grouping?: DataTableGroupingConfig<TData>
 }
 
 export type UseDataTableResult<TData> = {
@@ -66,6 +85,12 @@ export type UseDataTableResult<TData> = {
   runtime: DataTableRuntime
   filterState: FilterState
   setFilterState: (next: FilterState | ((prev: FilterState) => FilterState)) => void
+  /** Current grouping hierarchy (empty when grouping is not configured). */
+  grouping: string[]
+  /** Sets the hierarchy, normalized against the declared dimensions. */
+  setGrouping: (next: string[]) => void
+  /** True when `rowId` refers to a synthesized group row rather than a data row. */
+  isGroupRow: (rowId: string) => boolean
 }
 
 export function useDataTable<TData>({
@@ -82,6 +107,7 @@ export function useDataTable<TData>({
   initialColumnPinning,
   filterableColumns = EMPTY_FILTER_COLUMNS,
   initialFilterState,
+  grouping: groupingConfig,
 }: UseDataTableOptions<TData>): UseDataTableResult<TData> {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
@@ -95,6 +121,8 @@ export function useDataTable<TData>({
   })
   const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
   const [isAllMatchingSelected, setIsAllMatchingSelectedState] = React.useState(false)
+
+  const group = useGrouping(groupingConfig)
 
   const filterableIds = React.useMemo(
     () => filterableColumns.map((f) => f.id),
@@ -126,9 +154,29 @@ export function useDataTable<TData>({
     )
   }, [data, filterState])
 
-  const resolvedColumns = React.useMemo(
-    () => (enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns),
-    [enableRowSelection, columns],
+  // Memoize on `column.header`, not on the config object: consumers routinely
+  // pass an inline literal (`grouping={{ dimensions: [...], column: {...} }}`),
+  // a fresh object every render — depending on its identity would rebuild the
+  // whole column array (and churn TanStack's internal column state) on every
+  // render. `buildGroupColumn` only reads `config.header`, so that is the
+  // only real dependency. Mirrors the precedent in `use-grouped-table.ts`'s
+  // `groupColumnDef` memo.
+  const groupColumnHeader = groupingConfig?.column.header
+  const groupingEnabled = groupingConfig != null
+  const resolvedColumns = React.useMemo(() => {
+    const base = enableRowSelection ? [buildRowGutterColumn<TData>(), ...columns] : columns
+    if (!groupingEnabled) return base
+    return [buildGroupColumn<TData>({ header: groupColumnHeader }), ...base]
+    // `groupColumnHeader` is the only field buildGroupColumn reads; depending on
+    // the whole config object would rebuild this array on every render for
+    // consumers passing an inline literal.
+  }, [enableRowSelection, columns, groupingEnabled, groupColumnHeader])
+
+  // Grouped dimension columns must stay hidden regardless of what the user
+  // toggled in the Columns menu, so the derived map is spread last.
+  const effectiveColumnVisibility = React.useMemo(
+    () => ({ ...columnVisibility, ...group.derivedVisibility }),
+    [columnVisibility, group.derivedVisibility],
   )
 
   // React Compiler reports "Use of incompatible library" here: useReactTable
@@ -140,11 +188,16 @@ export function useDataTable<TData>({
     getRowId: getRowId ?? ((row, index) => String(index)),
     state: {
       sorting,
-      columnVisibility,
+      columnVisibility: effectiveColumnVisibility,
       columnPinning,
       columnSizing,
       rowSelection,
-      ...(enablePagination ? { pagination } : {}),
+      ...(group.enabled ? { grouping: group.grouping, expanded: group.expanded } : {}),
+      ...(enablePagination
+        ? { pagination }
+        : group.enabled
+          ? { pagination: UNBOUNDED_PAGINATION }
+          : {}),
     },
     onSortingChange: setSorting,
     onColumnVisibilityChange: setColumnVisibility,
@@ -156,8 +209,26 @@ export function useDataTable<TData>({
     columnResizeMode: "onChange",
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    ...(enablePagination ? { getPaginationRowModel: getPaginationRowModel() } : {}),
+    // Registered whenever grouping is on, even with enablePagination off —
+    // see UNBOUNDED_PAGINATION's comment above for why.
+    ...(enablePagination || group.enabled
+      ? { getPaginationRowModel: getPaginationRowModel() }
+      : {}),
     autoResetPageIndex: false,
+    ...(group.enabled
+      ? {
+          onGroupingChange: (updater) =>
+            group.setGrouping(
+              typeof updater === "function" ? updater(group.grouping) : updater,
+            ),
+          onExpandedChange: group.setExpanded,
+          getGroupedRowModel: getGroupedRowModel(),
+          getExpandedRowModel: getExpandedRowModel(),
+          enableSubRowSelection: true,
+          paginateExpandedRows: false,
+          autoResetExpanded: false,
+        }
+      : {}),
   })
 
   // autoResetPageIndex: false keeps the user's page across data edits, but
@@ -309,6 +380,18 @@ export function useDataTable<TData>({
   const rows = table.getRowModel().rows
   const rowIds = React.useMemo(() => rows.map((r) => r.id), [rows])
 
+  // Group rows carry TanStack-synthesised ids (e.g. "stage:won"), never TData
+  // ids — they must never reach updateData. A Set keeps the lookup O(1) and
+  // avoids table.getRow() throwing on an id that has since disappeared.
+  const groupRowIds = React.useMemo(
+    () => new Set(rows.filter((r) => r.getIsGrouped()).map((r) => r.id)),
+    [rows],
+  )
+  const isGroupRow = React.useCallback(
+    (rowId: string) => groupRowIds.has(rowId),
+    [groupRowIds],
+  )
+
   // Paste's "past the last row" detection must be measured against every
   // row that exists client-side, not just the current page's slice —
   // getRowModel() is post-pagination, so using `rowIds` here would treat a
@@ -319,7 +402,9 @@ export function useDataTable<TData>({
   // which this table never does.
   const prePaginationRows = table.getPrePaginationRowModel().rows
   const pasteRowIds = React.useMemo(
-    () => prePaginationRows.map((r) => r.id),
+    // Leaf rows only: a paste block must never target a synthesized group row.
+    // With grouping off, every row is a leaf, so this is identical to before.
+    () => prePaginationRows.filter((r) => !r.getIsGrouped()).map((r) => r.id),
     [prePaginationRows],
   )
 
@@ -355,15 +440,38 @@ export function useDataTable<TData>({
     [table, editable],
   )
 
-  // Per-cell gate. Today this only consults the column-level override; Task 5
-  // adds the group-row check here. `isColumnEditable` stays column-level for
-  // DataTableRuntime, clipboard paste, and bulk-clear.
+  // Per-cell gate: column-level override AND not a synthesized group row.
+  // `isColumnEditable` stays column-level for DataTableRuntime, clipboard
+  // paste, and bulk-clear.
   const isCellEditable = React.useCallback(
-    (pos: CellPos) => isColumnEditable(pos.columnId),
-    [isColumnEditable],
+    (pos: CellPos) => isColumnEditable(pos.columnId) && !isGroupRow(pos.rowId),
+    [isColumnEditable, isGroupRow],
   )
 
   const nav = useGridNavigation({ rowIds, columnIds, isCellEditable })
+
+  // Enter on a group row toggles expansion instead of entering edit mode
+  // (isCellEditable already refuses to edit it). Composed here rather than
+  // taught to useGridNavigation, which is deliberately table-agnostic. This
+  // wraps (rather than replaces) nav.handleKeyDown, and is itself wrapped by
+  // the file's own `handleKeyDown` below (which layers undo/copy/paste/clear
+  // ahead of grid navigation) — see that callback's fallthrough.
+  const handleKeyDownWithGroupExpand = React.useCallback(
+    (e: React.KeyboardEvent) => {
+      if (
+        e.key === "Enter" &&
+        nav.activeCell &&
+        !nav.editingCell &&
+        isGroupRow(nav.activeCell.rowId)
+      ) {
+        table.getRow(nav.activeCell.rowId)?.toggleExpanded()
+        e.preventDefault()
+        return
+      }
+      nav.handleKeyDown(e)
+    },
+    [nav, isGroupRow, table],
+  )
 
   // Copies either the active cell's value alone, or (when rows are
   // selected) every visible column of every selected row as TSV — mirrors
@@ -592,9 +700,9 @@ export function useDataTable<TData>({
         clearSelectedOrActiveCells()
         return
       }
-      nav.handleKeyDown(e)
+      handleKeyDownWithGroupExpand(e)
     },
-    [nav, undo, redo, copy, paste, clearSelectedOrActiveCells],
+    [nav, undo, redo, copy, paste, clearSelectedOrActiveCells, handleKeyDownWithGroupExpand],
   )
 
   const runtime: DataTableRuntime = {
@@ -613,5 +721,13 @@ export function useDataTable<TData>({
     handleKeyDown,
   }
 
-  return { table, runtime, filterState, setFilterState }
+  return {
+    table,
+    runtime,
+    filterState,
+    setFilterState,
+    grouping: group.grouping,
+    setGrouping: group.setGrouping,
+    isGroupRow,
+  }
 }

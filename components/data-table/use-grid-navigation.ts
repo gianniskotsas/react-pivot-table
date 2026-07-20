@@ -35,7 +35,8 @@ function samePos(a: CellPos | null, b: CellPos): boolean {
  * Pure grid navigation: active/editing cell state + keyboard handling, over
  * plain row/column id lists. No TanStack Table dependency — testable with
  * fabricated ids. `use-data-table.ts` supplies the real ids and combines this
- * with column-editability and data persistence into the full DataTableRuntime.
+ * with per-cell editability (column-level override AND not a group row) and
+ * data persistence into the full DataTableRuntime.
  *
  * Two responsibilities that belong to `use-data-table.ts`, not here:
  * 1. Memoize `rowIds`/`columnIds` (e.g. `useMemo` over `table.getRowModel().rows`).

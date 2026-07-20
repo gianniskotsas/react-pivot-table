@@ -69,7 +69,7 @@ export type DataTableRuntime = {
   isEditing: (pos: CellPos) => boolean
   /** Focuses a cell without entering edit mode (click, or arrow/Tab navigation). */
   setActiveCell: (pos: CellPos) => void
-  /** Enters edit mode for `pos`; a no-op if `isColumnEditable(pos.columnId)` is false. */
+  /** Enters edit mode for `pos`; a no-op if `isColumnEditable(pos.columnId)` is false, or if `pos.rowId` refers to a synthesized group row. */
   beginEdit: (pos: CellPos) => void
   /** Exits edit mode (on commit or cancel) without changing `activeCell`. */
   stopEditing: () => void

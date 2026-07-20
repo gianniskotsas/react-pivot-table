@@ -210,7 +210,7 @@ function buildColumn<TData, V>(
   // undefined) makes isColumnEditable's `override ?? tableDefault`
   // resolution (use-data-table.ts) correctly return false for these columns
   // regardless of the table default, which in turn makes
-  // useGridNavigation.beginEdit's existing isColumnEditable check correctly
+  // useGridNavigation.beginEdit's existing isCellEditable check correctly
   // refuse to enter edit mode via Enter — closing the gap at the source
   // instead of teaching beginEdit about field.edit. When field.edit IS
   // defined, this passes opts.editable through unchanged (including

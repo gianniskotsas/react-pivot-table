@@ -1,3 +1,5 @@
+import * as React from "react"
+
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
@@ -1136,5 +1138,131 @@ describe("useDataTable — pagination clamping", () => {
     expect(result.current.table.getPageCount()).toBe(1)
     expect(result.current.table.getState().pagination.pageIndex).toBe(0)
     expect(result.current.table.getRowModel().rows.length).toBe(10)
+  })
+})
+
+describe("grouping", () => {
+  const GROUPED_DATA = [
+    { id: "1", stage: "won", amount: 10 },
+    { id: "2", stage: "won", amount: 20 },
+    { id: "3", stage: "lost", amount: 5 },
+  ]
+  const groupedColumns = [
+    { id: "stage", accessorKey: "stage", header: "Stage", enableGrouping: true },
+    { id: "amount", accessorKey: "amount", header: "Amount" },
+  ]
+  const groupingConfig = {
+    dimensions: [{ id: "stage", label: "Stage" }],
+    initial: ["stage"],
+    column: { header: "Deal" },
+  }
+
+  function setupGrouped() {
+    return renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        editable: true,
+        enablePagination: false,
+        grouping: groupingConfig,
+      }),
+    )
+  }
+
+  it("prepends the auto group column when grouping is configured", () => {
+    const { result } = setupGrouped()
+    expect(result.current.table.getAllColumns()[0].id).toBe("__group__")
+  })
+
+  it("does not prepend a group column for a flat table", () => {
+    const { result } = renderHook(() =>
+      useDataTable({
+        data: GROUPED_DATA,
+        columns: groupedColumns as never,
+        getRowId: (r: { id: string }) => r.id,
+        enablePagination: false,
+      }),
+    )
+    expect(
+      result.current.table.getAllColumns().some((c) => c.id === "__group__"),
+    ).toBe(false)
+  })
+
+  it("produces group rows, and reports them via isGroupRow", () => {
+    const { result } = setupGrouped()
+    const rows = result.current.table.getRowModel().rows
+    expect(rows.every((r) => r.getIsGrouped())).toBe(true)
+    expect(result.current.isGroupRow(rows[0].id)).toBe(true)
+  })
+
+  it("hides the grouped dimension column", () => {
+    const { result } = setupGrouped()
+    expect(result.current.table.getState().columnVisibility.stage).toBe(false)
+  })
+
+  it("never lets a group row enter edit mode", () => {
+    const { result } = setupGrouped()
+    const groupRowId = result.current.table.getRowModel().rows[0].id
+    act(() =>
+      result.current.runtime.beginEdit({ rowId: groupRowId, columnId: "amount" }),
+    )
+    expect(result.current.runtime.editingCell).toBeNull()
+  })
+
+  it("still lets a LEAF row inside a group enter edit mode", () => {
+    const { result } = setupGrouped()
+    // Expand the first group so its leaves join the row model.
+    act(() => result.current.table.getRowModel().rows[0].toggleExpanded(true))
+    const leaf = result.current.table
+      .getRowModel()
+      .rows.find((r) => !r.getIsGrouped())
+    expect(leaf).toBeDefined()
+
+    act(() =>
+      result.current.runtime.beginEdit({ rowId: leaf!.id, columnId: "amount" }),
+    )
+    expect(result.current.runtime.editingCell).toEqual({
+      rowId: leaf!.id,
+      columnId: "amount",
+    })
+  })
+
+  it("Enter on a group row toggles expansion instead of editing", () => {
+    const { result } = setupGrouped()
+    const groupRow = result.current.table.getRowModel().rows[0]
+    expect(groupRow.getIsExpanded()).toBe(false)
+
+    act(() =>
+      result.current.runtime.setActiveCell({
+        rowId: groupRow.id,
+        columnId: "amount",
+      }),
+    )
+    const preventDefault = vi.fn()
+    act(() =>
+      result.current.runtime.handleKeyDown({
+        key: "Enter",
+        preventDefault,
+      } as unknown as React.KeyboardEvent),
+    )
+
+    expect(preventDefault).toHaveBeenCalled()
+    expect(result.current.runtime.editingCell).toBeNull()
+    expect(
+      result.current.table.getRowModel().rows[0].getIsExpanded(),
+    ).toBe(true)
+  })
+
+  it("excludes group rows from the paste target rows", () => {
+    const { result } = setupGrouped()
+    // Every top-level row is a group row, so no paste target may match one.
+    const groupIds = result.current.table
+      .getRowModel()
+      .rows.filter((r) => r.getIsGrouped())
+      .map((r) => r.id)
+    for (const id of groupIds) {
+      expect(result.current.isGroupRow(id)).toBe(true)
+    }
   })
 })
