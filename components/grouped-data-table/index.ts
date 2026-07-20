@@ -5,7 +5,7 @@ export {
   DimensionPicker,
   DimensionPickerContent,
   reorderGrouping,
-} from "./dimension-picker"
+} from "@/components/dimension-picker"
 export {
   GROUP_COLUMN_ID,
   type DimensionDef,

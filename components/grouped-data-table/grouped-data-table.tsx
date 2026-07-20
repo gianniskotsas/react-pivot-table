@@ -12,7 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
-import { DimensionPicker } from "./dimension-picker"
+import { DimensionPicker } from "@/components/dimension-picker"
 import { FilterPopover } from "./filter-builder"
 import { GroupCell } from "./group-cell"
 import { useGroupedTable } from "./use-grouped-table"

@@ -25,9 +25,11 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent } from "@/components/ui/popover"
 
-import type { DimensionDef } from "./types"
-import { MultiSelect } from "./multi-select"
-import { PopoverButtonTrigger } from "./primitives"
+import {
+  MultiSelect,
+  PopoverButtonTrigger,
+  type DimensionDef,
+} from "@/components/data-table"
 
 /** Pure reorder used on drag end. Returns a new array; unchanged if an id is missing. */
 export function reorderGrouping(

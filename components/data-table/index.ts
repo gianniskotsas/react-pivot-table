@@ -45,6 +45,13 @@ export type {
   FilterState,
   DataTableAction,
 } from "./types"
+export {
+  GROUP_COLUMN_ID,
+  type DimensionDef,
+  type GroupLeafConfig,
+  type GroupColumnConfig,
+  type DataTableGroupingConfig,
+} from "./types"
 // Pure filter helpers — for custom UIs and for a future MCP tool that emits or
 // describes filter config/conditions.
 export {
