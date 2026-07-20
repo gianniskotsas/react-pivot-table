@@ -67,7 +67,7 @@ export default function HomePage() {
           className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[32rem] bg-[radial-gradient(ellipse_60%_55%_at_50%_0%,color-mix(in_oklch,var(--accent),transparent_92%),transparent)]"
         />
 
-        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 pt-20 pb-12 text-center md:pt-28">
+        <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 px-6 pt-14 pb-12 text-center sm:pt-20 md:pt-28">
           <Badge
             variant="secondary"
             className="rounded-full font-normal"
@@ -75,7 +75,7 @@ export default function HomePage() {
           >
             Open source · shadcn registry
           </Badge>
-          <h1 className="max-w-2xl font-display text-5xl font-medium tracking-tight text-balance md:text-6xl">
+          <h1 className="max-w-2xl font-display text-4xl font-medium tracking-tight text-balance sm:text-5xl md:text-6xl">
             Data tables for <em className="italic">shadcn/ui</em>.
           </h1>
           <p className="max-w-lg text-balance text-muted-foreground md:text-lg">
@@ -111,11 +111,15 @@ export default function HomePage() {
             leads; the showcase grid below covers all three surfaces. Framed
             like ComponentPreview's canvas (dot grid, pointer-events-none,
             scaled) so it reads as a live product shot, not an interactive
-            widget competing with the page for clicks/scroll. */}
-        <div className="mx-auto max-w-5xl px-6 pb-24">
-          <div className="relative overflow-hidden rounded-2xl border bg-card shadow-lg ring-1 ring-foreground/5">
-            <div className="pointer-events-none h-[22rem] overflow-hidden bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_93%)_1px,transparent_1px)] bg-[size:16px_16px] p-6 md:h-[26rem] md:p-10">
-              <div className="origin-top scale-[0.92] md:scale-100">
+            widget competing with the page for clicks/scroll.
+            Hidden below md: the table's own columns don't reflow, so
+            shrinking it to fit a phone-width card either clips columns or
+            scales the text past legible — better to drop it there and let
+            the stat list carry the hero on small screens. */}
+        <div className="mx-auto max-w-5xl px-6 pb-16 md:pb-24">
+          <div className="relative hidden overflow-hidden rounded-2xl border bg-card shadow-lg ring-1 ring-foreground/5 md:block">
+            <div className="pointer-events-none h-[22rem] overflow-hidden bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_93%)_1px,transparent_1px)] bg-[size:16px_16px] p-6 lg:h-[26rem] lg:p-10">
+              <div className="origin-top scale-[0.85] lg:scale-100">
                 <HomeGroupedPreview />
               </div>
             </div>
@@ -125,7 +129,7 @@ export default function HomePage() {
             />
           </div>
 
-          <ul className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+          <ul className="mt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-3 md:mt-8 md:gap-x-8">
             {HERO_STATS.map(({ icon: Icon, label }) => (
               <li
                 key={label}
@@ -148,7 +152,10 @@ export default function HomePage() {
               className="group relative flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-foreground/5 transition-all hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
             >
               <div className="relative h-56 overflow-hidden bg-[radial-gradient(color-mix(in_oklch,var(--foreground),transparent_93%)_1px,transparent_1px)] [mask-image:linear-gradient(to_bottom,black_65%,transparent_100%)] bg-[size:14px_14px] p-4">
-                <div className="pointer-events-none origin-top-left scale-[0.82]">
+                {/* Table columns don't reflow, so a narrower single-column
+                    mobile card needs a smaller scale than the md+ 3-up grid
+                    to avoid clipping extra columns off the right edge. */}
+                <div className="pointer-events-none origin-top-left scale-[0.68] sm:scale-[0.82]">
                   {preview}
                 </div>
               </div>

@@ -41,7 +41,12 @@ export function GroupedDataTable<TData>(props: GroupedDataTableProps<TData>) {
         />
       </div>
 
-      <div className="rounded-md border">
+      {/* bg-background: without a fill here the table is fully transparent,
+          showing whatever's behind it (e.g. a docs preview canvas's dot
+          pattern) straight through the rows — see data-table.tsx's own
+          wrapper for the matching fix and why bg-background (not bg-card)
+          is the right token. */}
+      <div className="rounded-md border bg-background">
         <Table>
           {/* Muted band matching data-table's header treatment — column labels
               anchor the grid instead of floating on the body's surface. */}

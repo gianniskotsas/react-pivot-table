@@ -216,7 +216,17 @@ export function DataTable<TData>(props: DataTableProps<TData>) {
           {(props.enableExport ?? true) && <ExportCsvButton table={table} />}
         </div>
 
-        <div className="rounded-md border" onKeyDown={runtime.handleKeyDown}>
+        {/* bg-background (not bg-card): pinned cells hardcode bg-background
+            as their resting-state fill (see pinnedStyle above) to stay
+            opaque over scrolled columns — the table itself has to sit on
+            that same surface or pinned columns show a visible seam against
+            the rest of the row. Without any fill here the table was fully
+            transparent, showing whatever's behind it (e.g. a docs preview
+            canvas's dot pattern) straight through the rows. */}
+        <div
+          className="rounded-md border bg-background"
+          onKeyDown={runtime.handleKeyDown}
+        >
           <Table style={{ tableLayout: "fixed" }}>
             {/* The muted band gives the header row visual weight so the grid
                 doesn't read as headless markup — column labels anchor the
