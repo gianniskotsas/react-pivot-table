@@ -1,4 +1,5 @@
 import type * as React from "react"
+import type { Row } from "@tanstack/react-table"
 
 /** Identifies one cell by its TanStack row id and column id. */
 export type CellPos = { rowId: string; columnId: string }
@@ -191,4 +192,61 @@ export type DataTableAction<TData> = {
    * the same scope for footer aggregation) rather than iterating `rows`.
    */
   onClick: (context: { rowIds: string[]; rows: TData[]; allMatching: boolean }) => void
+}
+
+/** Stable id for the synthesized auto group column. */
+export const GROUP_COLUMN_ID = "__group__" as const
+
+/** A groupable column surfaced in the dimension picker. */
+export type DimensionDef = {
+  /** Must match the `id` of a column in `columns`. */
+  id: string
+  /** Human-readable label shown in the picker. */
+  label: string
+}
+
+/**
+ * Declarative leaf rendering: a primary label, with an optional leading icon and
+ * an optional muted secondary line below it.
+ */
+export type GroupLeafConfig<TData> = {
+  primary: (row: Row<TData>) => React.ReactNode
+  secondary?: (row: Row<TData>) => React.ReactNode
+  icon?: (row: Row<TData>) => React.ReactNode
+}
+
+export type GroupColumnConfig<TData> = {
+  /** Header text for the auto group column, e.g. "Account". */
+  header?: React.ReactNode
+  /** Declarative leaf rendering. Ignored if `renderLeaf` is provided. */
+  leaf?: GroupLeafConfig<TData>
+  /** Full-control leaf renderer. Takes precedence over `leaf`. */
+  renderLeaf?: (row: Row<TData>) => React.ReactNode
+  /** "leaf" = total leaf descendants (default), "immediate" = direct sub-rows. */
+  countMode?: "leaf" | "immediate"
+  /** Pixels of indentation per depth level. Default 24. */
+  indentSize?: number
+}
+
+/**
+ * Opt-in grouping. Omit entirely for a flat table — no grouping state, no group
+ * column, no behaviour change.
+ */
+export type DataTableGroupingConfig<TData> = {
+  /** Which columns the user may group by. */
+  dimensions: DimensionDef[]
+  /** Initial hierarchy, applied once at mount (uncontrolled — see the design doc). */
+  initial?: string[]
+  /** Auto group column configuration. */
+  column: GroupColumnConfig<TData>
+  /**
+   * Optional toolbar control for changing the hierarchy at runtime. Passed as a
+   * render prop rather than imported, so `data-table` never depends on dnd-kit —
+   * install `@kotsas-ui/dimension-picker` and pass its `<DimensionPicker />` here.
+   */
+  renderControl?: (ctx: {
+    dimensions: DimensionDef[]
+    grouping: string[]
+    setGrouping: (next: string[]) => void
+  }) => React.ReactNode
 }
