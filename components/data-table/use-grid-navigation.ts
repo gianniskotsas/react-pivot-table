@@ -7,7 +7,12 @@ import type { CellPos, MoveDirection } from "./types"
 export type UseGridNavigationOptions = {
   rowIds: string[]
   columnIds: string[]
-  isColumnEditable: (columnId: string) => boolean
+  /**
+   * Whether THIS cell may enter edit mode. Per-cell, not per-column: under
+   * grouping the same column is editable on a leaf row and not on a group row.
+   * `use-data-table.ts` composes the column-level override with a group-row check.
+   */
+  isCellEditable: (pos: CellPos) => boolean
 }
 
 export type GridNavigation = {
@@ -42,7 +47,7 @@ function samePos(a: CellPos | null, b: CellPos): boolean {
 export function useGridNavigation({
   rowIds,
   columnIds,
-  isColumnEditable,
+  isCellEditable,
 }: UseGridNavigationOptions): GridNavigation {
   const [activeCell, setActiveCellState] = React.useState<CellPos | null>(null)
   const [editingCell, setEditingCell] = React.useState<CellPos | null>(null)
@@ -58,11 +63,11 @@ export function useGridNavigation({
 
   const beginEdit = React.useCallback(
     (pos: CellPos) => {
-      if (!isColumnEditable(pos.columnId)) return
+      if (!isCellEditable(pos)) return
       setActiveCellState(pos)
       setEditingCell(pos)
     },
-    [isColumnEditable],
+    [isCellEditable],
   )
 
   const stopEditing = React.useCallback(() => {

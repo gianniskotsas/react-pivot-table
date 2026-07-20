@@ -1,14 +1,15 @@
 import { act, renderHook } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
+import type { CellPos } from "./types"
 import { useGridNavigation } from "./use-grid-navigation"
 
 const ROW_IDS = ["r1", "r2", "r3"]
 const COL_IDS = ["a", "b", "c"]
 
-function setup(isColumnEditable: (columnId: string) => boolean = () => true) {
+function setup(isCellEditable: (pos: CellPos) => boolean = () => true) {
   return renderHook(() =>
-    useGridNavigation({ rowIds: ROW_IDS, columnIds: COL_IDS, isColumnEditable }),
+    useGridNavigation({ rowIds: ROW_IDS, columnIds: COL_IDS, isCellEditable }),
   )
 }
 
@@ -60,7 +61,7 @@ describe("useGridNavigation", () => {
 
   it("moveActive is a no-op on an empty grid", () => {
     const { result } = renderHook(() =>
-      useGridNavigation({ rowIds: [], columnIds: [], isColumnEditable: () => true }),
+      useGridNavigation({ rowIds: [], columnIds: [], isCellEditable: () => true }),
     )
     act(() => result.current.moveActive("next"))
     expect(result.current.activeCell).toBeNull()
@@ -76,12 +77,22 @@ describe("useGridNavigation", () => {
   })
 
   it("beginEdit enters edit mode only for editable columns", () => {
-    const { result } = setup((columnId) => columnId === "a")
+    const { result } = setup((pos) => pos.columnId === "a")
     act(() => result.current.beginEdit({ rowId: "r1", columnId: "b" }))
     expect(result.current.editingCell).toBeNull()
     act(() => result.current.beginEdit({ rowId: "r1", columnId: "a" }))
     expect(result.current.editingCell).toEqual({ rowId: "r1", columnId: "a" })
     expect(result.current.isEditing({ rowId: "r1", columnId: "a" })).toBe(true)
+  })
+
+  it("gates editing per cell, not per column — same column, different rows", () => {
+    const { result } = setup((pos) => pos.rowId !== "r2")
+    act(() => result.current.setActiveCell({ rowId: "r2", columnId: "c1" }))
+    act(() => result.current.beginEdit({ rowId: "r2", columnId: "c1" }))
+    expect(result.current.editingCell).toBeNull()
+
+    act(() => result.current.beginEdit({ rowId: "r1", columnId: "c1" }))
+    expect(result.current.editingCell).toEqual({ rowId: "r1", columnId: "c1" })
   })
 
   it("stopEditing clears editingCell but keeps activeCell", () => {

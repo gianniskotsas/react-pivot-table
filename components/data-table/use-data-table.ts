@@ -22,7 +22,13 @@ import { buildRowGutterColumn, ROW_GUTTER_COLUMN_ID } from "./row-gutter"
 import { createUndoStack, type CellEdit } from "./undo"
 import { gridToTsv, parseTsv, planPaste } from "./clipboard"
 import { evaluateFilterState, normalizeFilterState, emptyFilterState } from "./filter-utils"
-import type { DataTableColumnMeta, DataTableRuntime, FilterDef, FilterState } from "./types"
+import type {
+  CellPos,
+  DataTableColumnMeta,
+  DataTableRuntime,
+  FilterDef,
+  FilterState,
+} from "./types"
 
 // Stable empty default so omitting `filterableColumns` doesn't create a new
 // array reference each render (which would churn the derived memos/callbacks).
@@ -349,7 +355,15 @@ export function useDataTable<TData>({
     [table, editable],
   )
 
-  const nav = useGridNavigation({ rowIds, columnIds, isColumnEditable })
+  // Per-cell gate. Today this only consults the column-level override; Task 5
+  // adds the group-row check here. `isColumnEditable` stays column-level for
+  // DataTableRuntime, clipboard paste, and bulk-clear.
+  const isCellEditable = React.useCallback(
+    (pos: CellPos) => isColumnEditable(pos.columnId),
+    [isColumnEditable],
+  )
+
+  const nav = useGridNavigation({ rowIds, columnIds, isCellEditable })
 
   // Copies either the active cell's value alone, or (when rows are
   // selected) every visible column of every selected row as TSV — mirrors
